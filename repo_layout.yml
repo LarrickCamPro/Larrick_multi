@@ -13,6 +13,11 @@ allowed_top_level:
   # Outputs and Artifacts
   - outputs
 
+  # Vendor / Tools
+  - LEAP71_ShapeKernel
+  - PicoGK
+  - tools
+
   # Documentation & Tests
   - docs
   - tests
