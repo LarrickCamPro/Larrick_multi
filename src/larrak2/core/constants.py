@@ -29,5 +29,5 @@ GEAR_INTERFERENCE_CLEARANCE_MM = 0.0
 GEAR_MIN_THICKNESS_MM = -0.05
 
 # Real-world constraint targets
-REALWORLD_LAMBDA_MIN_TARGET = 1.0   # Full EHL target
-REALWORLD_SCUFF_MARGIN_MIN = 0.0    # °C minimum margin
+REALWORLD_LAMBDA_MIN_TARGET = 1.0  # Full EHL target
+REALWORLD_SCUFF_MARGIN_MIN = 0.0  # °C minimum margin

@@ -5,7 +5,6 @@ import pytest
 
 from larrak2.realworld.surrogates import (
     DEFAULT_REALWORLD_PARAMS,
-    RealWorldSurrogateParams,
     evaluate_realworld_phase_resolved,
     evaluate_realworld_surrogates,
 )
@@ -26,9 +25,7 @@ class TestPhaseResolvedBasics:
     def test_flat_profiles_finite(self):
         """Flat profiles should produce finite results."""
         profs = self._make_flat_profiles()
-        result = evaluate_realworld_phase_resolved(
-            DEFAULT_REALWORLD_PARAMS, **profs
-        )
+        result = evaluate_realworld_phase_resolved(DEFAULT_REALWORLD_PARAMS, **profs)
         assert np.isfinite(result.lambda_min)
         assert np.isfinite(result.scuff_margin_C)
         assert np.isfinite(result.micropitting_safety)
@@ -36,26 +33,20 @@ class TestPhaseResolvedBasics:
     def test_worst_phase_in_range(self):
         """Worst phase angle should be in [0, 360)."""
         profs = self._make_flat_profiles()
-        result = evaluate_realworld_phase_resolved(
-            DEFAULT_REALWORLD_PARAMS, **profs
-        )
+        result = evaluate_realworld_phase_resolved(DEFAULT_REALWORLD_PARAMS, **profs)
         assert 0.0 <= result.worst_phase_deg < 360.0
 
     def test_n_bins_analyzed_positive(self):
         """At least some bins should be analyzed."""
         profs = self._make_flat_profiles()
-        result = evaluate_realworld_phase_resolved(
-            DEFAULT_REALWORLD_PARAMS, **profs
-        )
+        result = evaluate_realworld_phase_resolved(DEFAULT_REALWORLD_PARAMS, **profs)
         assert result.n_bins_analyzed > 0
 
     def test_lambda_profile_shape(self):
         """Lambda profile should match input shape."""
         n = 360
         profs = self._make_flat_profiles(n)
-        result = evaluate_realworld_phase_resolved(
-            DEFAULT_REALWORLD_PARAMS, **profs
-        )
+        result = evaluate_realworld_phase_resolved(DEFAULT_REALWORLD_PARAMS, **profs)
         assert result.lambda_profile.shape == (n,)
 
 
@@ -130,9 +121,7 @@ class TestPhaseResolvedVsScalar:
             fn_profile=np.full(n, 100.0),  # Uniform force → all bins analyzed
         )
 
-        assert phase_result.lambda_min == pytest.approx(
-            scalar_result.lambda_min, rel=0.01
-        ), (
+        assert phase_result.lambda_min == pytest.approx(scalar_result.lambda_min, rel=0.01), (
             f"Flat-profile phase-resolved λ ({phase_result.lambda_min:.4f}) "
             f"should match scalar λ ({scalar_result.lambda_min:.4f})"
         )
@@ -143,7 +132,7 @@ class TestPhaseResolvedVsScalar:
         # Create profiles with variation
         theta = np.linspace(0, 2 * np.pi, n, endpoint=False)
         hertz_prof = 1200.0 + 400.0 * np.sin(theta)  # 800–1600 MPa
-        sliding_prof = 5.0 + 3.0 * np.cos(theta)      # 2–8 m/s
+        sliding_prof = 5.0 + 3.0 * np.cos(theta)  # 2–8 m/s
         entrainment_prof = np.full(n, 15.0)
         fn_prof = np.full(n, 100.0)  # Uniform force → all bins analyzed
 

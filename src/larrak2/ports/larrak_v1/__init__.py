@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """Larrak v1 forward-evaluation port.
 
 This package contains pure forward-evaluation logic ported from Larrak v1.

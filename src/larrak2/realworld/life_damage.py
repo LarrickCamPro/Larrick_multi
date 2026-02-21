@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import numpy as np
 
-
 # Wöhler exponent for contact fatigue (typical carburized steel)
 _STRESS_EXPONENT = 8.0
 
@@ -71,8 +70,7 @@ def compute_life_damage_10k(
     """
     n_bins = len(hertz_stress_profile)
     if n_bins == 0:
-        return {"D_total": 0.0, "D_ring": 0.0, "D_planet": 0.0,
-                "N_set": 1, "revs_total": 0.0}
+        return {"D_total": 0.0, "D_ring": 0.0, "D_planet": 0.0, "N_set": 1, "revs_total": 0.0}
 
     N_set = hunting_n_set(hunting_level)
     revs_total = rpm * 60.0 * service_hours
@@ -84,7 +82,7 @@ def compute_life_damage_10k(
     sigma_ratio = np.maximum(hertz_stress_profile, 0.0) / _SIGMA_REF_MPA
     lambda_clamp = np.maximum(lambda_profile, 0.1)
 
-    dD_per_bin = (sigma_ratio ** _STRESS_EXPONENT) / (lambda_clamp ** _LAMBDA_EXPONENT)
+    dD_per_bin = (sigma_ratio**_STRESS_EXPONENT) / (lambda_clamp**_LAMBDA_EXPONENT)
 
     # Force-gate: only count bins where normal force > 50% of mean
     force_mean = float(np.mean(np.maximum(fn_profile, 0.0)))

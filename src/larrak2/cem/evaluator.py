@@ -13,16 +13,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-import numpy as np
-
 from larrak2.cem.lubrication import (
-    LubricationMode,
     LubricationParams,
     churning_loss_factor,
     cooling_effectiveness,
     effective_viscosity,
 )
-from larrak2.cem.material_db import MaterialClass, MaterialProperties, get_material
+from larrak2.cem.material_db import MaterialClass, get_material
 from larrak2.cem.post_processing import (
     CoatingType,
     HeatTreatment,

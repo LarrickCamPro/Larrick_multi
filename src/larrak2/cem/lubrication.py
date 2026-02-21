@@ -52,6 +52,7 @@ class LubricationParams:
 # Viscosity–temperature approximation (Walther equation simplified)
 # ---------------------------------------------------------------------------
 
+
 def effective_viscosity(params: LubricationParams, contact_temp_C: float) -> float:
     """Estimate viscosity at contact inlet temperature.
 
@@ -100,8 +101,7 @@ _COOLING_BASE: dict[LubricationMode, float] = {
 }
 
 
-def cooling_effectiveness(params: LubricationParams,
-                          pitch_line_vel_m_s: float) -> float:
+def cooling_effectiveness(params: LubricationParams, pitch_line_vel_m_s: float) -> float:
     """Compute normalized cooling effectiveness (0–1).
 
     Higher values indicate better thermal management at the mesh.
@@ -144,8 +144,7 @@ _CHURN_BASE: dict[LubricationMode, float] = {
 }
 
 
-def churning_loss_factor(params: LubricationParams,
-                         pitch_line_vel_m_s: float) -> float:
+def churning_loss_factor(params: LubricationParams, pitch_line_vel_m_s: float) -> float:
     """Compute relative churning/windage loss factor.
 
     Scale: 0.0 = no churning loss, 1.0 = maximum bath churning at speed.

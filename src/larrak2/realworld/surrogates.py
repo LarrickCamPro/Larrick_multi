@@ -17,7 +17,6 @@ from dataclasses import dataclass
 import numpy as np
 
 from larrak2.cem.lubrication import (
-    LubricationMode,
     LubricationParams,
     cooling_effectiveness,
     effective_viscosity,
@@ -25,13 +24,11 @@ from larrak2.cem.lubrication import (
 )
 from larrak2.cem.material_db import MaterialClass, get_material
 from larrak2.cem.post_processing import (
-    CoatingType,
     apply_coating_modifiers,
     coating_from_level,
     get_coating,
 )
 from larrak2.cem.surface_finish import (
-    SurfaceFinishTier,
     effective_composite_roughness,
     get_finish_properties,
     tier_from_level,
@@ -191,11 +188,7 @@ def evaluate_realworld_surrogates(
     material_temp_margin = mat_props.max_service_temp_C - operating_temp_C
 
     # 5. Cost index
-    total_cost = (
-        mat_props.cost_tier
-        + finish_props.cost_multiplier
-        + coating_props.cost_tier
-    )
+    total_cost = mat_props.cost_tier + finish_props.cost_multiplier + coating_props.cost_tier
 
     # 6. Feature importance (how much each lever matters for feasibility)
     importance: dict[str, float] = {}
@@ -207,7 +200,9 @@ def evaluate_realworld_surrogates(
     importance["surface_finish"] = max(0.0, 3.0 - lambda_min * 2.0) if lambda_min < 2.0 else 0.2
 
     # Material: critical if temp margin < 50 °C
-    importance["material"] = max(0.0, (50.0 - material_temp_margin) / 10.0) if material_temp_margin < 80.0 else 0.3
+    importance["material"] = (
+        max(0.0, (50.0 - material_temp_margin) / 10.0) if material_temp_margin < 80.0 else 0.3
+    )
 
     # Coating: important if scuff margin < 100 °C
     importance["coating"] = max(0.0, (100.0 - scuff_margin) / 20.0) if scuff_margin < 150.0 else 0.2
@@ -350,7 +345,9 @@ def evaluate_realworld_phase_resolved(
     importance: dict[str, float] = {}
     importance["lubrication"] = max(0.0, (1.0 - lambda_min) * 10.0) if lambda_min < 1.5 else 0.3
     importance["surface_finish"] = max(0.0, 3.0 - lambda_min * 2.0) if lambda_min < 2.0 else 0.2
-    importance["material"] = max(0.0, (50.0 - material_temp_margin) / 10.0) if material_temp_margin < 80.0 else 0.3
+    importance["material"] = (
+        max(0.0, (50.0 - material_temp_margin) / 10.0) if material_temp_margin < 80.0 else 0.3
+    )
     importance["coating"] = max(0.0, (100.0 - scuff_margin) / 20.0) if scuff_margin < 150.0 else 0.2
     ranking = sorted(importance.items(), key=lambda kv: kv[1], reverse=True)
 
@@ -367,4 +364,3 @@ def evaluate_realworld_phase_resolved(
         force_threshold_N=force_threshold,
         lambda_profile=lambda_profile,
     )
-

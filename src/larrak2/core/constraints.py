@@ -25,14 +25,14 @@ DEFAULT_SCALES: dict[str, float] = {
     "gear_min_thickness": 5.0,  # placeholder scaling
     "gear_contact_ratio_min": 1.0,
     "gear_self_intersection": 1.0,
-    "tol_budget": 10.0, # weighted penalty
-    "tooling_cost": 1.0, # weighted penalty
+    "tol_budget": 10.0,  # weighted penalty
+    "tooling_cost": 1.0,  # weighted penalty
     # Real-world constraints
-    "rw_lambda_min": 1.0,       # dimensionless (λ)
-    "rw_scuff_margin": 100.0,   # °C scale
+    "rw_lambda_min": 1.0,  # dimensionless (λ)
+    "rw_scuff_margin": 100.0,  # °C scale
     "rw_micropitting_sf": 1.0,  # safety factor
     "rw_material_temp": 100.0,  # °C scale
-    "rw_cost_index": 5.0,       # cost units
+    "rw_cost_index": 5.0,  # cost units
     "rw_life_damage_10k": 1.0,  # dimensionless (D)
 }
 
@@ -56,14 +56,14 @@ DEFAULT_KIND: dict[str, str] = {
     "gear_contact_ratio_min": "soft",
     "gear_self_intersection": "soft",
     # Machining
-    "tol_budget": "hard", # Per user requirement ("minimum of 0.5")
+    "tol_budget": "hard",  # Per user requirement ("minimum of 0.5")
     "tooling_cost": "soft",
     # Real-world
-    "rw_lambda_min": "hard",       # Must achieve full EHL
-    "rw_scuff_margin": "hard",     # Must have positive margin
+    "rw_lambda_min": "hard",  # Must achieve full EHL
+    "rw_scuff_margin": "hard",  # Must have positive margin
     "rw_micropitting_sf": "hard",  # Must exceed 1.0
-    "rw_material_temp": "hard",    # Must survive service temp
-    "rw_cost_index": "soft",       # Cost is a soft preference
+    "rw_material_temp": "hard",  # Must survive service temp
+    "rw_cost_index": "soft",  # Cost is a soft preference
     "rw_life_damage_10k": "hard",  # Must survive 10,000 h
 }
 
@@ -136,14 +136,16 @@ REALWORLD_CONSTRAINTS = [
     "rw_life_damage_10k",
 ]
 
+
 def get_constraint_names(fidelity: int) -> list[str]:
     """Return ordered constraint names for a given fidelity."""
     thermo = THERMO_CONSTRAINTS_FID1 if fidelity >= 1 else THERMO_CONSTRAINTS_FID0
     return (
-        list(thermo) + list(GEAR_CONSTRAINTS)
-        + list(MACHINING_CONSTRAINTS) + list(REALWORLD_CONSTRAINTS)
+        list(thermo)
+        + list(GEAR_CONSTRAINTS)
+        + list(MACHINING_CONSTRAINTS)
+        + list(REALWORLD_CONSTRAINTS)
     )
-
 
 
 def get_constraint_scales() -> dict[str, float]:

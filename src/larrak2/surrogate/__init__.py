@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """Surrogate modeling components."""
 
 from larrak2.surrogate.features import extract_scavenge_features_v1, get_scavenge_schema_v1

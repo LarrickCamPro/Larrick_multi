@@ -15,7 +15,7 @@ import json
 import logging
 import sys
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -76,12 +76,8 @@ def validate_candidates(
     Returns:
         ValidationReport with ranked candidates.
     """
-    from ..core.encoding import ENCODING_VERSION, N_TOTAL, decode_candidate
     from ..cem.evaluator import CEMEvalParams, evaluate_cem
-    from ..cem.material_db import MaterialClass
-    from ..cem.surface_finish import SurfaceFinishTier, tier_from_level
-    from ..cem.lubrication import LubricationMode, mode_from_level
-    from ..cem.post_processing import CoatingType, coating_from_level
+    from ..core.encoding import ENCODING_VERSION, N_TOTAL, decode_candidate
     from ..realworld.surrogates import (
         RealWorldSurrogateParams,
         evaluate_realworld_surrogates,
@@ -123,11 +119,17 @@ def validate_candidates(
         # --- Drift calculation ---
         drift_lambda = 0.0
         if abs(surr_result.lambda_min) > 1e-6:
-            drift_lambda = (cem_result.lambda_min - surr_result.lambda_min) / surr_result.lambda_min * 100.0
+            drift_lambda = (
+                (cem_result.lambda_min - surr_result.lambda_min) / surr_result.lambda_min * 100.0
+            )
 
         drift_scuff = 0.0
         if abs(surr_result.scuff_margin_C) > 1e-6:
-            drift_scuff = (cem_result.scuff_margin_C - surr_result.scuff_margin_C) / abs(surr_result.scuff_margin_C) * 100.0
+            drift_scuff = (
+                (cem_result.scuff_margin_C - surr_result.scuff_margin_C)
+                / abs(surr_result.scuff_margin_C)
+                * 100.0
+            )
 
         # --- Feasibility ---
         feasible_lambda = cem_result.lambda_min >= 1.0
@@ -149,26 +151,28 @@ def validate_candidates(
         rec_parts = [f"{r[0]}" for r in ranking[:4]]
         recommendation = " > ".join(rec_parts) if rec_parts else "no recommendation"
 
-        results.append(CandidateValidation(
-            index=i,
-            surr_lambda_min=surr_result.lambda_min,
-            surr_scuff_margin_C=surr_result.scuff_margin_C,
-            surr_micropitting_sf=surr_result.micropitting_safety,
-            cem_lambda_min=cem_result.lambda_min,
-            cem_scuff_margin_C=cem_result.scuff_margin_C,
-            cem_micropitting_sf=cem_result.micropitting_safety,
-            cem_material_temp_margin_C=float(
-                cem_result.details.get("material", {}).get("temp_margin_C", 0)
-            ),
-            cem_cost_index=cem_result.total_cost_index,
-            cem_lube_regime=cem_result.lube_regime,
-            drift_lambda_pct=drift_lambda,
-            drift_scuff_pct=drift_scuff,
-            is_feasible=is_feasible,
-            feasibility_score=score,
-            recommendation=recommendation,
-            details=cem_result.details,
-        ))
+        results.append(
+            CandidateValidation(
+                index=i,
+                surr_lambda_min=surr_result.lambda_min,
+                surr_scuff_margin_C=surr_result.scuff_margin_C,
+                surr_micropitting_sf=surr_result.micropitting_safety,
+                cem_lambda_min=cem_result.lambda_min,
+                cem_scuff_margin_C=cem_result.scuff_margin_C,
+                cem_micropitting_sf=cem_result.micropitting_safety,
+                cem_material_temp_margin_C=float(
+                    cem_result.details.get("material", {}).get("temp_margin_C", 0)
+                ),
+                cem_cost_index=cem_result.total_cost_index,
+                cem_lube_regime=cem_result.lube_regime,
+                drift_lambda_pct=drift_lambda,
+                drift_scuff_pct=drift_scuff,
+                is_feasible=is_feasible,
+                feasibility_score=score,
+                recommendation=recommendation,
+                details=cem_result.details,
+            )
+        )
 
     # Rank by feasibility score (descending)
     results.sort(key=lambda r: r.feasibility_score, reverse=True)
@@ -184,7 +188,7 @@ def validate_candidates(
 def format_report(report: ValidationReport) -> str:
     """Format a validation report as human-readable text."""
     lines = [
-        f"CEM Validation Report",
+        "CEM Validation Report",
         f"{'=' * 60}",
         f"Candidates: {report.n_candidates}  |  Feasible: {report.n_feasible}",
         f"Encoding: v{report.encoding_version}",
@@ -193,9 +197,15 @@ def format_report(report: ValidationReport) -> str:
 
     for rank, cand in enumerate(report.ranked_candidates, 1):
         status = "✓" if cand.is_feasible else "✗"
-        lines.append(f"Candidate #{cand.index} (rank {rank}) {status}  [score: {cand.feasibility_score:.1f}/100]")
-        lines.append(f"  λ_min = {cand.cem_lambda_min:.3f} (surrogate: {cand.surr_lambda_min:.3f}, drift: {cand.drift_lambda_pct:+.1f}%)")
-        lines.append(f"  Scuff margin = {cand.cem_scuff_margin_C:.1f}°C (surrogate: {cand.surr_scuff_margin_C:.1f}°C)")
+        lines.append(
+            f"Candidate #{cand.index} (rank {rank}) {status}  [score: {cand.feasibility_score:.1f}/100]"
+        )
+        lines.append(
+            f"  λ_min = {cand.cem_lambda_min:.3f} (surrogate: {cand.surr_lambda_min:.3f}, drift: {cand.drift_lambda_pct:+.1f}%)"
+        )
+        lines.append(
+            f"  Scuff margin = {cand.cem_scuff_margin_C:.1f}°C (surrogate: {cand.surr_scuff_margin_C:.1f}°C)"
+        )
         lines.append(f"  Micropitting S_λ = {cand.cem_micropitting_sf:.2f}")
         lines.append(f"  Lube regime: {cand.cem_lube_regime}")
         lines.append(f"  Recommendation: {cand.recommendation}")
@@ -211,19 +221,26 @@ def main(argv: list[str] | None = None) -> int:
         description="Validate Pareto-optimal candidates with full CEM evaluation.",
     )
     parser.add_argument(
-        "--archive", required=True, type=str,
+        "--archive",
+        required=True,
+        type=str,
         help="Path to Pareto archive (.npz or .json)",
     )
     parser.add_argument(
-        "--top", type=int, default=0,
+        "--top",
+        type=int,
+        default=0,
         help="Only validate top N candidates (0 = all)",
     )
     parser.add_argument(
-        "--output", type=str, default="",
+        "--output",
+        type=str,
+        default="",
         help="Path to save JSON report (optional)",
     )
     parser.add_argument(
-        "--verbose", action="store_true",
+        "--verbose",
+        action="store_true",
         help="Enable verbose logging",
     )
 
@@ -254,9 +271,9 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if args.top > 0:
-        X = X[:args.top]
+        X = X[: args.top]
         if F is not None:
-            F = F[:args.top]
+            F = F[: args.top]
 
     logger.info("Validating %d candidates from %s", X.shape[0], archive_path)
     t0 = time.perf_counter()

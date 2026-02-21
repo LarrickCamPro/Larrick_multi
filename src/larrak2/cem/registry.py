@@ -55,12 +55,15 @@ class DatasetDescriptor:
 
     def __post_init__(self) -> None:
         # Compute schema hash
-        data = json.dumps({
-            "name": self.name,
-            "domain": self.domain,
-            "version": self.version,
-            "columns": list(self.columns),
-        }, sort_keys=True)
+        data = json.dumps(
+            {
+                "name": self.name,
+                "domain": self.domain,
+                "version": self.version,
+                "columns": list(self.columns),
+            },
+            sort_keys=True,
+        )
         h = hashlib.sha256(data.encode()).hexdigest()
         object.__setattr__(self, "schema_hash", h[:16])
 
@@ -130,9 +133,7 @@ class DatasetRegistry:
             if p.exists():
                 table = self._load_file(p, desc)
             else:
-                logger.warning(
-                    "Dataset file not found: %s — returning empty placeholder", p
-                )
+                logger.warning("Dataset file not found: %s — returning empty placeholder", p)
                 table = {col: [] for col in desc.columns}
         else:
             # Auto-locate from data/cem/{name}.csv or .json
@@ -200,6 +201,7 @@ def get_registry() -> DatasetRegistry:
 # Placeholder dataset registration
 # ---------------------------------------------------------------------------
 
+
 def _register_placeholders(reg: DatasetRegistry) -> None:
     """Register placeholder dataset descriptors.
 
@@ -207,73 +209,111 @@ def _register_placeholders(reg: DatasetRegistry) -> None:
     are out of scope for this sprint — the architecture accepts them
     once sourced.
     """
-    reg.register(DatasetDescriptor(
-        name="material_properties",
-        domain="material",
-        source_ref="NASA Glenn + Carpenter + Pyrowear datasheets",
-        columns=(
-            "alloy", "max_service_temp_C", "case_hardness_HRC",
-            "core_hardness_HRC", "fatigue_life_multiplier", "cost_tier",
-        ),
-    ))
+    reg.register(
+        DatasetDescriptor(
+            name="material_properties",
+            domain="material",
+            source_ref="NASA Glenn + Carpenter + Pyrowear datasheets",
+            columns=(
+                "alloy",
+                "max_service_temp_C",
+                "case_hardness_HRC",
+                "core_hardness_HRC",
+                "fatigue_life_multiplier",
+                "cost_tier",
+            ),
+        )
+    )
 
-    reg.register(DatasetDescriptor(
-        name="tribology_ehl_coefficients",
-        domain="tribology",
-        source_ref="ISO/TS 6336-22 + NASA λ–life correlation",
-        columns=(
-            "oil_type", "temperature_C", "viscosity_cSt",
-            "pressure_viscosity_coeff", "ehl_constant",
-        ),
-    ))
+    reg.register(
+        DatasetDescriptor(
+            name="tribology_ehl_coefficients",
+            domain="tribology",
+            source_ref="ISO/TS 6336-22 + NASA λ–life correlation",
+            columns=(
+                "oil_type",
+                "temperature_C",
+                "viscosity_cSt",
+                "pressure_viscosity_coeff",
+                "ehl_constant",
+            ),
+        )
+    )
 
-    reg.register(DatasetDescriptor(
-        name="scuffing_critical_temperatures",
-        domain="tribology",
-        source_ref="ISO/TS 6336-20/21 + FZG test data",
-        columns=(
-            "oil_type", "additive_package", "T_crit_C",
-            "load_stage", "method",
-        ),
-    ))
+    reg.register(
+        DatasetDescriptor(
+            name="scuffing_critical_temperatures",
+            domain="tribology",
+            source_ref="ISO/TS 6336-20/21 + FZG test data",
+            columns=(
+                "oil_type",
+                "additive_package",
+                "T_crit_C",
+                "load_stage",
+                "method",
+            ),
+        )
+    )
 
-    reg.register(DatasetDescriptor(
-        name="surface_finish_endurance",
-        domain="surface",
-        source_ref="REM/AGMA FZG micropitting + NASA scuffing TOF",
-        columns=(
-            "finish_method", "Ra_um", "Rz_um",
-            "composite_roughness_factor", "micropitting_life_multiplier",
-            "scuffing_TOF_multiplier", "cost_multiplier",
-        ),
-    ))
+    reg.register(
+        DatasetDescriptor(
+            name="surface_finish_endurance",
+            domain="surface",
+            source_ref="REM/AGMA FZG micropitting + NASA scuffing TOF",
+            columns=(
+                "finish_method",
+                "Ra_um",
+                "Rz_um",
+                "composite_roughness_factor",
+                "micropitting_life_multiplier",
+                "scuffing_TOF_multiplier",
+                "cost_multiplier",
+            ),
+        )
+    )
 
-    reg.register(DatasetDescriptor(
-        name="lubrication_cooling_curves",
-        domain="lubrication",
-        source_ref="NASA oil-jet studies + API 677",
-        columns=(
-            "delivery_mode", "flow_rate_L_min", "pitch_vel_m_s",
-            "tooth_temp_reduction_C", "churning_loss_fraction",
-        ),
-    ))
+    reg.register(
+        DatasetDescriptor(
+            name="lubrication_cooling_curves",
+            domain="lubrication",
+            source_ref="NASA oil-jet studies + API 677",
+            columns=(
+                "delivery_mode",
+                "flow_rate_L_min",
+                "pitch_vel_m_s",
+                "tooth_temp_reduction_C",
+                "churning_loss_fraction",
+            ),
+        )
+    )
 
-    reg.register(DatasetDescriptor(
-        name="coating_rcf_performance",
-        domain="post_processing",
-        source_ref="Oerlikon Balzers + Platit + Scientific Reports",
-        columns=(
-            "coating_type", "substrate", "hertz_stress_MPa",
-            "cycles_to_failure", "friction_coeff", "temperature_C",
-        ),
-    ))
+    reg.register(
+        DatasetDescriptor(
+            name="coating_rcf_performance",
+            domain="post_processing",
+            source_ref="Oerlikon Balzers + Platit + Scientific Reports",
+            columns=(
+                "coating_type",
+                "substrate",
+                "hertz_stress_MPa",
+                "cycles_to_failure",
+                "friction_coeff",
+                "temperature_C",
+            ),
+        )
+    )
 
-    reg.register(DatasetDescriptor(
-        name="heat_treat_hardness_curves",
-        domain="post_processing",
-        source_ref="Pyrowear/CBS-50 NiL/Ferrium datasheets",
-        columns=(
-            "alloy", "treatment", "temper_temp_C",
-            "case_hardness_HRC", "core_hardness_HRC",
-        ),
-    ))
+    reg.register(
+        DatasetDescriptor(
+            name="heat_treat_hardness_curves",
+            domain="post_processing",
+            source_ref="Pyrowear/CBS-50 NiL/Ferrium datasheets",
+            columns=(
+                "alloy",
+                "treatment",
+                "temper_temp_C",
+                "case_hardness_HRC",
+                "core_hardness_HRC",
+            ),
+        )
+    )

@@ -1,16 +1,15 @@
 """Tests for real-world surrogate system (optimization-loop side)."""
 
 import numpy as np
-import pytest
 
+from larrak2.realworld.constraints import (
+    REALWORLD_CONSTRAINT_NAMES,
+    compute_realworld_constraints,
+)
 from larrak2.realworld.surrogates import (
     DEFAULT_REALWORLD_PARAMS,
     RealWorldSurrogateParams,
     evaluate_realworld_surrogates,
-)
-from larrak2.realworld.constraints import (
-    REALWORLD_CONSTRAINT_NAMES,
-    compute_realworld_constraints,
 )
 
 

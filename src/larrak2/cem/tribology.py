@@ -82,6 +82,7 @@ def _get_ehl_constant() -> float:
     """Retrieve k_ehl from dataset registry if available, else placeholder."""
     try:
         from larrak2.cem.registry import get_registry
+
         reg = get_registry()
         table = reg.load_table("tribology_ehl_coefficients")
         if "ehl_constant" in table and len(table["ehl_constant"]) > 0:
@@ -110,7 +111,7 @@ def compute_lambda(params: TribologyParams) -> float:
 
     # Simplified h_min (µm)
     k_ehl = _get_ehl_constant()
-    h_min = k_ehl * (viscosity_speed ** 0.7)
+    h_min = k_ehl * (viscosity_speed**0.7)
 
     # Pressure correction (higher Hertz stress thins the film)
     if params.hertz_stress_MPa > 0:
@@ -154,6 +155,7 @@ def _get_scuff_crit_temp() -> float:
     """Retrieve critical scuffing temperature from dataset registry if available."""
     try:
         from larrak2.cem.registry import get_registry
+
         reg = get_registry()
         table = reg.load_table("scuffing_critical_temperatures")
         if "T_crit_C" in table and len(table["T_crit_C"]) > 0:
@@ -161,6 +163,7 @@ def _get_scuff_crit_temp() -> float:
     except Exception:
         pass
     return _T_SCUFF_CRIT
+
 
 # Friction coefficient for flash temperature calculation
 _MU_FLASH = 0.06  # Placeholder
@@ -205,8 +208,7 @@ def compute_scuff_margin(params: TribologyParams) -> float:
 _LAMBDA_PERM = 0.3  # Placeholder
 
 
-def compute_micropitting_safety(lambda_val: float,
-                                lambda_perm: float = _LAMBDA_PERM) -> float:
+def compute_micropitting_safety(lambda_val: float, lambda_perm: float = _LAMBDA_PERM) -> float:
     """Compute micropitting safety factor S_λ = λ_min / λ_perm.
 
     Per ISO/TS 6336-22, micropitting occurs when the minimum local

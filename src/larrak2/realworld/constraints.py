@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from larrak2.realworld.surrogates import RealWorldSurrogateResult
 
-
 # Constraint names (must match core/constraints.py registry)
 REALWORLD_CONSTRAINT_NAMES: list[str] = [
     "rw_lambda_min",
@@ -28,10 +27,10 @@ REALWORLD_CONSTRAINT_NAMES: list[str] = [
 ]
 
 # Thresholds
-_LAMBDA_TARGET = 1.0       # Full EHL target
-_SCUFF_MARGIN_MIN = 0.0    # Minimum scuff margin (°C)
-_MICROPITTING_SF_MIN = 1.0 # Minimum micropitting safety factor
-_COST_THRESHOLD = 8.0      # Soft penalty above this cost index
+_LAMBDA_TARGET = 1.0  # Full EHL target
+_SCUFF_MARGIN_MIN = 0.0  # Minimum scuff margin (°C)
+_MICROPITTING_SF_MIN = 1.0  # Minimum micropitting safety factor
+_COST_THRESHOLD = 8.0  # Soft penalty above this cost index
 
 
 def compute_realworld_constraints(

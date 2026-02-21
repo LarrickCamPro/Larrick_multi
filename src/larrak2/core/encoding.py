@@ -21,8 +21,10 @@ ENCODING_VERSION = "0.4"
 
 # Decision variable count
 N_THERMO = 5
-N_GEAR = 9       # base_radius(1) + pitch_coeffs(7) + face_width(1)
-N_REALWORLD = 8  # surface_finish, lube_mode, material, coating, hunting, oil_flow, oil_temp, evacuation
+N_GEAR = 9  # base_radius(1) + pitch_coeffs(7) + face_width(1)
+N_REALWORLD = (
+    8  # surface_finish, lube_mode, material, coating, hunting, oil_flow, oil_temp, evacuation
+)
 N_TOTAL = N_THERMO + N_GEAR + N_REALWORLD  # 22
 
 
@@ -81,7 +83,7 @@ class GearParams:
 
     base_radius: float
     pitch_coeffs: np.ndarray  # 7 coefficients
-    face_width_mm: float      # Constrained by gear body z-height
+    face_width_mm: float  # Constrained by gear body z-height
 
     def to_array(self) -> np.ndarray:
         """Convert to flat array."""
@@ -218,7 +220,7 @@ def bounds() -> tuple[np.ndarray, np.ndarray]:
 
     # GearParams bounds: base_radius + 7 pitch coefficients + face_width
     gear_lb = np.array([20.0, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 4.0])
-    gear_ub = np.array([60.0,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5, 14.0])
+    gear_ub = np.array([60.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 14.0])
 
     # RealWorldParams bounds: 8 continuous levels [0, 1]
     # [finish, lube_mode, material, coating, hunting, oil_flow, oil_temp, evacuation]

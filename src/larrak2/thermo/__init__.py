@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """Thermo module — thermodynamic physics models."""
 
 from .motionlaw import ThermoResult, eval_thermo

@@ -26,8 +26,6 @@ import numpy as np
 from ..core.constants import MODEL_VERSION_GEAR_V1, MODEL_VERSION_THERMO_V1
 from ..core.constraints import (
     GEAR_CONSTRAINTS,
-    MACHINING_CONSTRAINTS,
-    REALWORLD_CONSTRAINTS,
     THERMO_CONSTRAINTS_FID0,
     THERMO_CONSTRAINTS_FID1,
     combine_constraints,
@@ -157,8 +155,8 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
     # ===================================================================
     # Machining Cost & Constraints
     # ===================================================================
+    from larrak2.machining.cost_model import calculate_tolerance_budget, calculate_tooling_cost
     from larrak2.surrogate.machining_inference import get_machining_engine
-    from larrak2.machining.cost_model import calculate_tooling_cost, calculate_tolerance_budget
 
     machining_eng = get_machining_engine()
 
@@ -184,8 +182,7 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
 
     # Tooling cost
     tooling_cost_val, is_standard_tool = calculate_tooling_cost(
-        min_feature_size_outer_mm=2.0 * b_max_survivable,
-        min_feature_size_inner_mm=min_hole_diam
+        min_feature_size_outer_mm=2.0 * b_max_survivable, min_feature_size_inner_mm=min_hole_diam
     )
 
     # Tolerance budget
@@ -194,7 +191,7 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
         min_curvature_mm=min_curvature,
         aspect_ratio=2.0,
         torque_nm=float(ctx.torque),
-        budget_mm=0.5
+        budget_mm=0.5,
     )
 
     # Tooling penalty (soft constraint for non-standard / expensive tools)
@@ -206,12 +203,12 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
     # ===================================================================
     # Real-World Checks (tribology, material, surface, lubrication)
     # ===================================================================
+    from larrak2.realworld.constraints import compute_realworld_constraints
     from larrak2.realworld.surrogates import (
         RealWorldSurrogateParams,
-        evaluate_realworld_surrogates,
         evaluate_realworld_phase_resolved,
+        evaluate_realworld_surrogates,
     )
-    from larrak2.realworld.constraints import compute_realworld_constraints
 
     # Decode real-world params from candidate (part of the decision vector)
     rw_params = RealWorldSurrogateParams(
@@ -235,8 +232,10 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
     hertz_prof = gear_diag.get("hertz_stress_profile")
     fn_prof = gear_diag.get("fn_profile")
     has_profiles = (
-        hertz_prof is not None and fn_prof is not None
-        and hasattr(hertz_prof, "__len__") and len(hertz_prof) > 1
+        hertz_prof is not None
+        and fn_prof is not None
+        and hasattr(hertz_prof, "__len__")
+        and len(hertz_prof) > 1
     )
 
     life_damage_total = 0.0
@@ -245,6 +244,7 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
     if has_profiles:
         # Force-gated phase-resolved tribology (high-load bins only)
         import numpy as _np
+
         # Prefer gear model's sliding speed profile when available
         sliding_prof = gear_diag.get("sliding_speed_profile")
         if sliding_prof is not None and hasattr(sliding_prof, "__len__") and len(sliding_prof) > 1:
@@ -281,6 +281,7 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
 
         # 10,000 h life damage (phase-binned Miner accumulation)
         from larrak2.realworld.life_damage import compute_life_damage_10k
+
         # Build lambda profile from the phase-resolved result's per-bin lambda
         lambda_prof = getattr(phase_result, "lambda_profile", None)
         if lambda_prof is None:

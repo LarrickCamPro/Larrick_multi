@@ -110,10 +110,10 @@ def get_material(cls: MaterialClass) -> MaterialProperties:
         KeyError: If material class is not in the database and no dataset covers it.
     """
     from larrak2.cem.registry import get_registry
-    
+
     reg = get_registry()
     table = reg.load_table("material_properties")
-    
+
     # Check if experimental data has been populated
     if "alloy" in table and len(table["alloy"]) > 0:
         for i, alloy_name in enumerate(table["alloy"]):

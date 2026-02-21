@@ -80,31 +80,35 @@ FINISH_PROPERTIES: dict[SurfaceFinishTier, FinishProperties] = {
 
 def get_finish_properties(tier: SurfaceFinishTier) -> FinishProperties:
     """Look up finish properties by tier.
-    
+
     Checks the DatasetRegistry for explicitly loaded experimental data.
     Falls back to FINISH_PROPERTIES if not overridden.
     """
     from larrak2.cem.registry import get_registry
+
     reg = get_registry()
     table = reg.load_table("surface_finish_endurance")
-    
+
     if "finish_method" in table and len(table["finish_method"]) > 0:
         for i, method in enumerate(table["finish_method"]):
             if method == tier.name or method == tier.value:
                 return FinishProperties(
                     Ra_um=float(table.get("Ra_um", [0.0])[i]),
                     Rz_um=float(table.get("Rz_um", [0.0])[i]),
-                    composite_roughness_factor=float(table.get("composite_roughness_factor", [1.0])[i]),
-                    micropitting_life_multiplier=float(table.get("micropitting_life_multiplier", [1.0])[i]),
+                    composite_roughness_factor=float(
+                        table.get("composite_roughness_factor", [1.0])[i]
+                    ),
+                    micropitting_life_multiplier=float(
+                        table.get("micropitting_life_multiplier", [1.0])[i]
+                    ),
                     scuffing_TOF_multiplier=float(table.get("scuffing_TOF_multiplier", [1.0])[i]),
                     cost_multiplier=float(table.get("cost_multiplier", [1.0])[i]),
                 )
-                
+
     return FINISH_PROPERTIES[tier]
 
 
-def effective_composite_roughness(tier: SurfaceFinishTier,
-                                  base_Ra_um: float = 0.50) -> float:
+def effective_composite_roughness(tier: SurfaceFinishTier, base_Ra_um: float = 0.50) -> float:
     """Compute effective composite roughness for a finish tier.
 
     Args:
@@ -119,7 +123,7 @@ def effective_composite_roughness(tier: SurfaceFinishTier,
     Ra = base_Ra_um * props.composite_roughness_factor
     # Composite roughness for two surfaces: σ* = sqrt(Ra1² + Ra2²)
     # Assuming both flanks same finish: σ* = Ra * sqrt(2)
-    return float(Ra * (2.0 ** 0.5))
+    return float(Ra * (2.0**0.5))
 
 
 def tier_from_level(level: float) -> SurfaceFinishTier:

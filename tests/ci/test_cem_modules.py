@@ -3,12 +3,34 @@
 import numpy as np
 import pytest
 
+from larrak2.cem.evaluator import CEMEvalParams, CEMResult, evaluate_cem
+from larrak2.cem.lubrication import (
+    LubricationMode,
+    LubricationParams,
+    cooling_effectiveness,
+    effective_viscosity,
+    mode_from_level,
+)
 from larrak2.cem.material_db import (
     MATERIAL_DB,
     MaterialClass,
     MaterialProperties,
     get_material,
     list_materials,
+)
+from larrak2.cem.post_processing import (
+    CoatingType,
+    HeatTreatment,
+    apply_heat_treat_modifiers,
+    coating_from_level,
+    get_coating,
+)
+from larrak2.cem.registry import get_registry
+from larrak2.cem.surface_finish import (
+    FINISH_PROPERTIES,
+    SurfaceFinishTier,
+    effective_composite_roughness,
+    tier_from_level,
 )
 from larrak2.cem.tribology import (
     LubeRegime,
@@ -18,30 +40,6 @@ from larrak2.cem.tribology import (
     compute_micropitting_safety,
     compute_scuff_margin,
 )
-from larrak2.cem.surface_finish import (
-    FINISH_PROPERTIES,
-    SurfaceFinishTier,
-    effective_composite_roughness,
-    tier_from_level,
-)
-from larrak2.cem.lubrication import (
-    LubricationMode,
-    LubricationParams,
-    cooling_effectiveness,
-    effective_viscosity,
-    mode_from_level,
-)
-from larrak2.cem.post_processing import (
-    CoatingType,
-    HeatTreatment,
-    apply_coating_modifiers,
-    apply_heat_treat_modifiers,
-    coating_from_level,
-    get_coating,
-    get_heat_treat,
-)
-from larrak2.cem.registry import DatasetRegistry, get_registry
-from larrak2.cem.evaluator import CEMEvalParams, CEMResult, evaluate_cem
 
 
 class TestMaterialDB:
@@ -249,6 +247,5 @@ class TestCEMEvaluator:
     def test_evaluate_cem_details(self):
         """Details dict should contain all domain sections."""
         result = evaluate_cem(CEMEvalParams())
-        for key in ["material", "surface", "lubrication", "coating",
-                     "heat_treatment", "tribology"]:
+        for key in ["material", "surface", "lubrication", "coating", "heat_treatment", "tribology"]:
             assert key in result.details, f"Missing detail section: {key}"

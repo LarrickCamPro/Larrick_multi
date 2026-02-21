@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """Optimization-loop real-world surrogates.
 
 Lightweight surrogate representations of material, surface finish,
@@ -10,12 +11,12 @@ ordered feature-importance rankings and feasibility estimates without
 calling the full CEM.
 """
 
+from larrak2.realworld.constraints import compute_realworld_constraints
 from larrak2.realworld.surrogates import (
     DEFAULT_REALWORLD_PARAMS,
     RealWorldSurrogateParams,
     evaluate_realworld_surrogates,
 )
-from larrak2.realworld.constraints import compute_realworld_constraints
 
 __all__ = [
     "DEFAULT_REALWORLD_PARAMS",

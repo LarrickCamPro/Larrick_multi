@@ -49,8 +49,13 @@ def test_constraint_sign_convention():
     assert np.allclose(result.G, scaled_from_diag), "Scaled constraints mismatch diag"
 
     # Verify real-world constraints are present
-    rw_expected = {"rw_lambda_min", "rw_scuff_margin", "rw_micropitting_sf",
-                   "rw_material_temp", "rw_cost_index"}
+    rw_expected = {
+        "rw_lambda_min",
+        "rw_scuff_margin",
+        "rw_micropitting_sf",
+        "rw_material_temp",
+        "rw_cost_index",
+    }
     assert rw_expected.issubset(set(names)), (
         f"Missing real-world constraints: {rw_expected - set(names)}"
     )

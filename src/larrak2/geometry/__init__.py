@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """Geometry generation utilities."""
 
 from larrak2.geometry.generate_stl import (
