@@ -56,12 +56,14 @@ def _cache_key(
     return h.hexdigest()
 
 
+
 def _build_profile_data(
     theta: np.ndarray,
     r_planet: np.ndarray,
     process_params: dict[str, float],
     R_psi: np.ndarray | None = None,
     psi: np.ndarray | None = None,
+    holes: list[list[list[float]]] | None = None,
 ) -> dict[str, Any]:
     """Build the dictionary structure for a single profile input."""
     # Convert polar (theta, r) to cartesian (x, y)
@@ -75,16 +77,72 @@ def _build_profile_data(
 
     outer_poly = np.column_stack((x, y)).tolist()
 
+    # Holes: Default to [] if None. Each hole is list of [x,y].
+    # Input 'holes' is list[list[list[float]]] (Array of Array of Array)
+    # The JSON input 'Holes' expects this format.
+    
     data = {
         "units": "mm",
         "outer": outer_poly,
-        "holes": [],
+        "holes": holes if holes is not None else [],
         "process": process_params,
         "metadata": {
             "created_by": "larrak2_picogk_adapter",
         },
     }
     return data
+
+
+def evaluate_manufacturability_batch(
+    candidates: list[dict[str, Any]],
+    voxel_size_mm: float = 0.1,
+    slab_thickness_mm: float = 14.0,
+    timeout_s: float | None = None,
+) -> list[dict[str, Any]]:
+    # ... (existing code, ensure it passes holes correctly)
+    # The batch function iterates candidates. 
+    # candidates is a list of dicts. 
+    # If candidates have 'holes', we must pass it to _build_profile_data.
+    
+    # We need to verify lines 189-191 in existing file.
+    # It calls _build_profile_data.
+    # We need to check context to see where to patch.
+    # I'll update the whole batch function part that calls _build_profile_data.
+    pass # Replaced below
+
+def evaluate_manufacturability(
+    theta: np.ndarray,
+    r_planet: np.ndarray,
+    wire_d_mm: float = 0.2,
+    overcut_mm: float = 0.05,
+    corner_margin_mm: float = 0.0,
+    min_ligament_mm: float = 0.35,
+    voxel_size_mm: float = 0.01,
+    slab_thickness_mm: float = 14.0,
+    timeout_s: float | None = None,
+    *,
+    R_psi: np.ndarray | None = None,
+    psi: np.ndarray | None = None,
+    holes: list[list[list[float]]] | None = None,
+) -> dict[str, Any]:
+    """Evaluate manufacturability of a gear profile via PicoGK oracle (Single Mode)."""
+
+    # Check cache first
+    # Hash key should include holes? 
+    # If holes affect result, yes.
+    # Current _cache_key does NOT include holes.
+    # I should update _cache_key too?
+    # Or just append holes to key if present.
+    
+    # Implementation Note: I will update _cache_key in a separate chunk or include it here if contiguous.
+    # The file structure is:
+    # 59: _build_profile_data
+    # 90: evaluate_manufacturability_batch
+    # 351: evaluate_manufacturability
+    
+    # I'll utilize MultiReplaceFileContent to hit these spots.
+    pass
+
 
 
 def evaluate_manufacturability_batch(
@@ -187,7 +245,12 @@ def evaluate_manufacturability_batch(
                 )
 
             data = _build_profile_data(
-                c["theta"], c["r_planet"], proc, c.get("R_psi"), c.get("psi")
+                c["theta"], 
+                c["r_planet"], 
+                proc, 
+                c.get("R_psi"), 
+                c.get("psi"),
+                c.get("holes")
             )
             chunk_input.append(data)
 
@@ -361,6 +424,7 @@ def evaluate_manufacturability(
     *,
     R_psi: np.ndarray | None = None,
     psi: np.ndarray | None = None,
+    holes: list[list[list[float]]] | None = None,
 ) -> dict[str, Any]:
     """Evaluate manufacturability of a gear profile via PicoGK oracle (Single Mode)."""
 
@@ -381,6 +445,7 @@ def evaluate_manufacturability(
         "min_ligament_mm": min_ligament_mm,
         "R_psi": R_psi,
         "psi": psi,
+        "holes": holes,
     }
 
     try:

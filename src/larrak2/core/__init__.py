@@ -1,8 +1,10 @@
+from __future__ import annotations
 """Core module — types, encoding, evaluator, utilities."""
 
 from .encoding import (
     Candidate,
     GearParams,
+    RealWorldParams,
     ThermoParams,
     bounds,
     decode_candidate,
@@ -17,6 +19,7 @@ __all__ = [
     "Candidate",
     "ThermoParams",
     "GearParams",
+    "RealWorldParams",
     "decode_candidate",
     "encode_candidate",
     "bounds",

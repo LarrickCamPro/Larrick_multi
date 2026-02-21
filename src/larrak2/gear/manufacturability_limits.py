@@ -39,7 +39,7 @@ class ManufacturingProcessParams:
 
     kerf_mm: float = 0.2
     overcut_mm: float = 0.05
-    min_ligament_mm: float = 0.35
+    min_ligament_mm: float = 0.25
     min_feature_radius_mm: float = 0.2
     max_pressure_angle_deg: float = 35.0
 

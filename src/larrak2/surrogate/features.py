@@ -50,7 +50,7 @@ class FeatureSchema:
 
 def get_gear_schema_v1() -> FeatureSchema:
     """Schema for Gear Surrogate V1."""
-    # Inputs: 8 gear params (base_radius + 7 coeffs)
+    # Inputs: 9 gear params (base_radius + 7 coeffs + face_width)
     feats = [
         "gear_base_radius",
         "gear_c1",
@@ -60,6 +60,7 @@ def get_gear_schema_v1() -> FeatureSchema:
         "gear_c5",
         "gear_c6",
         "gear_c7",
+        "gear_face_width",
     ]
     targets = ["delta_loss"]
     return FeatureSchema(
@@ -88,12 +89,11 @@ def get_scavenge_schema_v1() -> FeatureSchema:
 
 def extract_gear_features_v1(x: np.ndarray) -> np.ndarray:
     """Extract features for Gear model from full decision vector."""
-    # Assuming standard encoding: [Thermo(5), Gear(8)]
-    # Gear is indices 5:13 (inclusive 5, exclusive 13)
-    # Validate size?
-    if len(x) < 13:
+    # Standard encoding v0.3: [Thermo(5), Gear(9), RealWorld(4)]
+    # Gear is indices 5:14 (base_radius + 7 coeffs + face_width)
+    if len(x) < 14:
         raise ValueError(f"Input vector too small for V1 schema: {len(x)}")
-    return x[5:13]
+    return x[5:14]
 
 
 def extract_scavenge_features_v1(x: np.ndarray) -> np.ndarray:

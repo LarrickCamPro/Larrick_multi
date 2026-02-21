@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
@@ -11,7 +12,7 @@ except ImportError:
 
 
 class GearLossNetwork(nn.Module):
-    def __init__(self, input_dim: int = 8, hidden_dim: int = 64, output_dim: int = 3):
+    def __init__(self, input_dim: int = 9, hidden_dim: int = 64, output_dim: int = 3):
         """
         Inputs:
         1. RPM
@@ -53,20 +54,20 @@ class GearSurrogate:
         self.scaler_y = joblib.load(self.model_dir / "scaler_y.pkl")
 
         # Load Model
-        self.model = GearLossNetwork(input_dim=8, hidden_dim=64)
+        self.model = GearLossNetwork(input_dim=9, hidden_dim=64)
         state_dict = torch.load(self.model_dir / "best_model.pt", map_location="cpu")
         self.model.load_state_dict(state_dict)
         self.model.eval()
 
     def predict(
-        self, rpm: float, torque: float, base_radius: float, coeffs: list[float]
+        self, rpm: float, torque: float, base_radius: float, coeffs: list[float], face_width: float
     ) -> dict[str, float]:
         """Predict losses for single operating point."""
         # Ensure coeffs is length 5
         c_pad = list(coeffs) + [0.0] * (5 - len(coeffs))
         c_pad = c_pad[:5]
 
-        row = np.array([[rpm, torque, base_radius, *c_pad]], dtype=np.float32)
+        row = np.array([[rpm, torque, base_radius, *c_pad, face_width]], dtype=np.float32)
 
         # Scale Input
         x_scaled = self.scaler_X.transform(row)

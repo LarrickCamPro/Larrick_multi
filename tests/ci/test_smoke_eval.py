@@ -26,7 +26,7 @@ def test_smoke_eval_shapes():
 
         # Check shapes
         assert result.F.shape == (3,), f"Expected F shape (3,), got {result.F.shape}"
-        assert result.G.shape == (12,), f"Expected G shape (12,), got {result.G.shape}"
+        assert result.G.shape == (17,), f"Expected G shape (17,), got {result.G.shape}"
 
         # Loss should be non-negative
         loss_total = result.diag["metrics"]["loss_total"]
@@ -62,6 +62,19 @@ def test_smoke_eval_diag():
     assert "gear" in result.diag
     assert "timings" in result.diag
     assert "metrics" in result.diag
+    assert "realworld" in result.diag
 
     # Check timings
     assert result.diag["timings"]["total_ms"] > 0
+
+    # Check realworld diagnostics structure
+    rw = result.diag["realworld"]
+    assert "lambda_min" in rw
+    assert "scuff_margin_C" in rw
+    assert "micropitting_safety" in rw
+    assert "feature_importance" in rw
+
+    # Check gear-derived operating conditions
+    gear_d = result.diag["gear"]
+    assert "hertz_stress_max" in gear_d, "Missing hertz_stress_max in gear diag"
+    assert "entrainment_velocity_mean" in gear_d, "Missing entrainment_velocity_mean in gear diag"

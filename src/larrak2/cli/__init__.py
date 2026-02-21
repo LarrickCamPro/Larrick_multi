@@ -23,4 +23,12 @@ def run_single_main(argv: list[str] | None = None) -> int:
     return main(argv)
 
 
-__all__ = ["run_pareto_main", "run_single_main"]
+def validate_main(argv: list[str] | None = None) -> int:
+    """Lazy wrapper for `larrak2.cli.validate.main`."""
+
+    from .validate import main
+
+    return main(argv)
+
+
+__all__ = ["run_pareto_main", "run_single_main", "validate_main"]

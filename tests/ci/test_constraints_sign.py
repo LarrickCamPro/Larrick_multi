@@ -22,7 +22,7 @@ def test_mid_bounds_feasible():
     n_satisfied = np.sum(result.G <= 0)
     assert n_satisfied >= 5, (
         f"Mid-bounds candidate should satisfy most constraints. "
-        f"Satisfied: {n_satisfied}/7, G: {result.G}"
+        f"Satisfied: {n_satisfied}/{len(result.G)}, G: {result.G}"
     )
 
 
@@ -39,14 +39,21 @@ def test_constraint_sign_convention():
     result = evaluate_candidate(x, ctx)
 
     # Verify constraint array length and diag consistency
-    assert len(result.G) == 12, f"Expected 12 constraints, got {len(result.G)}"
+    assert len(result.G) == 17, f"Expected 17 constraints, got {len(result.G)}"
     constraints = result.diag.get("constraints", [])
-    assert len(constraints) == 12, "Constraint diagnostics should list all constraints"
+    assert len(constraints) == 17, "Constraint diagnostics should list all constraints"
     names = [c["name"] for c in constraints]
-    assert len(set(names)) == 12, "Constraint names should be unique"
+    assert len(set(names)) == 17, "Constraint names should be unique"
     # Scaled values should match returned G
     scaled_from_diag = [c["scaled"] for c in constraints]
     assert np.allclose(result.G, scaled_from_diag), "Scaled constraints mismatch diag"
+
+    # Verify real-world constraints are present
+    rw_expected = {"rw_lambda_min", "rw_scuff_margin", "rw_micropitting_sf",
+                   "rw_material_temp", "rw_cost_index"}
+    assert rw_expected.issubset(set(names)), (
+        f"Missing real-world constraints: {rw_expected - set(names)}"
+    )
 
     # Check that constraints are reasonable (not extremely violated)
     max_violation = np.max(result.G)

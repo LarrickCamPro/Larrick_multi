@@ -10,8 +10,10 @@ Flow:
     1. decode_candidate(x) -> Candidate
     2. eval_thermo(params.thermo, ctx) -> ThermoResult
     3. eval_gear(params.gear, i_req_profile, ctx) -> GearResult
-    4. Assemble F (objectives) and G (constraints)
-    5. Return EvalResult with diagnostics
+    4. Machining surrogates -> tooling & tolerance constraints
+    5. Real-world surrogates -> λ, scuffing, micropitting, material, cost
+    6. Assemble F (objectives) and G (constraints)
+    7. Return EvalResult with diagnostics
 """
 
 from __future__ import annotations
@@ -24,6 +26,8 @@ import numpy as np
 from ..core.constants import MODEL_VERSION_GEAR_V1, MODEL_VERSION_THERMO_V1
 from ..core.constraints import (
     GEAR_CONSTRAINTS,
+    MACHINING_CONSTRAINTS,
+    REALWORLD_CONSTRAINTS,
     THERMO_CONSTRAINTS_FID0,
     THERMO_CONSTRAINTS_FID1,
     combine_constraints,
@@ -49,7 +53,7 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
 
     Returns:
         EvalResult with:
-            F: Objectives [efficiency (negated), loss, max_planet_radius]
+            F: Objectives [1-η_comb, 1-η_exp, 1-η_gear] (minimize)
             G: Constraints (G <= 0 feasible)
             diag: Diagnostics dict
     """
@@ -94,10 +98,12 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
     gear_result = eval_gear(candidate.gear, thermo_result.requested_ratio_profile, ctx)
     t_gear = time.perf_counter() - t_gear_start
 
-    # Objectives (minimize) are the three efficiencies:
-    # - F[0] = 1 - η_comb  (chemical -> released heat)
-    # - F[1] = 1 - η_exp   (released heat -> work)
-    # - F[2] = 1 - η_gear  (piston/mech power -> output power)
+    # ===================================================================
+    # Objectives (minimize): three efficiency gaps
+    # ===================================================================
+    #   F[0] = 1 - η_comb  (chemical -> released heat)
+    #   F[1] = 1 - η_exp   (released heat -> work)
+    #   F[2] = 1 - η_gear  (piston/mech power -> output power)
 
     thermo_diag = thermo_result.diag or {}
     Q_chem = float(thermo_diag.get("Q_chem", 0.0))
@@ -148,83 +154,246 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
 
     F = np.array([1.0 - eta_comb, 1.0 - eta_exp, 1.0 - eta_gear], dtype=np.float64)
 
-    # Constraints (G <= 0 feasible) with centralized scaling/naming
-    thermo_names = THERMO_CONSTRAINTS_FID1 if ctx.fidelity >= 1 else THERMO_CONSTRAINTS_FID0
-    gear_names = GEAR_CONSTRAINTS
+    # ===================================================================
+    # Machining Cost & Constraints
+    # ===================================================================
+    from larrak2.surrogate.machining_inference import get_machining_engine
+    from larrak2.machining.cost_model import calculate_tooling_cost, calculate_tolerance_budget
 
-    thermo_G_values: list[float] = list(np.asarray(thermo_result.G, dtype=float))
-    power_balance_raw = 0.0
+    machining_eng = get_machining_engine()
 
-    if ctx.fidelity >= 1:
-        # Operating-point demand constraint:
-        # indicated power must meet demanded output power plus gear loss.
-        # For fidelity=2 (OpenFOAM NN), enforce unconditionally.
-        # For fidelity=1, keep permissive behavior unless NN is explicitly active.
-        if ctx.fidelity >= 2 or bool(thermo_diag.get("openfoam_nn_used", False)):
-            cycles_per_sec = float(ctx.rpm) / 60.0
-            W_for_balance = float(thermo_diag.get("W", thermo_diag.get("w_indicated", 0.0)))
-            P_indicated = max(W_for_balance, 0.0) * max(cycles_per_sec, 0.0)
-            P_required = max(P_out, 0.0) + max(float(loss_corrected), 0.0)
-            power_balance_raw = float(P_required - P_indicated)  # <= 0 feasible
-        else:
-            power_balance_raw = 0.0
-        thermo_G_values.append(power_balance_raw)
+    # Extract surrogate inputs from ratio profile
+    rr = thermo_result.requested_ratio_profile
+    dev = rr - 1.0
+    max_pos = np.max(dev)
+    min_neg = np.min(dev)
+    amp_surr = float(max_pos) if abs(max_pos) > abs(min_neg) else float(min_neg)
 
-    G, constraint_diag = combine_constraints(
-        thermo_G_values,
-        list(np.asarray(gear_result.G, dtype=float)),
-        thermo_names,
-        gear_names,
+    shape_name = str(thermo_diag.get("motion_law", "Sine"))
+    dur_comp = float(candidate.thermo.compression_duration)
+    dur_exp = float(candidate.thermo.expansion_duration)
+
+    # Predict for both flanks, take worst case
+    tm_c, bm_c, hd_c, cr_c = machining_eng.predict(dur_comp, amp_surr, shape_name)
+    tm_e, bm_e, hd_e, cr_e = machining_eng.predict(dur_exp, amp_surr, shape_name)
+
+    t_min_proxy = min(tm_c, tm_e)
+    b_max_survivable = min(bm_c, bm_e)
+    min_hole_diam = min(hd_c, hd_e)
+    min_curvature = min(cr_c, cr_e)
+
+    # Tooling cost
+    tooling_cost_val, is_standard_tool = calculate_tooling_cost(
+        min_feature_size_outer_mm=2.0 * b_max_survivable,
+        min_feature_size_inner_mm=min_hole_diam
     )
 
-    # Feasibility based only on hard constraints
-    hard_mask = np.array([c["kind"] == "hard" for c in constraint_diag], dtype=bool)
-    G_hard = G[hard_mask]
+    # Tolerance budget
+    tol_req, tol_penalty = calculate_tolerance_budget(
+        min_ligament_mm=t_min_proxy,
+        min_curvature_mm=min_curvature,
+        aspect_ratio=2.0,
+        torque_nm=float(ctx.torque),
+        budget_mm=0.5
+    )
 
+    # Tooling penalty (soft constraint for non-standard / expensive tools)
+    tooling_penalty = max(0.0, tooling_cost_val - 2.0) * 0.1
+
+    machining_G = [tol_penalty, tooling_penalty]
+    machining_names = ["tol_budget", "tooling_cost"]
+
+    # ===================================================================
+    # Real-World Checks (tribology, material, surface, lubrication)
+    # ===================================================================
+    from larrak2.realworld.surrogates import (
+        RealWorldSurrogateParams,
+        evaluate_realworld_surrogates,
+        evaluate_realworld_phase_resolved,
+    )
+    from larrak2.realworld.constraints import compute_realworld_constraints
+
+    # Decode real-world params from candidate (part of the decision vector)
+    rw_params = RealWorldSurrogateParams(
+        surface_finish_level=candidate.realworld.surface_finish_level,
+        lube_mode_level=candidate.realworld.lube_mode_level,
+        material_quality_level=candidate.realworld.material_quality_level,
+        coating_level=candidate.realworld.coating_level,
+        oil_flow_level=candidate.realworld.oil_flow_level,
+        oil_supply_temp_level=candidate.realworld.oil_supply_temp_level,
+        evacuation_level=candidate.realworld.evacuation_level,
+    )
+
+    # Operating conditions from gear evaluation
+    gear_diag = gear_result.diag or {}
+    operating_temp_C = float(thermo_diag.get("T_mean_wall", 200.0))
+    pitch_line_vel = omega * candidate.gear.base_radius / 1000.0  # m/s
+
+    t_rw_start = time.perf_counter()
+
+    # Phase-resolved evaluation if gear provides profile arrays
+    hertz_prof = gear_diag.get("hertz_stress_profile")
+    fn_prof = gear_diag.get("fn_profile")
+    has_profiles = (
+        hertz_prof is not None and fn_prof is not None
+        and hasattr(hertz_prof, "__len__") and len(hertz_prof) > 1
+    )
+
+    life_damage_total = 0.0
+    life_damage_diag: dict = {}
+
+    if has_profiles:
+        # Force-gated phase-resolved tribology (high-load bins only)
+        import numpy as _np
+        # Prefer gear model's sliding speed profile when available
+        sliding_prof = gear_diag.get("sliding_speed_profile")
+        if sliding_prof is not None and hasattr(sliding_prof, "__len__") and len(sliding_prof) > 1:
+            sliding_v_prof = _np.asarray(sliding_prof, dtype=_np.float64)
+        else:
+            # Fallback: derive from radius gradient (omega is already rad/s)
+            r_planet = gear_diag.get("r_planet")
+            if r_planet is not None and hasattr(r_planet, "__len__"):
+                sliding_v_prof = omega * _np.abs(_np.gradient(r_planet / 1000.0))
+            else:
+                sliding_v_prof = _np.full_like(hertz_prof, 5.0)
+
+        entrainment_prof = gear_diag.get("entrainment_velocity_profile")
+        if entrainment_prof is None or not hasattr(entrainment_prof, "__len__"):
+            entrainment_prof = _np.full_like(hertz_prof, 15.0)
+
+        phase_result = evaluate_realworld_phase_resolved(
+            rw_params,
+            hertz_stress_profile=_np.asarray(hertz_prof, dtype=_np.float64),
+            sliding_velocity_profile=_np.asarray(sliding_v_prof, dtype=_np.float64),
+            entrainment_velocity_profile=_np.asarray(entrainment_prof, dtype=_np.float64),
+            fn_profile=_np.asarray(fn_prof, dtype=_np.float64),
+            operating_temp_C=operating_temp_C,
+            pitch_line_vel_m_s=pitch_line_vel,
+        )
+        # Use phase-resolved result for constraints
+        rw_result = phase_result
+        phase_diag = {
+            "worst_phase_deg": phase_result.worst_phase_deg,
+            "n_bins_analyzed": phase_result.n_bins_analyzed,
+            "force_threshold_N": phase_result.force_threshold_N,
+            "phase_resolved": True,
+        }
+
+        # 10,000 h life damage (phase-binned Miner accumulation)
+        from larrak2.realworld.life_damage import compute_life_damage_10k
+        # Build lambda profile from the phase-resolved result's per-bin lambda
+        lambda_prof = getattr(phase_result, "lambda_profile", None)
+        if lambda_prof is None:
+            # Approximate: uniform lambda from the worst-case result
+            lambda_prof = _np.full_like(hertz_prof, max(rw_result.lambda_min, 0.1))
+        life_result = compute_life_damage_10k(
+            hertz_stress_profile=_np.asarray(hertz_prof, dtype=_np.float64),
+            lambda_profile=_np.asarray(lambda_prof, dtype=_np.float64),
+            fn_profile=_np.asarray(fn_prof, dtype=_np.float64),
+            rpm=float(ctx.rpm),
+            hunting_level=candidate.realworld.hunting_level,
+        )
+        life_damage_total = life_result["D_total"]
+        life_damage_diag = life_result
+    else:
+        # Scalar fallback (no profiles available)
+        hertz_stress = float(gear_diag.get("hertz_stress_max", 1200.0))
+        sliding_vel = float(gear_diag.get("sliding_speed_max", 5.0))
+        entrainment_vel = float(gear_diag.get("entrainment_velocity_mean", 15.0))
+
+        rw_result = evaluate_realworld_surrogates(
+            rw_params,
+            operating_temp_C=operating_temp_C,
+            hertz_stress_MPa=hertz_stress,
+            sliding_velocity_m_s=sliding_vel,
+            entrainment_velocity_m_s=entrainment_vel,
+            pitch_line_vel_m_s=pitch_line_vel,
+        )
+        phase_diag = {"phase_resolved": False}
+
+    rw_G, rw_names = compute_realworld_constraints(
+        rw_result, operating_temp_C, life_damage_total=life_damage_total
+    )
+    t_rw = time.perf_counter() - t_rw_start
+
+    # ===================================================================
+    # Combine all constraints
+    # ===================================================================
+    # Thermo constraint names from centralized registry
+    thermo_cnames = THERMO_CONSTRAINTS_FID1 if ctx.fidelity >= 1 else THERMO_CONSTRAINTS_FID0
+    thermo_G = list(thermo_result.G)
+
+    # Gear constraints (8 from eval_gear) + machining (2)
+    gear_G_list = list(gear_result.G) + machining_G
+    gear_names_list = list(GEAR_CONSTRAINTS) + machining_names
+
+    # Combine thermo + gear (incl. machining) + realworld constraints
+    G, constraint_diag = combine_constraints(
+        thermo_G=thermo_G,
+        gear_G=gear_G_list,
+        thermo_names=thermo_cnames,
+        gear_names=gear_names_list,
+        realworld_G=rw_G,
+        realworld_names=rw_names,
+    )
+
+    # ===================================================================
     # Diagnostics
+    # ===================================================================
     t_total = time.perf_counter() - t0
-    diag = {
-        "thermo": thermo_result.diag,
-        "gear": gear_result.diag,
+
+    diag: dict = {
+        "thermo": thermo_diag,
+        "gear": gear_result.diag or {},
+        "machining": {
+            "t_min_proxy_mm": t_min_proxy,
+            "b_max_survivable_mm": b_max_survivable,
+            "min_hole_diam_mm": min_hole_diam,
+            "tooling_cost": tooling_cost_val,
+            "is_standard_tool": is_standard_tool,
+            "tol_required_mm": tol_req,
+            "tol_penalty": tol_penalty,
+            "inputs": {"dur_comp": dur_comp, "amp": amp_surr, "shape": shape_name},
+        },
+        "realworld": {
+            "lambda_min": rw_result.lambda_min,
+            "scuff_margin_C": rw_result.scuff_margin_C,
+            "micropitting_safety": rw_result.micropitting_safety,
+            "lube_regime": rw_result.lube_regime,
+            "material_temp_margin_C": rw_result.material_temp_margin_C,
+            "cost_index": rw_result.total_cost_index,
+            "feature_importance": rw_result.feature_importance,
+            "params": {
+                "surface_finish_level": rw_params.surface_finish_level,
+                "lube_mode_level": rw_params.lube_mode_level,
+                "material_quality_level": rw_params.material_quality_level,
+                "coating_level": rw_params.coating_level,
+                "oil_flow_level": rw_params.oil_flow_level,
+                "oil_supply_temp_level": rw_params.oil_supply_temp_level,
+                "evacuation_level": rw_params.evacuation_level,
+                "hunting_level": candidate.realworld.hunting_level,
+            },
+            "life_damage": life_damage_diag,
+            **phase_diag,  # worst_phase_deg, n_bins_analyzed, etc.
+        },
+        "constraints": constraint_diag,
+        "surrogate": surrogate_meta,
         "timings": {
-            "total_ms": t_total * 1000,
             "thermo_ms": t_thermo * 1000,
             "gear_ms": t_gear * 1000,
+            "realworld_ms": t_rw * 1000,
+            "total_ms": t_total * 1000,
         },
         "metrics": {
             "eta_comb": eta_comb,
             "eta_exp": eta_exp,
             "eta_gear": eta_gear,
-            "eta_therm": float(np.clip(eta_comb * eta_exp, 0.0, 1.0)),
-            "eta_total": float(np.clip(eta_comb * eta_exp * eta_gear, 0.0, 1.0)),
-            "efficiency_raw": thermo_result.efficiency,
-            "ratio_error_mean": gear_result.ratio_error_mean,
-            "ratio_error_max": gear_result.ratio_error_max,
-            "max_planet_radius": gear_result.max_planet_radius,
-            "loss_total": float(loss_corrected),
-            "loss_raw": gear_result.loss_total,
-            "power_out": P_out,
-            "power_balance_raw": power_balance_raw,
+            "loss_total": loss_corrected,
+            "dynamic_slope_limit": dynamic_slope_limit,
         },
         "versions": {
-            "thermo_v1": MODEL_VERSION_THERMO_V1,
-            "gear_v1": MODEL_VERSION_GEAR_V1,
-            **surrogate_meta,
-        },
-        "constraints": constraint_diag,
-        "feasible_hard": bool(np.all(G_hard <= 0)) if len(G_hard) else True,
-        "manufacturability_limits": {
-            "durations_deg": rate_env.duration_deg,
-            "max_delta_ratio": rate_env.max_delta_ratio,
-            "max_ratio_slope": rate_env.max_ratio_slope,
-            "applied_ratio_slope_limit": dynamic_slope_limit,
-            "process": {
-                "kerf_mm": process_cfg.kerf_mm,
-                "overcut_mm": process_cfg.overcut_mm,
-                "min_ligament_mm": process_cfg.min_ligament_mm,
-                "min_feature_radius_mm": process_cfg.min_feature_radius_mm,
-                "max_pressure_angle_deg": process_cfg.max_pressure_angle_deg,
-            },
+            "thermo": MODEL_VERSION_THERMO_V1,
+            "gear": MODEL_VERSION_GEAR_V1,
         },
     }
 

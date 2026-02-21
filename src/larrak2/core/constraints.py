@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import numpy as np
 
 # Default per-constraint scaling to keep magnitudes comparable.
+
 DEFAULT_SCALES: dict[str, float] = {
     "thermo_compression_min": 10.0,  # degrees
     "thermo_heat_release_width_min": 10.0,  # degrees
@@ -24,6 +25,15 @@ DEFAULT_SCALES: dict[str, float] = {
     "gear_min_thickness": 5.0,  # placeholder scaling
     "gear_contact_ratio_min": 1.0,
     "gear_self_intersection": 1.0,
+    "tol_budget": 10.0, # weighted penalty
+    "tooling_cost": 1.0, # weighted penalty
+    # Real-world constraints
+    "rw_lambda_min": 1.0,       # dimensionless (λ)
+    "rw_scuff_margin": 100.0,   # °C scale
+    "rw_micropitting_sf": 1.0,  # safety factor
+    "rw_material_temp": 100.0,  # °C scale
+    "rw_cost_index": 5.0,       # cost units
+    "rw_life_damage_10k": 1.0,  # dimensionless (D)
 }
 
 DEFAULT_KIND: dict[str, str] = {
@@ -45,6 +55,16 @@ DEFAULT_KIND: dict[str, str] = {
     "gear_min_thickness": "hard",
     "gear_contact_ratio_min": "soft",
     "gear_self_intersection": "soft",
+    # Machining
+    "tol_budget": "hard", # Per user requirement ("minimum of 0.5")
+    "tooling_cost": "soft",
+    # Real-world
+    "rw_lambda_min": "hard",       # Must achieve full EHL
+    "rw_scuff_margin": "hard",     # Must have positive margin
+    "rw_micropitting_sf": "hard",  # Must exceed 1.0
+    "rw_material_temp": "hard",    # Must survive service temp
+    "rw_cost_index": "soft",       # Cost is a soft preference
+    "rw_life_damage_10k": "hard",  # Must survive 10,000 h
 }
 
 DEFAULT_REASON: dict[str, str] = {
@@ -64,6 +84,15 @@ DEFAULT_REASON: dict[str, str] = {
     "gear_min_thickness": "tooth thickness below minimum",
     "gear_contact_ratio_min": "contact ratio below 1.0",
     "gear_self_intersection": "psi mapping non-monotonic (self-intersection risk)",
+    "tol_budget": "tolerance budget violation (requires tighter tolerances than allowed)",
+    "tooling_cost": "excessive tooling cost (requires non-standard/micro tools)",
+    # Real-world
+    "rw_lambda_min": "specific film thickness below full EHL target (λ < 1.0)",
+    "rw_scuff_margin": "scuffing temperature margin insufficient",
+    "rw_micropitting_sf": "micropitting safety factor below 1.0",
+    "rw_material_temp": "operating temperature exceeds material service limit",
+    "rw_cost_index": "combined material/surface/coating cost exceeds threshold",
+    "rw_life_damage_10k": "accumulated damage exceeds 10,000 h service life",
 }
 
 
@@ -93,11 +122,28 @@ GEAR_CONSTRAINTS = [
     "gear_self_intersection",
 ]
 
+MACHINING_CONSTRAINTS = [
+    "tol_budget",
+    "tooling_cost",
+]
+
+REALWORLD_CONSTRAINTS = [
+    "rw_lambda_min",
+    "rw_scuff_margin",
+    "rw_micropitting_sf",
+    "rw_material_temp",
+    "rw_cost_index",
+    "rw_life_damage_10k",
+]
 
 def get_constraint_names(fidelity: int) -> list[str]:
     """Return ordered constraint names for a given fidelity."""
     thermo = THERMO_CONSTRAINTS_FID1 if fidelity >= 1 else THERMO_CONSTRAINTS_FID0
-    return list(thermo) + list(GEAR_CONSTRAINTS)
+    return (
+        list(thermo) + list(GEAR_CONSTRAINTS)
+        + list(MACHINING_CONSTRAINTS) + list(REALWORLD_CONSTRAINTS)
+    )
+
 
 
 def get_constraint_scales() -> dict[str, float]:
@@ -123,8 +169,10 @@ def combine_constraints(
     thermo_names: Sequence[str],
     gear_names: Sequence[str],
     scale_overrides: Mapping[str, float] | None = None,
+    realworld_G: Sequence[float] | None = None,
+    realworld_names: Sequence[str] | None = None,
 ) -> tuple[np.ndarray, list[dict]]:
-    """Merge thermo + gear constraints with scaling and reason codes.
+    """Merge thermo + gear + realworld constraints with scaling and reason codes.
 
     Returns:
         G_scaled: np.ndarray, concatenated constraints (scaled) with sign convention G<=0 feasible.
@@ -134,6 +182,10 @@ def combine_constraints(
 
     all_names = list(thermo_names) + list(gear_names)
     all_raw = list(thermo_G) + list(gear_G)
+
+    if realworld_G is not None and realworld_names is not None:
+        all_names.extend(realworld_names)
+        all_raw.extend(realworld_G)
 
     if len(all_names) != len(all_raw):
         raise ValueError(
