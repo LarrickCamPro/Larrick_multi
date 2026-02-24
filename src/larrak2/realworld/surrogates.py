@@ -23,12 +23,12 @@ from larrak2.cem.lubrication import (
     mode_from_level,
 )
 from larrak2.cem.material_db import MaterialClass, get_material
+from larrak2.cem.material_snapping import get_soft_selected_routes
 from larrak2.cem.post_processing import (
     apply_coating_modifiers,
     coating_from_level,
     get_coating,
 )
-from larrak2.cem.material_snapping import get_soft_selected_routes
 from larrak2.cem.surface_finish import (
     effective_composite_roughness,
     get_finish_properties,
@@ -219,7 +219,9 @@ def evaluate_realworld_surrogates(
         importance["material"] = (
             max(0.0, (50.0 - material_temp_margin) / 10.0) if material_temp_margin < 80.0 else 0.3
         )
-        importance["coating"] = max(0.0, (100.0 - scuff_margin) / 20.0) if scuff_margin < 150.0 else 0.2
+        importance["coating"] = (
+            max(0.0, (100.0 - scuff_margin) / 20.0) if scuff_margin < 150.0 else 0.2
+        )
         ranking = sorted(importance.items(), key=lambda kv: kv[1], reverse=True)
 
         _lambda_mins.append(lambda_min)
@@ -390,7 +392,9 @@ def evaluate_realworld_phase_resolved(
         importance["material"] = (
             max(0.0, (50.0 - material_temp_margin) / 10.0) if material_temp_margin < 80.0 else 0.3
         )
-        importance["coating"] = max(0.0, (100.0 - scuff_margin) / 20.0) if scuff_margin < 150.0 else 0.2
+        importance["coating"] = (
+            max(0.0, (100.0 - scuff_margin) / 20.0) if scuff_margin < 150.0 else 0.2
+        )
         ranking = sorted(importance.items(), key=lambda kv: kv[1], reverse=True)
 
         _temp_margins.append(material_temp_margin)

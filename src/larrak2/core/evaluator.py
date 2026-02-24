@@ -94,12 +94,14 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
     # Resolve material properties for gear eval (E' requires material DB)
     from dataclasses import replace
 
-    from ..cem.material_db import get_material, MaterialClass
+    from ..cem.material_db import MaterialClass, get_material
     from ..cem.material_snapping import get_soft_selected_routes
     from ..realworld.surrogates import _material_from_level
 
     # Default to 200C gear bulk filter temp unless we have thermo
-    gear_bulk_filter_C = float(thermo_result.diag.get("T_wall_C", 200.0)) if thermo_result.diag else 200.0
+    gear_bulk_filter_C = (
+        float(thermo_result.diag.get("T_wall_C", 200.0)) if thermo_result.diag else 200.0
+    )
 
     if candidate.realworld.material_state is not None:
         min_snap_dist, routes_weights = get_soft_selected_routes(
@@ -295,8 +297,8 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
             pitch_line_vel_m_s=pitch_line_vel,
         )
         # 10,000 h life damage (phase-binned Miner accumulation)
-        from larrak2.realworld.life_damage import compute_life_damage_10k, get_sigma_ref_for_route
         from larrak2.cem.registry import get_registry
+        from larrak2.realworld.life_damage import compute_life_damage_10k, get_sigma_ref_for_route
 
         reg = get_registry()
         md_table = reg.load_table("route_metadata")
@@ -307,25 +309,35 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
         for rid, alpha in routes_weights:
             try:
                 rid_idx = list(md_table["route_id"]).index(rid)
-                cleanliness = float(md_table.get("cleanliness_grade_proxy", [1.0]*len(md_table["route_id"]))[rid_idx])
+                cleanliness = float(
+                    md_table.get("cleanliness_grade_proxy", [1.0] * len(md_table["route_id"]))[
+                        rid_idx
+                    ]
+                )
             except ValueError:
                 cleanliness = 1.0
 
             # Override parameters scalar representation for internal physics call
             from dataclasses import replace
+
             rw_params_override = replace(
-                rw_params, 
-                material_state=None, 
-                material_quality_level=float(np.clip(
-                    dict([
-                        ("AISI_9310", 0.0), 
-                        ("Pyrowear_53", 0.25), 
-                        ("CBS50_NiL", 0.5), 
-                        ("M50NiL", 0.75), 
-                        ("Ferrium_C64", 1.0)
-                    ]).get(rid, 0.5), 
-                    0.0, 1.0
-                ))
+                rw_params,
+                material_state=None,
+                material_quality_level=float(
+                    np.clip(
+                        dict(
+                            [
+                                ("AISI_9310", 0.0),
+                                ("Pyrowear_53", 0.25),
+                                ("CBS50_NiL", 0.5),
+                                ("M50NiL", 0.75),
+                                ("Ferrium_C64", 1.0),
+                            ]
+                        ).get(rid, 0.5),
+                        0.0,
+                        1.0,
+                    )
+                ),
             )
 
             phase_res_val = evaluate_realworld_phase_resolved(
@@ -339,7 +351,7 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
             )
 
             _sigma_ref = get_sigma_ref_for_route(rid, cleanliness_proxy=cleanliness)
-            
+
             lambda_prof = getattr(phase_res_val, "lambda_profile", None)
             if lambda_prof is None:
                 lambda_prof = _np.full_like(hertz_prof, max(phase_res_val.lambda_min, 0.1))
@@ -359,6 +371,7 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
 
         # Safe Constraint Aggregation over explicit top-k routes
         from larrak2.realworld.surrogates import PhaseResolvedResult
+
         rw_result = PhaseResolvedResult(
             lambda_min=min(m.lambda_min for a, m in _rw_results),
             scuff_margin_C=min(m.scuff_margin_C for a, m in _rw_results),
@@ -381,7 +394,7 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
             "D_planet": max(lr.get("D_planet", 0) for a, lr in _life_damages),
             "N_set": candidate.realworld.hunting_level,
         }
-        
+
         phase_diag = {
             "worst_phase_deg": rw_result.worst_phase_deg,
             "n_bins_analyzed": rw_result.n_bins_analyzed,
@@ -405,8 +418,8 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
         phase_diag = {"phase_resolved": False}
 
     rw_G, rw_names = compute_realworld_constraints(
-        rw_result, 
-        operating_temp_C=operating_temp_C, 
+        rw_result,
+        operating_temp_C=operating_temp_C,
         life_damage_total=life_damage_total,
         min_snap_distance=min_snap_dist,
     )

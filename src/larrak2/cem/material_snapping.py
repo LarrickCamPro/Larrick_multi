@@ -113,9 +113,7 @@ def get_soft_selected_routes(
         valid_routes.append(r)
 
     if not valid_routes:
-        raise ValueError(
-            f"No routes available with max_service_temp_C >= {gear_bulk_temp_C} °C"
-        )
+        raise ValueError(f"No routes available with max_service_temp_C >= {gear_bulk_temp_C} °C")
 
     # Compute distances
     scored = []

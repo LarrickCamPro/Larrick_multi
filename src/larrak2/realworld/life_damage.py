@@ -145,8 +145,7 @@ def _load_limit_stress_table() -> dict[str, float]:
                         f"Allowables tables must have unique route_ids."
                     )
                 logger.warning(
-                    "Duplicate route_id '%s' in limit_stress_numbers — "
-                    "last value wins",
+                    "Duplicate route_id '%s' in limit_stress_numbers — last value wins",
                     key,
                 )
             mapping[key] = float(table["sigma_Hlim_MPa"][i])
@@ -191,17 +190,16 @@ def get_sigma_ref_for_route(route_id: str, cleanliness_proxy: float = 1.0) -> fl
     if route_id not in mapping:
         if os.environ.get("LARRAK_STRICT_DATA", "0") == "1":
             raise ValueError(
-                f"Route '{route_id}' missing from limit_stress_numbers "
-                f"and LARRAK_STRICT_DATA=1."
+                f"Route '{route_id}' missing from limit_stress_numbers and LARRAK_STRICT_DATA=1."
             )
         logger.warning("Route '%s' not in limit_stress_numbers; using baseline", route_id)
         return _SIGMA_REF_MPA
 
     sigma_hlim = mapping[route_id]
-    
+
     # Apply cleanliness scaling (0.0 -> 0.8x, 1.0 -> 1.2x)
     f_cleanliness = 0.8 + 0.4 * float(np.clip(cleanliness_proxy, 0.0, 1.0))
-    
+
     return _SIGMA_REF_MPA * (sigma_hlim / sigma_hlim_baseline) * f_cleanliness
 
 

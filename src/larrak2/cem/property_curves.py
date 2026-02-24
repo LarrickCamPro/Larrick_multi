@@ -118,8 +118,7 @@ def get_property_at_temp(
         if T_C == temps[0]:
             return float(vals[0])
         raise ValueError(
-            f"Only one data point at {temps[0]}°C for {key}, "
-            f"cannot interpolate to {T_C}°C."
+            f"Only one data point at {temps[0]}°C for {key}, cannot interpolate to {T_C}°C."
         )
 
     # Linear interpolation

@@ -4,21 +4,21 @@ import os
 import tempfile
 from pathlib import Path
 
-import numpy as np
 import pytest
 
-from larrak2.cem.registry import DatasetRegistry, DatasetDescriptor, get_registry
+from larrak2.cem.material_db import MaterialClass
 from larrak2.cem.property_curves import (
     get_property_at_temp,
+)
+from larrak2.cem.property_curves import (
     invalidate_cache as invalidate_curves_cache,
 )
+from larrak2.cem.registry import DatasetDescriptor, DatasetRegistry, get_registry
 from larrak2.realworld.life_damage import (
+    _SIGMA_REF_MPA,
     get_sigma_ref_for_route,
     invalidate_limit_stress_cache,
-    _SIGMA_REF_MPA,
 )
-from larrak2.cem.material_db import MaterialClass
-
 
 # ---------------------------------------------------------------
 # Schema validation

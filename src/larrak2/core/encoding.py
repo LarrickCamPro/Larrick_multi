@@ -129,7 +129,7 @@ class RealWorldParams:
 
     def to_array(self) -> np.ndarray:
         """Convert to flat array.
-        
+
         If material_state is present, prepends the -999.0 version sentinel
         and packs the 4D state vector (length 12). Otherwise falls back to
         legacy 1D format (length 8).
@@ -181,7 +181,7 @@ class RealWorldParams:
                 oil_supply_temp_level=float(arr[10]),
                 evacuation_level=float(arr[11]),
             )
-            
+
         # Version 1.0 Legacy Check
         return cls(
             surface_finish_level=float(arr[0]),

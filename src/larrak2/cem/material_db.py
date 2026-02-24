@@ -138,8 +138,20 @@ def get_material(cls: MaterialClass) -> MaterialProperties:
                     case_hardness_HRC=float(table["case_hardness_HRC"][i]),
                     core_hardness_HRC=float(table["core_hardness_HRC"][i]),
                     fatigue_life_multiplier=float(table["fatigue_life_multiplier"][i]),
-                    youngs_modulus_GPa=float(table.get("youngs_modulus_GPa", [MATERIAL_DB[cls].youngs_modulus_GPa])[min(i, len(table.get("youngs_modulus_GPa", [])) - 1)] if len(table.get("youngs_modulus_GPa", [])) > 0 else MATERIAL_DB[cls].youngs_modulus_GPa),
-                    poissons_ratio=float(table.get("poissons_ratio", [MATERIAL_DB[cls].poissons_ratio])[min(i, len(table.get("poissons_ratio", [])) - 1)] if len(table.get("poissons_ratio", [])) > 0 else MATERIAL_DB[cls].poissons_ratio),
+                    youngs_modulus_GPa=float(
+                        table.get("youngs_modulus_GPa", [MATERIAL_DB[cls].youngs_modulus_GPa])[
+                            min(i, len(table.get("youngs_modulus_GPa", [])) - 1)
+                        ]
+                        if len(table.get("youngs_modulus_GPa", [])) > 0
+                        else MATERIAL_DB[cls].youngs_modulus_GPa
+                    ),
+                    poissons_ratio=float(
+                        table.get("poissons_ratio", [MATERIAL_DB[cls].poissons_ratio])[
+                            min(i, len(table.get("poissons_ratio", [])) - 1)
+                        ]
+                        if len(table.get("poissons_ratio", [])) > 0
+                        else MATERIAL_DB[cls].poissons_ratio
+                    ),
                     cost_tier=int(table["cost_tier"][i]),
                 )
 
