@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("picogk_manufact")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+da6e40afe2de735de44f7bb4ead85b9895c3da84")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7f14ff488f89fd0a0989081946120822ea8e2871")]
 [assembly: System.Reflection.AssemblyProductAttribute("picogk_manufact")]
 [assembly: System.Reflection.AssemblyTitleAttribute("picogk_manufact")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

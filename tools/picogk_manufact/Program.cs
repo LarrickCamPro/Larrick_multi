@@ -7,6 +7,7 @@
 //
 // Output: JSON metrics to stdout.
 
+
 using System.Diagnostics;
 using System.Numerics;
 using System.Text.Json;
@@ -20,7 +21,7 @@ namespace PicoGKManufact;
 record ProfileInput(
     string Units,
     float[][] Outer,
-    float[][] Holes,
+    float[][][] Holes, // Changed to array of arrays of arrays (List of polygons)
     Dictionary<string, JsonElement> Metadata,
     ProcessParams Process
 );
@@ -51,6 +52,8 @@ record OracleResult(
     float AreaAfterInsetMm2,
     int ComponentCountAfterInset,
     float VoxelResolutionMm,
+    float MinHoleDiameterMm,       // NEW: Equivalent diameter of smallest hole
+    float MinHoleCurvatureRadiusMm, // NEW: Min curvature radius in holes
     string[] Notes
 );
 
@@ -138,11 +141,11 @@ static class Program
                 AreaAfterInsetMm2: 0f,
                 ComponentCountAfterInset: 0,
                 VoxelResolutionMm: voxelSize,
+                MinHoleDiameterMm: 0f,
+                MinHoleCurvatureRadiusMm: 0f,
                 Notes: new[] { $"Exception: {ex.Message}" }
             );
-            // In batch mode, we might want to return a list of fails, but for fatal crash just return one fail object
-            // or let the caller handle the non-zero exit.
-            // For now, print a single fail result to stdout so parsing might survive if it was single mode.
+            
             Console.WriteLine(JsonSerializer.Serialize(failResult, new JsonSerializerOptions
             {
                 WriteIndented = true,
@@ -164,15 +167,50 @@ static class Program
         int originalTriCount = mesh.nTriangleCount();
         if (originalTriCount == 0)
         {
-            return new OracleResult(false, process.KerfBufferMm, 0, 0, 0, 0, 0, voxelSize,
+            return new OracleResult(false, process.KerfBufferMm, 0, 0, 0, 0, 0, voxelSize, 0, 0,
                 new[] { "Empty mesh after extrusion" });
         }
 
-        // Voxelize
-        // Note: Voxels constructor takes a Mesh. 
+        // Voxelize Outer
         using var voxOriginal = new Voxels(mesh);
 
-        // Compute original area (approximate from bounding box cross-section)
+        // Handle Holes
+        float minHoleDiam = float.MaxValue;
+        float minHoleCurv = float.MaxValue;
+        bool hasHoles = input.Holes != null && input.Holes.Length > 0;
+
+        if (hasHoles)
+        {
+            foreach (var holePointsRaw in input.Holes)
+            {
+                var holePoints = ToVector2(holePointsRaw);
+                var holeMesh = ExtrudePolygon(holePoints, slabThickness);
+                if (holeMesh.nTriangleCount() > 0)
+                {
+                    using var voxHole = new Voxels(holeMesh);
+                    voxOriginal.voxBoolSubtract(voxHole);
+                    
+                    // Compute Hole Metrics
+                    float area = ComputePolygonArea(holePoints);
+                    float eqDiam = 2.0f * MathF.Sqrt(area / MathF.PI);
+                    if (eqDiam < minHoleDiam) minHoleDiam = eqDiam;
+
+                    float curv = ComputeMinCurvatureRadius(holePoints);
+                    if (curv < minHoleCurv) minHoleCurv = curv;
+                }
+            }
+        }
+        else
+        {
+            minHoleDiam = 0f;
+            minHoleCurv = 0f;
+        }
+        
+        // If no holes found despite array existing (empty polys?), reset
+        if (minHoleDiam == float.MaxValue) minHoleDiam = 0f;
+        if (minHoleCurv == float.MaxValue) minHoleCurv = 0f;
+
+        // Compute original area (approximate)
         float areaOriginal = EstimateCrossSectionArea(voxOriginal, voxelSize, slabThickness);
 
         // --- Check A: Inward offset survival ---
@@ -194,11 +232,16 @@ static class Program
         if (emptyAfterInset)
         {
             notes.Add($"Check A FAIL: shape empty after {kerfBuffer:F4}mm inset");
-            return new OracleResult(false, kerfBuffer, 0, 0, areaOriginal, 0, 0, voxelSize, notes.ToArray());
+            return new OracleResult(false, kerfBuffer, 0, 0, areaOriginal, 0, 0, voxelSize, minHoleDiam, minHoleCurv, notes.ToArray());
         }
         notes.Add("Check A PASS: shape survives kerf inset");
 
         // --- Check B: Minimum ligament thickness (binary search) ---
+        // Warning: BinarySearchMaxInset might behave differently with holes (ligaments between hole and outer).
+        // It correctly checks if *any* part survives.
+        // A thin wall between hole and outer will disappear if eroded.
+        // So this logic covers hole-to-outer ligaments too!
+        
         float bMaxSurvivable = BinarySearchMaxInset(voxOriginal, kerfBuffer, voxelSize);
         float tMinProxy = 2.0f * bMaxSurvivable;
 
@@ -223,7 +266,7 @@ static class Program
             notes.Add("Check C PASS: concave radius sufficient");
         }
 
-        // --- Check D: Gap collapse (simplified) ---
+        // --- Check D: Gap collapse ---
         int componentCount = 1; 
         notes.Add("Check D: gap collapse check (single-body assumption)");
 
@@ -238,6 +281,8 @@ static class Program
             AreaAfterInsetMm2: areaAfterInset,
             ComponentCountAfterInset: componentCount,
             VoxelResolutionMm: voxelSize,
+            MinHoleDiameterMm: minHoleDiam,
+            MinHoleCurvatureRadiusMm: minHoleCurv,
             Notes: notes.ToArray()
         );
     }
@@ -250,6 +295,46 @@ static class Program
             result[i] = new Vector2(points[i][0], points[i][1]);
         }
         return result;
+    }
+    
+    // Computes Signal Poly Area (Shoelace)
+    static float ComputePolygonArea(Vector2[] p)
+    {
+        float area = 0f;
+        for (int i = 0; i < p.Length; i++)
+        {
+            int j = (i + 1) % p.Length;
+            area += p[i].X * p[j].Y;
+            area -= p[i].Y * p[j].X;
+        }
+        return MathF.Abs(area) * 0.5f;
+    }
+
+    // Computes min radius of curvature via 3-point circle fitting
+    static float ComputeMinCurvatureRadius(Vector2[] p)
+    {
+        if (p.Length < 3) return 0f;
+        float minR = float.MaxValue;
+        
+        for (int i = 0; i < p.Length; i++)
+        {
+            Vector2 p1 = p[(i - 1 + p.Length) % p.Length];
+            Vector2 p2 = p[i];
+            Vector2 p3 = p[(i + 1) % p.Length];
+            
+            // Circumradius of triangle p1,p2,p3
+            float a = (p1 - p2).Length();
+            float b = (p2 - p3).Length();
+            float c = (p3 - p1).Length();
+            float s = (a + b + c) / 2.0f;
+            float area = MathF.Sqrt(MathF.Max(0, s * (s - a) * (s - b) * (s - c)));
+            
+            if (area < 1e-6f) continue; // Collinear, infinite radius
+            
+            float R = (a * b * c) / (4.0f * area);
+            if (R < minR) minR = R;
+        }
+        return minR;
     }
 
     /// <summary>

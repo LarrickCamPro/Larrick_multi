@@ -61,3 +61,8 @@
 2026-02-15 21:25:22,000 - run_full_doe - INFO - LARRAK_PICOGK_TIMEOUT: 600
 2026-02-15 21:25:22,000 - run_full_doe - INFO - Computing limits (this may take time)...
 2026-02-15 21:25:22,110 - larrak2.gear.manufacturability_limits - INFO - Phase 2: Running PicoGK batch for 3929 candidates
+2026-02-15 22:20:23,275 - run_full_doe - INFO - Starting Full Manufacturability DOE
+2026-02-15 22:20:23,275 - run_full_doe - INFO - LARRAK_PICOGK_ORACLE: 1
+2026-02-15 22:20:23,275 - run_full_doe - INFO - LARRAK_PICOGK_TIMEOUT: 600
+2026-02-15 22:20:23,275 - run_full_doe - INFO - Computing limits (this may take time)...
+2026-02-15 22:20:23,390 - larrak2.gear.manufacturability_limits - INFO - Phase 2: Running PicoGK batch for 3929 candidates

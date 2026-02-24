@@ -19,7 +19,7 @@ allowed_top_level:
   - tools
 
   # Documentation & Tests
-  - docs
+  - Docs
   - tests
 
   # Config & Dotfiles (explicit allowlist for clarity, though script might ignore dotfiles if configured)
