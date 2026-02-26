@@ -9,6 +9,11 @@ from typing import Any
 import joblib
 import numpy as np
 
+from larrak2.core.artifact_paths import (
+    DEFAULT_INITIALIZATION_SURROGATE_DIR,
+    assert_not_legacy_models_path,
+)
+
 log = logging.getLogger(__name__)
 
 
@@ -22,8 +27,16 @@ class VoxelSurrogateAdapter:
         "stroke_check": "stroke_check.joblib",
     }
 
-    def __init__(self, model_dir: str | Path = "data/models/surrogate") -> None:
-        self.model_dir = Path(model_dir)
+    def __init__(
+        self,
+        model_dir: str | Path = str(DEFAULT_INITIALIZATION_SURROGATE_DIR),
+    ) -> None:
+        self.model_dir = Path(
+            assert_not_legacy_models_path(
+                model_dir,
+                purpose="Initialization surrogate model directory",
+            )
+        )
         self.models: dict[str, Any] = {}
         self._load_models()
 

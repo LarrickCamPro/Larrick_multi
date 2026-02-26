@@ -22,6 +22,10 @@ from typing import Any
 import numpy as np
 
 from ...core.constants import N_THETA, P_ATM, RATIO_SLOPE_LIMIT_FID1
+from ...core.artifact_paths import (
+    DEFAULT_OPENFOAM_NN_ARTIFACT,
+    assert_not_legacy_models_path,
+)
 from ...core.encoding import ThermoParams
 from ...core.types import BreathingConfig, EvalContext
 from ...thermo.motionlaw import _ratio_profile_stats
@@ -351,9 +355,9 @@ def v1_eval_thermo_forward(
     if ctx.fidelity >= 2:
         model_path = str(ctx.openfoam_model_path).strip() if ctx.openfoam_model_path else ""
         if not model_path:
-            model_path = os.environ.get(
-                "LARRAK2_OPENFOAM_NN_PATH", "models/openfoam_nn/openfoam_breathing.pt"
-            )
+            env_path = str(os.environ.get("LARRAK2_OPENFOAM_NN_PATH", "")).strip()
+            model_path = env_path if env_path else str(DEFAULT_OPENFOAM_NN_ARTIFACT)
+        model_path = str(assert_not_legacy_models_path(model_path, purpose="OpenFOAM NN artifact"))
         mp = Path(model_path)
         if not mp.exists():
             raise FileNotFoundError(

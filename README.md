@@ -47,6 +47,15 @@ We enforce a strict layout to maintain modularity.
 
 - Do not create root-level folders like `logs`, `results`, `temp`. Use `outputs/` or `data_temp/`.
 - All source code must live in `src/`.
+- Terminal-generated artifacts should be written under `outputs/`, categorized by source/purpose:
+  - `outputs/artifacts/surrogates/openfoam_nn/`
+  - `outputs/artifacts/surrogates/calculix_nn/`
+  - `outputs/artifacts/surrogates/gear_loss_nn/`
+  - `outputs/artifacts/surrogates/v1_gbr/`
+  - `outputs/artifacts/surrogates/hifi/`
+  - `outputs/artifacts/surrogates/initialization_voxel/`
+- Legacy `models/` paths are deprecated. Runtime model reads/writes are strict outputs-only and will fail if pointed at `models/`.
+- Artifact layout/migration policy lives in `src/larrak2/artifacts/model_layout.py`.
 
 ---
 
@@ -130,7 +139,7 @@ python -m larrak2.cli.run_pareto --fidelity 1 --pop 64 --gen 50
 ```bash
 # 1) Train NN surrogates (standalone pre-job)
 larrak-run train-surrogates --single-condition \
-  --openfoam-data data/openfoam_doe/results.jsonl \
+  --openfoam-data outputs/openfoam_doe/results.jsonl \
   --calculix-data data/calculix_doe/train.npz
 
 # 2) Run dress rehearsal (no NN training stage)

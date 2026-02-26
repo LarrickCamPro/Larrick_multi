@@ -23,15 +23,15 @@ from pathlib import Path
 def main() -> int:
     p = argparse.ArgumentParser(description="Run OpenFOAM pipeline validation gates")
     p.add_argument("--n-sanity", type=int, default=10)
-    p.add_argument("--doe-jsonl", type=str, default="data/openfoam_doe/results.jsonl")
-    p.add_argument("--doe-outdir", type=str, default="data/openfoam_doe")
+    p.add_argument("--doe-jsonl", type=str, default="outputs/openfoam_doe/results.jsonl")
+    p.add_argument("--doe-outdir", type=str, default="outputs/openfoam_doe")
     p.add_argument("--runs-root", type=str, default="runs/openfoam_doe")
     p.add_argument(
         "--template", type=str, default="openfoam_templates/opposed_piston_rotary_valve_case"
     )
     p.add_argument("--solver", type=str, default="rhoPimpleFoam")
     p.add_argument("--train-epochs", type=int, default=200)
-    p.add_argument("--artifact-outdir", type=str, default="models/openfoam_nn")
+    p.add_argument("--artifact-outdir", type=str, default="outputs/artifacts/surrogates/openfoam_nn")
     p.add_argument("--artifact-name", type=str, default="openfoam_breathing.pt")
     args = p.parse_args()
 

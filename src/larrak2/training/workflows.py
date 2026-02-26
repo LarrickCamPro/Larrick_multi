@@ -7,6 +7,8 @@ from pathlib import Path
 
 import numpy as np
 
+from larrak2.core.artifact_paths import assert_not_legacy_models_write
+
 # OpenFOAM Imports
 try:
     from larrak2.surrogate.openfoam_nn import (
@@ -55,12 +57,17 @@ except ImportError:
     pass
 
 
+def _resolve_artifact_outdir(raw: str | Path, *, purpose: str) -> Path:
+    outdir = assert_not_legacy_models_write(raw, purpose=purpose)
+    outdir.mkdir(parents=True, exist_ok=True)
+    return outdir
+
+
 def train_openfoam_workflow(args: argparse.Namespace):
     """Workflow for OpenFOAM NN training."""
     print("Starting OpenFOAM NN Training Workflow...")
     data_path = Path(args.data)
-    outdir = Path(args.outdir)
-    outdir.mkdir(parents=True, exist_ok=True)
+    outdir = _resolve_artifact_outdir(args.outdir, purpose="OpenFOAM surrogate artifact")
 
     # 1. Load Data
     suf = data_path.suffix.lower()
@@ -109,8 +116,7 @@ def train_calculix_workflow(args: argparse.Namespace):
     """Workflow for CalculiX NN training."""
     print("Starting CalculiX NN Training Workflow...")
     data_path = Path(args.data)
-    outdir = Path(args.outdir)
-    outdir.mkdir(parents=True, exist_ok=True)
+    outdir = _resolve_artifact_outdir(args.outdir, purpose="CalculiX surrogate artifact")
 
     suf = data_path.suffix.lower()
     if suf == ".json":
@@ -161,6 +167,8 @@ def train_gear_nn_workflow(args: argparse.Namespace):
     print("Starting Gear NN Training Workflow...")
     import pandas as pd
 
+    outdir = _resolve_artifact_outdir(args.outdir, purpose="Gear-loss NN artifact")
+
     df = pd.read_parquet(args.data)
 
     # Columns logic (from Phase 2)
@@ -189,7 +197,7 @@ def train_gear_nn_workflow(args: argparse.Namespace):
         output_dim=len(available_y),
     )
 
-    train_proch_basic(model=model, X=X, y=y, output_dir=args.outdir, epochs=args.epochs, lr=args.lr)
+    train_proch_basic(model=model, X=X, y=y, output_dir=str(outdir), epochs=args.epochs, lr=args.lr)
     print("Gear NN training complete.")
 
 
@@ -197,8 +205,7 @@ def train_scavenge_gbr_workflow(args: argparse.Namespace):
     """Workflow for Scavenge GBR training."""
     print("Starting Scavenge GBR Training Workflow...")
     data_path = Path(args.data)
-    outdir = Path(args.outdir)
-    outdir.mkdir(parents=True, exist_ok=True)
+    outdir = _resolve_artifact_outdir(args.outdir, purpose="Scavenge GBR artifact")
 
     with np.load(data_path) as data:
         X = data["X"]
@@ -230,8 +237,7 @@ def train_gear_gbr_workflow(args: argparse.Namespace):
     """Workflow for Gear GBR training."""
     print("Starting Gear GBR Training Workflow...")
     data_path = Path(args.data)
-    outdir = Path(args.outdir)
-    outdir.mkdir(parents=True, exist_ok=True)
+    outdir = _resolve_artifact_outdir(args.outdir, purpose="Gear GBR artifact")
 
     with np.load(data_path) as data:
         X = data["X"]
@@ -268,8 +274,7 @@ def train_residual_workflow(args: argparse.Namespace):
     """Workflow for Residual Surrogate training."""
     print("Starting Residual Surrogate Training Workflow...")
     data_path = Path(args.data)
-    outdir = Path(args.outdir)
-    outdir.mkdir(parents=True, exist_ok=True)
+    outdir = _resolve_artifact_outdir(args.outdir, purpose="Residual surrogate artifact")
 
     with np.load(data_path) as data:
         X = data["X"]

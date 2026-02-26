@@ -19,6 +19,13 @@ import numpy as np
 from larrak2.adapters.calculix import CalculiXRunner
 from larrak2.adapters.openfoam import OpenFoamRunner
 from larrak2.cli.run_pareto import main as run_pareto_main
+from larrak2.core.artifact_paths import (
+    DEFAULT_CALCULIX_NN_ARTIFACT,
+    DEFAULT_GEAR_LOSS_NN_DIR,
+    DEFAULT_OPENFOAM_NN_ARTIFACT,
+    assert_not_legacy_models_path,
+    assert_not_legacy_models_write,
+)
 from larrak2.core.constraints import (
     get_constraint_kinds_for_phase,
     get_constraint_names,
@@ -955,13 +962,13 @@ def _resolve_path_from_arg_or_env(
     """Resolve a filesystem path from CLI arg, then env var, then default."""
     arg_str = str(arg_value).strip() if isinstance(arg_value, str) else ""
     if arg_str:
-        return Path(arg_str)
+        return assert_not_legacy_models_path(arg_str, purpose=env_key)
 
     env_str = str(os.environ.get(env_key, "")).strip()
     if env_str:
-        return Path(env_str)
+        return assert_not_legacy_models_path(env_str, purpose=env_key)
 
-    return Path(default_path)
+    return assert_not_legacy_models_path(default_path, purpose=env_key)
 
 
 def run_train_surrogates_workflow(args: argparse.Namespace) -> int:
@@ -1026,9 +1033,15 @@ def run_train_surrogates_workflow(args: argparse.Namespace) -> int:
     _write_manifest()
 
     t0 = time.perf_counter()
-    openfoam_outdir = Path(args.openfoam_outdir)
+    openfoam_outdir = assert_not_legacy_models_write(
+        args.openfoam_outdir,
+        purpose="OpenFOAM surrogate artifact output",
+    )
     openfoam_outdir.mkdir(parents=True, exist_ok=True)
-    calculix_outdir = Path(args.calculix_outdir)
+    calculix_outdir = assert_not_legacy_models_write(
+        args.calculix_outdir,
+        purpose="CalculiX surrogate artifact output",
+    )
     calculix_outdir.mkdir(parents=True, exist_ok=True)
     _log(
         "Step started: train_nn_surrogates",
@@ -1236,7 +1249,7 @@ def run_dress_rehearsal_workflow(args: argparse.Namespace) -> int:
             openfoam_model = _resolve_path_from_arg_or_env(
                 getattr(args, "openfoam_model_path", ""),
                 env_key="LARRAK2_OPENFOAM_NN_PATH",
-                default_path="models/openfoam_nn/openfoam_breathing.pt",
+                default_path=str(DEFAULT_OPENFOAM_NN_ARTIFACT),
             )
             if not openfoam_model.exists():
                 raise FileNotFoundError(
@@ -1253,7 +1266,7 @@ def run_dress_rehearsal_workflow(args: argparse.Namespace) -> int:
             calculix_model = _resolve_path_from_arg_or_env(
                 getattr(args, "calculix_model_path", ""),
                 env_key="LARRAK2_CALCULIX_NN_PATH",
-                default_path="models/calculix_nn/calculix_stress.pt",
+                default_path=str(DEFAULT_CALCULIX_NN_ARTIFACT),
             )
             if not calculix_model.exists():
                 raise FileNotFoundError(
@@ -1273,7 +1286,7 @@ def run_dress_rehearsal_workflow(args: argparse.Namespace) -> int:
             gear_loss_model_dir = _resolve_path_from_arg_or_env(
                 getattr(args, "gear_loss_model_dir", ""),
                 env_key="LARRAK2_GEAR_LOSS_NN_DIR",
-                default_path="models/gear_surrogate_v1",
+                default_path=str(DEFAULT_GEAR_LOSS_NN_DIR),
             )
             if not gear_loss_model_dir.exists():
                 raise FileNotFoundError(

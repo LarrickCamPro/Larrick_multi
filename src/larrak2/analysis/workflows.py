@@ -11,6 +11,7 @@ import numpy as np
 
 from larrak2.adapters.pymoo_problem import ParetoProblem
 from larrak2.analysis.sensitivity import constraint_activation_report, sensitivity_scan
+from larrak2.core.artifact_paths import prefer_existing_path
 from larrak2.core.encoding import bounds, mid_bounds_candidate
 from larrak2.core.evaluator import evaluate_candidate
 from larrak2.core.types import EvalContext
@@ -55,9 +56,8 @@ def sensitivity_workflow(args: Any) -> int:
     print("[B] Constraint Activation Report")
     print("-" * 70)
 
-    # Load Pareto front from diagnostic run if available
-    # Defaulting to diagnostic_results (default outdir for diagnostic run)
-    diagnostic_dir = Path("diagnostic_results")
+    # Load Pareto front from diagnostic run if available.
+    diagnostic_dir = prefer_existing_path(Path("outputs/diagnostic_results"), Path("diagnostic_results"))
     pareto_file = diagnostic_dir / "pareto_X.npy"
 
     if pareto_file.exists():
@@ -92,13 +92,16 @@ def sensitivity_workflow(args: Any) -> int:
         if "limit" in stats:
             print(f"    limit: {stats['limit']}, headroom: {stats['headroom_pct']:.1f}%")
 
-    # Save results
+    # Save results under outputs/analysis.
     output = {
         "sensitivity": sens_results,
         "activation": activation,
     }
 
-    with open("sensitivity_analysis.json", "w") as f:
+    analysis_outdir = Path("outputs/analysis")
+    analysis_outdir.mkdir(parents=True, exist_ok=True)
+    sensitivity_report = analysis_outdir / "sensitivity_analysis.json"
+    with sensitivity_report.open("w", encoding="utf-8") as f:
         json.dump(output, f, indent=2)
 
     print("\n" + "=" * 70)

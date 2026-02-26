@@ -21,6 +21,11 @@ from typing import Any
 
 import numpy as np
 
+from ..core.artifact_paths import (
+    DEFAULT_CALCULIX_NN_ARTIFACT,
+    DEFAULT_GEAR_LOSS_NN_DIR,
+    assert_not_legacy_models_path,
+)
 from ..core.constants import GEAR_INTERFERENCE_CLEARANCE_MM, GEAR_MIN_THICKNESS_MM
 from ..core.encoding import GearParams
 from ..core.types import EvalContext
@@ -210,7 +215,11 @@ def _evaluate_radius_strategy_stress(
     ctx_model_path = getattr(ctx, "calculix_model_path", None)
     model_path_str = str(ctx_model_path).strip() if isinstance(ctx_model_path, str) else ""
     if not model_path_str:
-        model_path_str = os.environ.get("LARRAK2_CALCULIX_NN_PATH", "models/calculix_nn/calculix_stress.pt")
+        env_path = str(os.environ.get("LARRAK2_CALCULIX_NN_PATH", "")).strip()
+        model_path_str = env_path if env_path else str(DEFAULT_CALCULIX_NN_ARTIFACT)
+    model_path_str = str(
+        assert_not_legacy_models_path(model_path_str, purpose="CalculiX NN artifact")
+    )
     model_path = Path(model_path_str)
     calc_surrogate = None
 
@@ -416,7 +425,14 @@ def eval_gear(
                 ctx_model_dir = getattr(ctx, "gear_loss_model_dir", None)
                 model_dir_str = str(ctx_model_dir).strip() if isinstance(ctx_model_dir, str) else ""
                 if not model_dir_str:
-                    model_dir_str = os.environ.get("LARRAK2_GEAR_LOSS_NN_DIR", "models/gear_surrogate_v1")
+                    env_dir = str(os.environ.get("LARRAK2_GEAR_LOSS_NN_DIR", "")).strip()
+                    model_dir_str = env_dir if env_dir else str(DEFAULT_GEAR_LOSS_NN_DIR)
+                model_dir_str = str(
+                    assert_not_legacy_models_path(
+                        model_dir_str,
+                        purpose="Gear-loss NN model directory",
+                    )
+                )
                 model_dir = Path(model_dir_str)
                 if not model_dir.exists():
                     raise FileNotFoundError(

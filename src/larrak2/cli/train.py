@@ -5,6 +5,12 @@ from __future__ import annotations
 import argparse
 import sys
 
+from larrak2.core.artifact_paths import (
+    DEFAULT_CALCULIX_NN_DIR,
+    DEFAULT_GEAR_LOSS_NN_DIR,
+    DEFAULT_OPENFOAM_NN_DIR,
+    DEFAULT_SURROGATE_V1_DIR,
+)
 from larrak2.training.workflows import (
     train_calculix_workflow,
     train_gear_gbr_workflow,
@@ -23,7 +29,7 @@ def main():
     # Common Arguments Factory
     def add_common_args(p):
         p.add_argument("--data", required=True, help="Input data path")
-        p.add_argument("--outdir", default="models", help="Output directory")
+        p.add_argument("--outdir", default="outputs/artifacts/surrogates", help="Output directory")
         p.add_argument("--seed", type=int, default=42, help="Random seed")
 
     def add_nn_args(p):
@@ -37,29 +43,35 @@ def main():
     add_common_args(p_of)
     add_nn_args(p_of)
     p_of.add_argument("--name", default="openfoam_breathing.pt")
+    p_of.set_defaults(outdir=str(DEFAULT_OPENFOAM_NN_DIR))
 
     # 1b. CalculiX NN
     p_ccx = subparsers.add_parser("calculix", help="CalculiX Stress Neural Network Surrogate")
     add_common_args(p_ccx)
     add_nn_args(p_ccx)
     p_ccx.add_argument("--name", default="calculix_stress.pt")
+    p_ccx.set_defaults(outdir=str(DEFAULT_CALCULIX_NN_DIR))
 
     # 2. Gear NN
     p_gear_nn = subparsers.add_parser("gear-nn", help="Gear Loss Neural Network")
     add_common_args(p_gear_nn)
     add_nn_args(p_gear_nn)
+    p_gear_nn.set_defaults(outdir=str(DEFAULT_GEAR_LOSS_NN_DIR))
 
     # 3. Gear GBR
     p_gear_gbr = subparsers.add_parser("gear-gbr", help="Gear GBR Ensemble")
     add_common_args(p_gear_gbr)
+    p_gear_gbr.set_defaults(outdir=str(DEFAULT_SURROGATE_V1_DIR))
 
     # 4. Scavenge GBR
     p_scav = subparsers.add_parser("scavenge", help="Scavenge GBR Ensemble")
     add_common_args(p_scav)
+    p_scav.set_defaults(outdir=str(DEFAULT_SURROGATE_V1_DIR))
 
     # 5. Residual
     p_resid = subparsers.add_parser("residual", help="Residual Surrogate (Efficiency/Loss)")
     add_common_args(p_resid)
+    p_resid.set_defaults(outdir=str(DEFAULT_SURROGATE_V1_DIR))
 
     args = parser.parse_args()
 

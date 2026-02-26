@@ -8,11 +8,13 @@ from __future__ import annotations
 
 import pickle
 import warnings
+import os
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
+from larrak2.core.artifact_paths import DEFAULT_SURROGATE_V1_DIR, assert_not_legacy_models_path
 from larrak2.surrogate.features import (
     extract_gear_features_v1,
     extract_scavenge_features_v1,
@@ -20,15 +22,39 @@ from larrak2.surrogate.features import (
     get_scavenge_schema_v1,
 )
 
-_MODEL_ROOT = Path("models/surrogate_v1")
+
+def _model_roots() -> list[Path]:
+    roots: list[Path] = [DEFAULT_SURROGATE_V1_DIR]
+    env_root = str(os.environ.get("LARRAK2_SURROGATE_V1_ROOT", "")).strip()
+    if env_root:
+        roots.insert(
+            0,
+            Path(
+                assert_not_legacy_models_path(
+                    env_root,
+                    purpose="Surrogate v1 model root",
+                )
+            ),
+        )
+
+    dedup: list[Path] = []
+    seen: set[str] = set()
+    for p in roots:
+        key = str(p)
+        if key not in seen:
+            dedup.append(p)
+            seen.add(key)
+    return dedup
 
 
 def _get_model_path(key: str) -> Path | None:
     """Resolve model path by convention."""
-    for name in [f"model_{key}.pkl", f"{key}.pkl", f"{key}/model.pkl", f"{key}/best_model.pt"]:
-        p = _MODEL_ROOT / name
-        if p.exists():
-            return p
+    names = [f"model_{key}.pkl", f"{key}.pkl", f"{key}/model.pkl", f"{key}/best_model.pt"]
+    for root in _model_roots():
+        for name in names:
+            p = root / name
+            if p.exists():
+                return p
     return None
 
 

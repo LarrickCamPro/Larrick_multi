@@ -9,6 +9,7 @@ from typing import Any
 import numpy as np
 
 from larrak2.core.encoding import N_TOTAL, decode_candidate
+from larrak2.core.artifact_paths import DEFAULT_HIFI_SURROGATE_DIR, assert_not_legacy_models_path
 from larrak2.surrogate.hifi.models import (
     FlowCoefficientSurrogate,
     StructuralSurrogate,
@@ -24,12 +25,18 @@ class HifiSurrogateAdapter:
 
     def __init__(
         self,
-        model_dir: str | Path = "models/hifi",
+        model_dir: str | Path = str(DEFAULT_HIFI_SURROGATE_DIR),
         *,
         default_rpm: float = 3000.0,
         default_torque: float = 200.0,
     ) -> None:
-        self.model_dir = Path(model_dir)
+        requested = Path(model_dir)
+        self.model_dir = Path(
+            assert_not_legacy_models_path(
+                requested,
+                purpose="HiFi surrogate model directory",
+            )
+        )
         self.default_rpm = float(default_rpm)
         self.default_torque = float(default_torque)
 
@@ -168,4 +175,3 @@ class HifiSurrogateAdapter:
 
 
 __all__ = ["HifiSurrogateAdapter"]
-

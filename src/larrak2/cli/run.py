@@ -24,6 +24,10 @@ from larrak2.cli.run_workflows import (
     run_pareto_staged_workflow,
     run_train_surrogates_workflow,
 )
+from larrak2.core.artifact_paths import (
+    DEFAULT_CALCULIX_NN_DIR,
+    DEFAULT_OPENFOAM_NN_DIR,
+)
 
 
 def main() -> int:
@@ -32,7 +36,7 @@ def main() -> int:
 
     # --- Pareto Grid ---
     pg = subparsers.add_parser("pareto-grid", help="Pareto over (rpm, torque) grid")
-    pg.add_argument("--outdir-root", type=str, default="results_grid")
+    pg.add_argument("--outdir-root", type=str, default="outputs/pareto_grid")
     pg.add_argument("--pop", type=int, default=64)
     pg.add_argument("--gen", type=int, default=50)
     pg.add_argument("--fidelity", type=int, default=2, choices=[0, 1, 2])
@@ -81,11 +85,11 @@ def main() -> int:
     ps.add_argument("--rpm", type=float, default=3000.0)
     ps.add_argument("--torque", type=float, default=200.0)
     ps.add_argument("--seed", type=int, default=1)
-    ps.add_argument("--outdir", type=str, default="results_staged")
+    ps.add_argument("--outdir", type=str, default="outputs/pareto_staged")
 
     # --- Active Learning ---
     al = subparsers.add_parser("active-learning", help="Staged opt → uncertainty → truth sims")
-    al.add_argument("--outdir", type=str, default="out/active_learning")
+    al.add_argument("--outdir", type=str, default="outputs/active_learning")
     al.add_argument("--pop", type=int, default=64)
     al.add_argument("--gen", type=int, default=30)
     al.add_argument("--promote", type=int, default=20)
@@ -101,10 +105,10 @@ def main() -> int:
         type=str,
         default="openfoam_templates/opposed_piston_rotary_valve_sliding_case",
     )
-    od.add_argument("--outdir", type=str, default="data/openfoam_doe")
-    od.add_argument("--runs-root", type=str, default="runs/openfoam_doe")
-    od.add_argument("--jsonl", type=str, default="data/openfoam_doe/results.jsonl")
-    od.add_argument("--checkpoint", type=str, default="data/openfoam_doe/checkpoint.json")
+    od.add_argument("--outdir", type=str, default="outputs/openfoam_doe")
+    od.add_argument("--runs-root", type=str, default="outputs/openfoam_doe/runs")
+    od.add_argument("--jsonl", type=str, default="outputs/openfoam_doe/results.jsonl")
+    od.add_argument("--checkpoint", type=str, default="outputs/openfoam_doe/checkpoint.json")
     od.add_argument("--n", type=int, default=500)
     od.add_argument("--seed", type=int, default=42)
     od.add_argument("--checkpoint-every", type=int, default=10)
@@ -160,7 +164,7 @@ def main() -> int:
     ts.add_argument("--openfoam-lambda-max", type=float, default=1.6)
     ts.add_argument("--openfoam-solver", type=str, default="rhoPimpleFoam")
     ts.add_argument("--openfoam-docker-timeout-s", type=int, default=1800)
-    ts.add_argument("--openfoam-outdir", type=str, default="models/openfoam_nn")
+    ts.add_argument("--openfoam-outdir", type=str, default=str(DEFAULT_OPENFOAM_NN_DIR))
     ts.add_argument("--openfoam-name", type=str, default="openfoam_breathing.pt")
     ts.add_argument("--openfoam-epochs", type=int, default=120)
     ts.add_argument("--openfoam-lr", type=float, default=1e-3)
@@ -175,7 +179,7 @@ def main() -> int:
     )
     ts.add_argument("--calculix-runs-per-condition", type=int, default=4)
     ts.add_argument("--calculix-solver", type=str, default="ccx")
-    ts.add_argument("--calculix-outdir", type=str, default="models/calculix_nn")
+    ts.add_argument("--calculix-outdir", type=str, default=str(DEFAULT_CALCULIX_NN_DIR))
     ts.add_argument("--calculix-name", type=str, default="calculix_stress.pt")
     ts.add_argument("--calculix-epochs", type=int, default=120)
     ts.add_argument("--calculix-lr", type=float, default=1e-3)
@@ -403,7 +407,7 @@ def main() -> int:
     diag.add_argument("--torque", type=float, default=200.0)
     diag.add_argument("--fidelity", type=int, default=1)
     diag.add_argument("--seed", type=int, default=123)
-    diag.add_argument("--outdir", type=str, default="diagnostic_results")
+    diag.add_argument("--outdir", type=str, default="outputs/diagnostic_results")
 
     args = parser.parse_args()
 
