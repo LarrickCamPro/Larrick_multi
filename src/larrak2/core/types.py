@@ -87,10 +87,7 @@ class EvalContext:
                 f"got {self.calculix_stress_mode}"
             )
         if self.gear_loss_mode not in {"physics", "nn"}:
-            raise ValueError(
-                "gear_loss_mode must be 'physics' or 'nn', "
-                f"got {self.gear_loss_mode}"
-            )
+            raise ValueError(f"gear_loss_mode must be 'physics' or 'nn', got {self.gear_loss_mode}")
 
 
 @dataclass

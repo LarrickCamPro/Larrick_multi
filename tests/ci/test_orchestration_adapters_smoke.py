@@ -9,8 +9,8 @@ import numpy as np
 from larrak2.core.encoding import N_TOTAL, bounds
 from larrak2.core.types import EvalContext
 from larrak2.orchestration.adapters import (
-    CEMAdapter,
     CasadiSolverAdapter,
+    CEMAdapter,
     HifiSurrogateAdapter,
     PhysicsSimulationAdapter,
 )
@@ -65,4 +65,3 @@ def test_surrogate_solver_simulation_smoke(tmp_path: Path) -> None:
     result = sim.evaluate(refined, context=ctx)
     assert "objective" in result
     assert np.isfinite(float(result["objective"]))
-

@@ -27,11 +27,23 @@ except ImportError:
 try:
     from larrak2.surrogate.calculix_nn import (
         DEFAULT_FEATURE_KEYS as DEFAULT_CCX_FEATURE_KEYS,
+    )
+    from larrak2.surrogate.calculix_nn import (
         DEFAULT_TARGET_KEYS as DEFAULT_CCX_TARGET_KEYS,
+    )
+    from larrak2.surrogate.calculix_nn import (
         load_dataset_json as load_ccx_dataset_json,
+    )
+    from larrak2.surrogate.calculix_nn import (
         load_dataset_jsonl as load_ccx_dataset_jsonl,
+    )
+    from larrak2.surrogate.calculix_nn import (
         load_dataset_npz as load_ccx_dataset_npz,
+    )
+    from larrak2.surrogate.calculix_nn import (
         save_artifact as save_ccx_artifact,
+    )
+    from larrak2.surrogate.calculix_nn import (
         train_calculix_surrogate,
     )
 except ImportError:
