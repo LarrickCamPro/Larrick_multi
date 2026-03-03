@@ -32,6 +32,14 @@ _HUNTING_LADDER: list[tuple[float, int]] = [
 ]
 
 
+def _require_finite_positive(name: str, value: float) -> float:
+    if not np.isfinite(value):
+        raise ValueError(f"{name} must be finite in life-damage calibration")
+    if value <= 0.0:
+        raise ValueError(f"{name} must be > 0 in life-damage calibration")
+    return float(value)
+
+
 def _load_calibration(path: Path = _CALIBRATION_PATH) -> dict[str, Any]:
     global _BASELINE_ROUTE_ID, _CALIBRATION_CACHE, _SIGMA_REF_MPA
     if _CALIBRATION_CACHE is not None:
@@ -66,10 +74,19 @@ def _load_calibration(path: Path = _CALIBRATION_PATH) -> dict[str, Any]:
         "cleanliness_scale_min": float(payload["cleanliness_scale_min"]),
         "cleanliness_scale_max": float(payload["cleanliness_scale_max"]),
     }
-    if calib["sigma_ref_mpa"] <= 0:
-        raise ValueError("sigma_ref_mpa must be > 0 in life-damage calibration")
-    if calib["stress_exponent"] <= 0 or calib["lambda_exponent"] <= 0:
-        raise ValueError("stress_exponent/lambda_exponent must be > 0 in life-damage calibration")
+    if not calib["baseline_route_id"].strip():
+        raise ValueError("baseline_route_id must be non-empty in life-damage calibration")
+    calib["sigma_ref_mpa"] = _require_finite_positive("sigma_ref_mpa", float(calib["sigma_ref_mpa"]))
+    calib["stress_exponent"] = _require_finite_positive(
+        "stress_exponent", float(calib["stress_exponent"])
+    )
+    calib["lambda_exponent"] = _require_finite_positive(
+        "lambda_exponent", float(calib["lambda_exponent"])
+    )
+    if not np.isfinite(calib["cleanliness_scale_min"]) or not np.isfinite(
+        calib["cleanliness_scale_max"]
+    ):
+        raise ValueError("cleanliness scale bounds must be finite in life-damage calibration")
     if calib["cleanliness_scale_max"] < calib["cleanliness_scale_min"]:
         raise ValueError("cleanliness scale bounds are invalid in life-damage calibration")
 
@@ -226,10 +243,149 @@ def get_sigma_ref_for_route(
         return sigma_ref_default
 
     sigma_hlim = mapping[route_id]
+    clean = float(cleanliness_proxy)
+    if not np.isfinite(clean):
+        if strict:
+            raise ValueError(
+                f"Route '{route_id}' cleanliness_proxy must be finite when strict_data=True."
+            )
+        logger.warning(
+            "Route '%s' cleanliness_proxy is non-finite; defaulting to 0.5", route_id
+        )
+        clean = 0.5
+
     cmin = float(calib["cleanliness_scale_min"])
     cmax = float(calib["cleanliness_scale_max"])
-    f_cleanliness = cmin + (cmax - cmin) * float(np.clip(cleanliness_proxy, 0.0, 1.0))
+    f_cleanliness = cmin + (cmax - cmin) * float(np.clip(clean, 0.0, 1.0))
     return sigma_ref_default * (sigma_hlim / sigma_hlim_baseline) * f_cleanliness
+
+
+def get_route_cleanliness_proxy(
+    route_id: str,
+    *,
+    strict_data: bool | None = None,
+    validation_mode: str | None = None,
+) -> tuple[float, str, list[str]]:
+    """Resolve route cleanliness proxy with strict/warn/off behavior."""
+    strict = _strict_data_enabled(strict_data)
+    mode = (
+        "strict"
+        if strict
+        else ("off" if str(validation_mode).strip().lower() == "off" else "warn")
+    )
+    degrade_token = "degraded_off" if mode == "off" else "degraded_warn"
+
+    from larrak2.cem.registry import get_registry
+
+    reg = get_registry()
+    table, messages = reg.load_required_table(
+        "route_metadata",
+        validation_mode=mode,
+        key_columns=("route_id",),
+    )
+
+    if "cleanliness_grade_proxy" not in table:
+        msg = "route_metadata is missing required 'cleanliness_grade_proxy' column."
+        if strict:
+            raise ValueError(msg)
+        messages.append(msg)
+        logger.warning(msg)
+        return 0.5, degrade_token, messages
+
+    route_ids = [str(v).strip() for v in table.get("route_id", [])]
+    if route_id not in route_ids:
+        msg = f"Route '{route_id}' missing from route_metadata."
+        if strict:
+            raise ValueError(msg)
+        messages.append(msg)
+        logger.warning(msg)
+        return 0.5, degrade_token, messages
+
+    idx = route_ids.index(route_id)
+    raw_val = table.get("cleanliness_grade_proxy", [None] * len(route_ids))[idx]
+    try:
+        clean = float(raw_val)
+    except (TypeError, ValueError):
+        clean = float("nan")
+    if not np.isfinite(clean):
+        msg = (
+            f"Route '{route_id}' has non-finite cleanliness_grade_proxy in route_metadata "
+            f"(value={raw_val!r})."
+        )
+        if strict:
+            raise ValueError(msg)
+        messages.append(msg)
+        logger.warning(msg)
+        return 0.5, degrade_token, messages
+
+    if clean < 0.0 or clean > 1.0:
+        msg = (
+            f"Route '{route_id}' cleanliness_grade_proxy={clean:.6g} is outside [0,1]; "
+            "clipping in non-strict mode."
+        )
+        if strict:
+            raise ValueError(msg)
+        messages.append(msg)
+        logger.warning(msg)
+        clean = float(np.clip(clean, 0.0, 1.0))
+
+    status = "ok" if not messages else degrade_token
+    return clean, status, messages
+
+
+def compute_life_damage_scalar_proxy_10k(
+    *,
+    hertz_stress_MPa: float,
+    lambda_min: float,
+    rpm: float,
+    hunting_level: float,
+    service_hours: float = 10_000.0,
+    sigma_ref_MPa: float | None = None,
+) -> dict[str, Any]:
+    """Deterministic scalar proxy for lifetime damage when phase profiles are unavailable."""
+    calib = _load_calibration()
+    stress_exponent = float(calib["stress_exponent"])
+    lambda_exponent = float(calib["lambda_exponent"])
+    sigma_ref_default = float(calib["sigma_ref_mpa"])
+
+    sigma_ref = float(sigma_ref_MPa if sigma_ref_MPa is not None else sigma_ref_default)
+    if not np.isfinite(sigma_ref) or sigma_ref <= 0.0:
+        raise ValueError("sigma_ref_MPa must be finite and > 0 for scalar life-damage proxy")
+
+    stress = float(hertz_stress_MPa)
+    lam = float(lambda_min)
+    rpm_val = float(rpm)
+    hrs = max(float(service_hours), 0.0)
+
+    N_set = hunting_n_set(hunting_level)
+    revs_total = max(rpm_val, 0.0) * 60.0 * hrs
+    if stress <= 0.0 or rpm_val <= 0.0 or hrs <= 0.0:
+        return {
+            "D_total": 0.0,
+            "D_ring": 0.0,
+            "D_planet": 0.0,
+            "N_set": int(N_set),
+            "revs_total": float(revs_total),
+            "sigma_ref_used": float(sigma_ref),
+            "calibration_version": str(calib["version"]),
+        }
+
+    sigma_ratio = max(stress, 0.0) / sigma_ref
+    lambda_clamp = max(lam, 0.1)
+    d_per_rev_planet = (sigma_ratio**stress_exponent) / (lambda_clamp**lambda_exponent)
+    d_planet = d_per_rev_planet * revs_total
+    d_ring = d_planet / max(float(N_set), 1.0)
+    d_total = max(d_planet, d_ring)
+
+    return {
+        "D_total": float(d_total),
+        "D_ring": float(d_ring),
+        "D_planet": float(d_planet),
+        "N_set": int(N_set),
+        "revs_total": float(revs_total),
+        "sigma_ref_used": float(sigma_ref),
+        "calibration_version": str(calib["version"]),
+    }
 
 
 def invalidate_limit_stress_cache() -> None:

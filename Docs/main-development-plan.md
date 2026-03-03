@@ -238,7 +238,9 @@ Explore -> Exploit -> Lifetime (A->C) and F2 probe status.
 
 1. A->C strict artifact/data prerequisites are green
    (`a_to_c_hard_failed == 0` in `artifact_contract_audit.json`).
-2. A strict CasADi-backed A->C pass remains blocked by runtime dependency
-   (`No module named casadi`) and must be resolved before GO status.
+2. A strict CasADi-backed A->C pass remains blocked in the active probe
+   interpreter (`/opt/miniconda3/bin/python`) where `casadi` is not installed.
+   CasADi is declared as an optional project dependency (`.[casadi]`), so this
+   is an environment/runtime availability issue, not a missing project feature.
 3. F2 probe blockers are captured and categorized in
    `outputs/readiness/f2_blockers.json`.

@@ -97,6 +97,14 @@ def test_smoke_eval_diag():
     assert "tribology_method_used" in rw
     assert "tribology_data_status" in rw
     assert "feature_importance" in rw
+    assert "life_damage_status" in rw
+    assert "life_damage_input_mode" in rw
+    life = rw.get("life_damage", {})
+    assert "life_damage_status" in life
+    assert "life_damage_input_mode" in life
+    assert "sigma_ref_used" in life
+    assert "route_worst_case" in life
+    assert "calibration_version" in life
 
     # Check gear-derived operating conditions
     gear_d = result.diag["gear"]

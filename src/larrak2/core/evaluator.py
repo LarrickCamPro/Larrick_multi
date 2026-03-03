@@ -271,8 +271,48 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
         and len(hertz_prof) > 1
     )
 
+    strict_lifetime_data = bool(getattr(ctx, "strict_data", True))
+    lifetime_mode_hint = str(getattr(ctx, "surrogate_validation_mode", "warn")).strip().lower()
+    lifetime_validation_mode = (
+        "strict" if strict_lifetime_data else ("off" if lifetime_mode_hint == "off" else "warn")
+    )
+    degraded_lifetime_token = "degraded_off" if lifetime_validation_mode == "off" else "degraded_warn"
+    lifetime_data_messages: list[str] = []
+
+    from larrak2.realworld.life_damage import (
+        compute_life_damage_10k,
+        compute_life_damage_scalar_proxy_10k,
+        get_route_cleanliness_proxy,
+        get_sigma_ref_for_route,
+    )
+
+    rpm_for_life = float(ctx.rpm)
+    if not np.isfinite(rpm_for_life):
+        if strict_lifetime_data:
+            raise ValueError("strict_data=True but rpm is non-finite for lifetime evaluation.")
+        rpm_for_life = 0.0
+        lifetime_data_messages.append("Non-finite rpm in lifetime path; defaulting to 0.0.")
+
+    hunting_level_for_life = float(rw_params.hunting_level)
+    if not np.isfinite(hunting_level_for_life):
+        if strict_lifetime_data:
+            raise ValueError("strict_data=True but hunting_level is non-finite for lifetime evaluation.")
+        hunting_level_for_life = 0.5
+        lifetime_data_messages.append("Non-finite hunting_level in lifetime path; defaulting to 0.5.")
+
     life_damage_total = 0.0
-    life_damage_diag: dict = {}
+    life_damage_diag: dict[str, object] = {
+        "D_total": 0.0,
+        "D_ring": 0.0,
+        "D_planet": 0.0,
+        "N_set": 1,
+        "life_damage_status": "ok",
+        "life_damage_input_mode": "phase_profile" if has_profiles else "scalar_proxy",
+        "sigma_ref_used": float("nan"),
+        "route_worst_case": "",
+        "calibration_version": "",
+        "messages": [],
+    }
 
     if has_profiles:
         # Force-gated phase-resolved tribology (high-load bins only)
@@ -294,38 +334,25 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
         if entrainment_prof is None or not hasattr(entrainment_prof, "__len__"):
             entrainment_prof = _np.full_like(hertz_prof, 15.0)
 
-        phase_result = evaluate_realworld_phase_resolved(
-            rw_params,
-            hertz_stress_profile=_np.asarray(hertz_prof, dtype=_np.float64),
-            sliding_velocity_profile=_np.asarray(sliding_v_prof, dtype=_np.float64),
-            entrainment_velocity_profile=_np.asarray(entrainment_prof, dtype=_np.float64),
-            fn_profile=_np.asarray(fn_prof, dtype=_np.float64),
-            operating_temp_C=operating_temp_C,
-            pitch_line_vel_m_s=pitch_line_vel,
-            tribology_scuff_method=tribology_scuff_method,
-            tribology_validation_mode=tribology_validation_mode,
-            strict_tribology_data=strict_tribology_flag,
-        )
-        # 10,000 h life damage (phase-binned Miner accumulation)
-        from larrak2.cem.registry import get_registry
-        from larrak2.realworld.life_damage import compute_life_damage_10k, get_sigma_ref_for_route
-
-        reg = get_registry()
-        md_table = reg.load_table("route_metadata")
-
         _rw_results = []
         _life_damages = []
+        route_iter = list(routes_weights)
+        if not route_iter:
+            if strict_lifetime_data:
+                raise ValueError("strict_data=True but no material routes were resolved for life damage.")
+            route_iter = [(str(dominant_rid), 1.0)]
+            lifetime_data_messages.append(
+                "No route weights available; using dominant route fallback for life-damage evaluation."
+            )
 
-        for rid, alpha in routes_weights:
-            try:
-                rid_idx = list(md_table["route_id"]).index(rid)
-                cleanliness = float(
-                    md_table.get("cleanliness_grade_proxy", [1.0] * len(md_table["route_id"]))[
-                        rid_idx
-                    ]
-                )
-            except ValueError:
-                cleanliness = 1.0
+        for rid, alpha in route_iter:
+            cleanliness, life_status, clean_messages = get_route_cleanliness_proxy(
+                rid,
+                strict_data=strict_lifetime_data,
+                validation_mode=lifetime_validation_mode,
+            )
+            if life_status != "ok":
+                lifetime_data_messages.extend([f"[{rid}] {m}" for m in clean_messages])
 
             # Override parameters scalar representation for internal physics call
             from dataclasses import replace
@@ -377,12 +404,13 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
                 hertz_stress_profile=_np.asarray(hertz_prof, dtype=_np.float64),
                 lambda_profile=lambda_prof,
                 fn_profile=_np.asarray(fn_prof, dtype=_np.float64),
-                rpm=ctx.rpm,
-                hunting_level=rw_params.hunting_level,
+                rpm=rpm_for_life,
+                hunting_level=hunting_level_for_life,
                 service_hours=10_000.0,
                 sigma_ref_MPa=_sigma_ref,
             )
 
+            lr["_route_id"] = str(rid)
             _rw_results.append((alpha, phase_res_val))
             _life_damages.append((alpha, lr))
 
@@ -424,12 +452,22 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
             tribology_provenance=dict(_rw_results[0][1].tribology_provenance),
         )
 
-        life_damage_total = max(lr["D_total"] for a, lr in _life_damages)
+        worst_lr = max(
+            (lr for _, lr in _life_damages),
+            key=lambda rec: float(rec.get("D_total", 0.0)),
+        )
+        life_damage_total = float(worst_lr.get("D_total", 0.0))
         life_damage_diag = {
             "D_total": life_damage_total,
-            "D_ring": max(lr.get("D_ring", 0) for a, lr in _life_damages),
-            "D_planet": max(lr.get("D_planet", 0) for a, lr in _life_damages),
-            "N_set": candidate.realworld.hunting_level,
+            "D_ring": float(worst_lr.get("D_ring", 0.0)),
+            "D_planet": float(worst_lr.get("D_planet", 0.0)),
+            "N_set": int(worst_lr.get("N_set", 1)),
+            "life_damage_status": "ok" if not lifetime_data_messages else degraded_lifetime_token,
+            "life_damage_input_mode": "phase_profile",
+            "sigma_ref_used": float(worst_lr.get("sigma_ref_used", np.nan)),
+            "route_worst_case": str(worst_lr.get("_route_id", "")),
+            "calibration_version": str(worst_lr.get("calibration_version", "")),
+            "messages": list(lifetime_data_messages),
         }
 
         phase_diag = {
@@ -440,9 +478,35 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
         }
     else:
         # Scalar fallback (no profiles available)
-        hertz_stress = float(gear_diag.get("hertz_stress_max", 1200.0))
+        hertz_raw = gear_diag.get("hertz_stress_max")
+        if hertz_raw is None:
+            if strict_lifetime_data:
+                raise ValueError(
+                    "strict_data=True but gear diagnostics missing required 'hertz_stress_max' "
+                    "for scalar life-damage proxy."
+                )
+            lifetime_data_messages.append(
+                "Missing hertz_stress_max in scalar fallback; using conservative 1400 MPa."
+            )
+            hertz_stress = 1400.0
+        else:
+            hertz_stress = float(hertz_raw)
+            if not np.isfinite(hertz_stress):
+                if strict_lifetime_data:
+                    raise ValueError(
+                        "strict_data=True but hertz_stress_max is non-finite in scalar fallback."
+                    )
+                lifetime_data_messages.append(
+                    "Non-finite hertz_stress_max in scalar fallback; using conservative 1400 MPa."
+                )
+                hertz_stress = 1400.0
+
         sliding_vel = float(gear_diag.get("sliding_speed_max", 5.0))
+        if not np.isfinite(sliding_vel):
+            sliding_vel = 5.0
         entrainment_vel = float(gear_diag.get("entrainment_velocity_mean", 15.0))
+        if not np.isfinite(entrainment_vel):
+            entrainment_vel = 15.0
 
         rw_result = evaluate_realworld_surrogates(
             rw_params,
@@ -455,6 +519,80 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
             tribology_validation_mode=tribology_validation_mode,
             strict_tribology_data=strict_tribology_flag,
         )
+        lambda_scalar = float(getattr(rw_result, "lambda_min", np.nan))
+        if not np.isfinite(lambda_scalar):
+            if strict_lifetime_data:
+                raise ValueError(
+                    "strict_data=True but scalar lifetime fallback received non-finite lambda_min."
+                )
+            lifetime_data_messages.append(
+                "Non-finite lambda_min in scalar fallback; using conservative lambda=0.8."
+            )
+            lambda_scalar = 0.8
+
+        hunting_level_scalar = float(hunting_level_for_life)
+        if not np.isfinite(hunting_level_scalar):
+            if strict_lifetime_data:
+                raise ValueError(
+                    "strict_data=True but hunting_level is non-finite for scalar lifetime proxy."
+                )
+            lifetime_data_messages.append(
+                "Non-finite hunting_level in scalar fallback; defaulting to 0.5."
+            )
+            hunting_level_scalar = 0.5
+
+        route_iter = list(routes_weights)
+        if not route_iter:
+            if strict_lifetime_data:
+                raise ValueError("strict_data=True but no material routes were resolved for life damage.")
+            route_iter = [(str(dominant_rid), 1.0)]
+            lifetime_data_messages.append(
+                "No route weights available; using dominant route fallback for life-damage evaluation."
+            )
+
+        _life_damages = []
+        for rid, _alpha in route_iter:
+            cleanliness, life_status, clean_messages = get_route_cleanliness_proxy(
+                rid,
+                strict_data=strict_lifetime_data,
+                validation_mode=lifetime_validation_mode,
+            )
+            if life_status != "ok":
+                lifetime_data_messages.extend([f"[{rid}] {m}" for m in clean_messages])
+
+            sigma_ref = get_sigma_ref_for_route(
+                rid,
+                cleanliness_proxy=cleanliness,
+                strict_data=strict_lifetime_data,
+            )
+            lr = compute_life_damage_scalar_proxy_10k(
+                hertz_stress_MPa=float(hertz_stress),
+                lambda_min=float(lambda_scalar),
+                rpm=float(rpm_for_life),
+                hunting_level=float(hunting_level_scalar),
+                service_hours=10_000.0,
+                sigma_ref_MPa=float(sigma_ref),
+            )
+            lr["_route_id"] = str(rid)
+            _life_damages.append(lr)
+
+        worst_lr = max(
+            _life_damages,
+            key=lambda rec: float(rec.get("D_total", 0.0)),
+        )
+        life_damage_total = float(worst_lr.get("D_total", 0.0))
+        life_damage_diag = {
+            "D_total": life_damage_total,
+            "D_ring": float(worst_lr.get("D_ring", 0.0)),
+            "D_planet": float(worst_lr.get("D_planet", 0.0)),
+            "N_set": int(worst_lr.get("N_set", 1)),
+            "life_damage_status": "ok" if not lifetime_data_messages else degraded_lifetime_token,
+            "life_damage_input_mode": "scalar_proxy",
+            "sigma_ref_used": float(worst_lr.get("sigma_ref_used", np.nan)),
+            "route_worst_case": str(worst_lr.get("_route_id", "")),
+            "calibration_version": str(worst_lr.get("calibration_version", "")),
+            "messages": list(lifetime_data_messages),
+        }
         phase_diag = {"phase_resolved": False}
 
     rw_G, rw_names = compute_realworld_constraints(
@@ -559,6 +697,9 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
             "material_temp_margin_C": rw_result.material_temp_margin_C,
             "cost_index": rw_result.total_cost_index,
             "feature_importance": rw_result.feature_importance,
+            "life_damage_status": str(life_damage_diag.get("life_damage_status", "ok")),
+            "life_damage_input_mode": str(life_damage_diag.get("life_damage_input_mode", "")),
+            "lifetime_validation_mode": str(lifetime_validation_mode),
             "params": {
                 "surface_finish_level": rw_params.surface_finish_level,
                 "lube_mode_level": rw_params.lube_mode_level,
