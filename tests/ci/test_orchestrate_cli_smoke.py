@@ -32,6 +32,9 @@ def test_orchestrate_cli_smoke(tmp_path: Path) -> None:
             "2",
             "--truth-dispatch-mode",
             "off",
+            "--allow-heuristic-surrogate-fallback",
+            "--surrogate-validation-mode",
+            "off",
         ],
         capture_output=True,
         text=True,
@@ -48,4 +51,3 @@ def test_orchestrate_cli_smoke(tmp_path: Path) -> None:
     assert manifest["workflow"] == "orchestrate"
     assert manifest["result"]["n_iterations"] >= 1
     assert manifest["files"]["orchestrate_manifest"] == str(manifest_path)
-

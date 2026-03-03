@@ -37,6 +37,9 @@ def test_orchestrate_manual_truth_plan_filters_truth_evals(tmp_path: Path) -> No
             "manual",
             "--truth-plan",
             str(truth_plan),
+            "--allow-heuristic-surrogate-fallback",
+            "--surrogate-validation-mode",
+            "off",
         ],
         capture_output=True,
         text=True,
@@ -48,4 +51,3 @@ def test_orchestrate_manual_truth_plan_filters_truth_evals(tmp_path: Path) -> No
     assert manifest["config"]["truth_dispatch_mode"] == "manual"
     assert manifest["iterations"], "expected at least one iteration record"
     assert all(int(it["n_truth_evaluated"]) == 0 for it in manifest["iterations"])
-
