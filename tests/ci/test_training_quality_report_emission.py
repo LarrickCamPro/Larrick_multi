@@ -157,7 +157,10 @@ def test_train_thermo_symbolic_emits_quality_report(tmp_path: Path) -> None:
     report = json.loads((outdir / "quality_report.json").read_text(encoding="utf-8"))
     summary = json.loads((outdir / "thermo_symbolic_training_summary.json").read_text(encoding="utf-8"))
     assert report["surrogate_kind"] == "thermo_symbolic"
+    assert report["quality_profile"]["normalization_method"] == "p95_p05_range"
     assert report["metrics"]["train"]
     assert report["metrics"]["val"]
     assert report["metrics"]["test"]
+    assert report["metrics"]["val"]["per_target"]
+    assert report["metrics"]["test"]["per_target"]
     assert Path(summary["artifact_path"]).exists()

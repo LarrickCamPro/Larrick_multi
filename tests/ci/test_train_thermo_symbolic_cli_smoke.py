@@ -65,5 +65,7 @@ def test_train_thermo_symbolic_cli_smoke(tmp_path: Path) -> None:
     report = json.loads(report_path.read_text(encoding="utf-8"))
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert report["surrogate_kind"] == "thermo_symbolic"
+    assert report["quality_profile"]["normalization_method"] == "p95_p05_range"
+    assert report["metrics"]["val"]["per_target"]
     assert manifest["workflow"] == "train_thermo_symbolic"
     assert manifest["ok"] is True

@@ -273,8 +273,20 @@ def refine_candidate(
         diag["thermo_symbolic_mode"] = str(
             slice_result.diagnostics.get(
                 "thermo_symbolic_mode",
-                getattr(ctx_refine, "thermo_symbolic_mode", "off"),
+                getattr(ctx_refine, "thermo_symbolic_mode", "strict"),
             )
+        )
+        diag["thermo_symbolic_path"] = str(
+            slice_result.diagnostics.get("thermo_symbolic_path", "")
+        )
+        diag["thermo_symbolic_overlay_objectives"] = list(
+            slice_result.diagnostics.get("thermo_symbolic_overlay_objectives", [])
+        )
+        diag["thermo_symbolic_overlay_constraints"] = list(
+            slice_result.diagnostics.get("thermo_symbolic_overlay_constraints", [])
+        )
+        diag["thermo_symbolic_error"] = str(
+            slice_result.diagnostics.get("thermo_symbolic_error", "")
         )
 
         if slice_result.success:

@@ -24,6 +24,8 @@ from larrak2.surrogate.quality_contract import (
     dataset_manifest_for_file,
     regression_metrics,
     sha256_file,
+    thermo_symbolic_balanced_profile,
+    thermo_symbolic_quality_fail_reasons,
     write_quality_report,
 )
 from larrak2.surrogate.stack import (
@@ -587,8 +589,7 @@ def train_thermo_symbolic_workflow(args: argparse.Namespace) -> dict[str, Any]:
         val_frac=float(getattr(args, "val_frac", 0.2)),
     )
 
-    val_rmse = float((metrics.get("val") or {}).get("rmse", float("nan")))
-    passed = bool(np.isfinite(val_rmse))
+    quality_profile = thermo_symbolic_balanced_profile()
     report = {
         "schema_version": "surrogate_quality_report_v1",
         "surrogate_kind": "thermo_symbolic",
@@ -601,17 +602,17 @@ def train_thermo_symbolic_workflow(args: argparse.Namespace) -> dict[str, Any]:
             "test": dict(metrics.get("test", {})),
             "slice_metrics": [],
         },
-        "ood_thresholds": {
-            "max_val_rmse": float(max(1e-6, 2.0 * val_rmse)) if np.isfinite(val_rmse) else float("inf")
-        },
+        "quality_profile": quality_profile,
+        "ood_thresholds": {},
         "uncertainty_calibration": {"method": "deterministic_affine", "status": "not_applicable"},
         "required_artifacts": [out_path.name],
-        "pass": passed,
-        "fail_reasons": [] if passed else ["non-finite validation RMSE"],
+        "pass": True,
+        "fail_reasons": [],
     }
+    reasons = thermo_symbolic_quality_fail_reasons(report)
+    report["pass"] = bool(len(reasons) == 0)
+    report["fail_reasons"] = reasons
     save_thermo_symbolic_artifact(artifact, out_path, quality_report=report)
-    report["artifact_sha256"] = sha256_file(out_path)
-    write_quality_report(out_path.parent / "quality_report.json", report)
 
     summary = {
         "artifact_path": str(out_path),

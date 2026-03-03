@@ -422,7 +422,7 @@ def _build_eval_context_from_args(
         strict_tribology_data=getattr(args, "strict_tribology_data", None),
         tribology_scuff_method=str(getattr(args, "tribology_scuff_method", "auto")),
         surrogate_validation_mode=str(getattr(args, "surrogate_validation_mode", "strict")),
-        thermo_symbolic_mode=str(getattr(args, "thermo_symbolic_mode", "off")),
+        thermo_symbolic_mode=str(getattr(args, "thermo_symbolic_mode", "strict")),
         thermo_symbolic_artifact_path=str(
             getattr(args, "thermo_symbolic_artifact_path", "")
         ).strip()
@@ -1980,7 +1980,7 @@ def run_explore_exploit_workflow(args: argparse.Namespace) -> int:
         thermo_constants_path=str(getattr(args, "thermo_constants_path", "")).strip() or None,
         thermo_anchor_manifest_path=str(getattr(args, "thermo_anchor_manifest", "")).strip()
         or None,
-        thermo_symbolic_mode=str(getattr(args, "thermo_symbolic_mode", "off")),
+        thermo_symbolic_mode=str(getattr(args, "thermo_symbolic_mode", "strict")),
         thermo_symbolic_artifact_path=str(
             getattr(args, "thermo_symbolic_artifact_path", "")
         ).strip()
@@ -1998,7 +1998,7 @@ def run_explore_exploit_workflow(args: argparse.Namespace) -> int:
         thermo_constants_path=str(getattr(args, "thermo_constants_path", "")).strip() or None,
         thermo_anchor_manifest_path=str(getattr(args, "thermo_anchor_manifest", "")).strip()
         or None,
-        thermo_symbolic_mode=str(getattr(args, "thermo_symbolic_mode", "off")),
+        thermo_symbolic_mode=str(getattr(args, "thermo_symbolic_mode", "strict")),
         thermo_symbolic_artifact_path=(
             str(getattr(args, "thermo_symbolic_artifact_path", "")).strip()
             or str(DEFAULT_THERMO_SYMBOLIC_ARTIFACT)
@@ -2137,7 +2137,7 @@ def run_orchestrate_workflow(args: argparse.Namespace) -> int:
         strict_tribology_data=getattr(args, "strict_tribology_data", None),
         tribology_scuff_method=str(getattr(args, "tribology_scuff_method", "auto")),
         surrogate_validation_mode=str(getattr(args, "surrogate_validation_mode", "strict")),
-        thermo_symbolic_mode=str(getattr(args, "thermo_symbolic_mode", "off")),
+        thermo_symbolic_mode=str(getattr(args, "thermo_symbolic_mode", "strict")),
         thermo_symbolic_artifact_path=str(
             getattr(args, "thermo_symbolic_artifact_path", "")
         ).strip()

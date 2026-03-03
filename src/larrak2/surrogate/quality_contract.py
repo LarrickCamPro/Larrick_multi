@@ -14,6 +14,13 @@ LOGGER = logging.getLogger(__name__)
 
 _ALLOWED_MODES = {"strict", "warn", "off"}
 _ALLOWED_KINDS = {"stack", "openfoam", "calculix", "hifi", "thermo_symbolic"}
+_THERMO_SYMBOLIC_BALANCED_PROFILE = {
+    "profile": "balanced_v1",
+    "normalization_method": "p95_p05_range",
+    "val_nrmse_max": 0.20,
+    "test_nrmse_max": 0.25,
+    "min_r2": 0.40,
+}
 
 
 def sha256_file(path: str | Path) -> str:
@@ -80,6 +87,81 @@ def _require(condition: bool, message: str) -> None:
         raise ValueError(message)
 
 
+def thermo_symbolic_balanced_profile() -> dict[str, Any]:
+    """Return the canonical balanced quality profile for thermo symbolic artifacts."""
+    return dict(_THERMO_SYMBOLIC_BALANCED_PROFILE)
+
+
+def _as_float(value: Any) -> float:
+    try:
+        return float(value)
+    except Exception:
+        return float("nan")
+
+
+def thermo_symbolic_quality_fail_reasons(report: dict[str, Any]) -> list[str]:
+    """Return target-specific quality gate failures for thermo symbolic reports."""
+    if str(report.get("surrogate_kind", "")).strip() != "thermo_symbolic":
+        return []
+
+    profile = dict(thermo_symbolic_balanced_profile())
+    profile.update(report.get("quality_profile", {}) or {})
+    val_nrmse_max = _as_float(profile.get("val_nrmse_max"))
+    test_nrmse_max = _as_float(profile.get("test_nrmse_max"))
+    min_r2 = _as_float(profile.get("min_r2"))
+
+    metrics = report.get("metrics", {}) if isinstance(report.get("metrics", {}), dict) else {}
+    out: list[str] = []
+    for split, nrmse_limit in (("val", val_nrmse_max), ("test", test_nrmse_max)):
+        split_metrics = metrics.get(split, {}) if isinstance(metrics.get(split, {}), dict) else {}
+        per_target = split_metrics.get("per_target", [])
+        if not isinstance(per_target, list) or not per_target:
+            out.append(f"{split}.per_target missing or empty")
+            continue
+        for rec in per_target:
+            if not isinstance(rec, dict):
+                out.append(f"{split}.per_target has non-object entry")
+                continue
+            name = str(rec.get("name", "")).strip() or "<unnamed>"
+            nrmse = _as_float(rec.get("nrmse"))
+            r2 = _as_float(rec.get("r2"))
+            if not np.isfinite(nrmse):
+                out.append(f"{split}:{name} nrmse is non-finite")
+            elif np.isfinite(nrmse_limit) and nrmse > nrmse_limit:
+                out.append(
+                    f"{split}:{name} nrmse={nrmse:.6f} exceeds {nrmse_limit:.6f}"
+                )
+            if not np.isfinite(r2):
+                out.append(f"{split}:{name} r2 is non-finite")
+            elif np.isfinite(min_r2) and r2 < min_r2:
+                out.append(f"{split}:{name} r2={r2:.6f} below {min_r2:.6f}")
+    return out
+
+
+def validate_thermo_symbolic_quality(
+    report: dict[str, Any],
+    *,
+    validation_mode: str = "strict",
+) -> list[str]:
+    """Enforce thermo symbolic per-target quality thresholds by mode."""
+    mode = str(validation_mode).strip().lower()
+    if mode not in _ALLOWED_MODES:
+        raise ValueError(f"validation_mode must be one of {sorted(_ALLOWED_MODES)}, got {validation_mode!r}")
+    if mode == "off":
+        return []
+    if str(report.get("surrogate_kind", "")).strip() != "thermo_symbolic":
+        return []
+
+    reasons = thermo_symbolic_quality_fail_reasons(report)
+    if reasons:
+        _raise_or_warn(
+            mode,
+            "thermo symbolic quality gates failed: " + "; ".join(reasons),
+            exc_type=ValueError,
+        )
+    return reasons
+
+
 def validate_quality_report_schema(report: dict[str, Any]) -> None:
     """Validate quality report contract schema."""
     _require(isinstance(report, dict), "quality_report must be a JSON object")
@@ -101,6 +183,34 @@ def validate_quality_report_schema(report: dict[str, Any]) -> None:
     _require("fail_reasons" in report and isinstance(report["fail_reasons"], list), "fail_reasons must be a list")
     if "required_artifacts" in report:
         _require(isinstance(report["required_artifacts"], list), "required_artifacts must be a list")
+    if kind == "thermo_symbolic":
+        _require(
+            "quality_profile" in report and isinstance(report["quality_profile"], dict),
+            "quality_profile must be an object for thermo_symbolic reports",
+        )
+        profile = report["quality_profile"]
+        _require(
+            str(profile.get("normalization_method", "")).strip() == "p95_p05_range",
+            "quality_profile.normalization_method must be 'p95_p05_range' for thermo_symbolic",
+        )
+        for key in ("val_nrmse_max", "test_nrmse_max", "min_r2"):
+            _require(key in profile, f"quality_profile.{key} is required for thermo_symbolic")
+        for split in ("train", "val", "test"):
+            sm = metrics[split]
+            _require(
+                "per_target" in sm and isinstance(sm["per_target"], list),
+                f"metrics.{split}.per_target must be a list for thermo_symbolic",
+            )
+            for i, rec in enumerate(sm["per_target"]):
+                _require(
+                    isinstance(rec, dict),
+                    f"metrics.{split}.per_target[{i}] must be an object",
+                )
+                for key in ("name", "rmse", "mae", "r2", "nrmse", "target_scale"):
+                    _require(
+                        key in rec,
+                        f"metrics.{split}.per_target[{i}].{key} is required for thermo_symbolic",
+                    )
 
 
 def load_quality_report(path: str | Path) -> dict[str, Any]:
@@ -144,7 +254,15 @@ def validate_artifact_quality(
         )
         return None
 
-    report = load_quality_report(report_path)
+    try:
+        report = load_quality_report(report_path)
+    except Exception as exc:
+        _raise_or_warn(
+            mode,
+            f"Invalid quality report schema at '{report_path}': {exc}",
+            exc_type=ValueError,
+        )
+        return None
     if str(report.get("surrogate_kind", "")).strip() != str(surrogate_kind).strip():
         _raise_or_warn(
             mode,
@@ -195,6 +313,9 @@ __all__ = [
     "load_quality_report",
     "regression_metrics",
     "sha256_file",
+    "thermo_symbolic_balanced_profile",
+    "thermo_symbolic_quality_fail_reasons",
+    "validate_thermo_symbolic_quality",
     "validate_artifact_quality",
     "validate_quality_report_schema",
     "write_quality_report",

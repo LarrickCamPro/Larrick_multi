@@ -65,7 +65,18 @@ class _StubSolver:
         context,  # noqa: ARG002
         max_step: np.ndarray,  # noqa: ARG002
     ) -> dict[str, Any]:
-        return dict(candidate)
+        out = dict(candidate)
+        out["solver_success"] = True
+        out["solver_diag"] = {
+            "thermo_symbolic_mode": "strict",
+            "thermo_symbolic_used": True,
+            "thermo_symbolic_version": "thermover-orch-1",
+            "thermo_symbolic_path": "outputs/artifacts/surrogates/thermo_symbolic/thermo_symbolic_f1.npz",
+            "thermo_symbolic_overlay_objectives": ["eta_comb_gap"],
+            "thermo_symbolic_overlay_constraints": ["mass_balance"],
+            "thermo_symbolic_error": "",
+        }
+        return out
 
 
 class _StubSimulation:
@@ -101,4 +112,10 @@ def test_orchestrate_auto_truth_is_deterministic_and_budget_respecting(tmp_path:
     it0 = manifest["iterations"][0]
     selected = [row["candidate_id"] for row in it0["selected_candidates"]]
     assert selected == ["cand-1", "cand-3"]
+    assert it0["selected_candidates"][0]["thermo_symbolic_mode"] == "strict"
+    assert it0["selected_candidates"][0]["thermo_symbolic_used"] is True
+    assert it0["selected_candidates"][0]["thermo_symbolic_overlay_objectives"] == ["eta_comb_gap"]
     assert it0["n_truth_evaluated"] == 2
+    assert "life_damage_input_mode" in it0["truth_results"][0]
+    assert "life_damage_status" in it0["truth_results"][0]
+    assert "lifetime" in manifest

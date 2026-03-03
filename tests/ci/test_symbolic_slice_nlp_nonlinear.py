@@ -85,7 +85,7 @@ def test_symbolic_slice_solver_uses_nonlinear_nlp(monkeypatch, tmp_path: Path) -
     )
 
     x0 = mid_bounds_candidate()
-    ctx = EvalContext(rpm=2400.0, torque=140.0, fidelity=1, seed=3)
+    ctx = EvalContext(rpm=2400.0, torque=140.0, fidelity=1, seed=3, thermo_symbolic_mode="off")
 
     result = solve_symbolic_slice_with_ipopt(
         x0=x0,

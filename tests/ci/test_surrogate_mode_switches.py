@@ -114,6 +114,7 @@ def test_calculix_analytical_mode_is_explicit_bypass(monkeypatch):
 
 def test_gear_loss_nn_mode_requires_model_dir(monkeypatch, tmp_path: Path):
     x = mid_bounds_candidate()
+    _install_realworld_stub(monkeypatch)
     anchor_manifest = _write_relaxed_anchor_manifest(tmp_path / "anchors_relaxed.json")
     candidate = decode_candidate(x)
     base = two_zone.evaluate_two_zone_thermo(
@@ -139,6 +140,7 @@ def test_gear_loss_nn_mode_requires_model_dir(monkeypatch, tmp_path: Path):
         gear_loss_mode="nn",
         gear_loss_model_dir="/tmp/does_not_exist_gear_loss_dir",
         thermo_anchor_manifest_path=str(anchor_manifest),
+        strict_tribology_data=False,
     )
 
     with pytest.raises(FileNotFoundError):

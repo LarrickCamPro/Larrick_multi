@@ -68,7 +68,7 @@ class EvalContext:
     thermo_model: str = "two_zone_eq_v1"
     thermo_constants_path: str | None = None
     thermo_anchor_manifest_path: str | None = None
-    thermo_symbolic_mode: str = "off"
+    thermo_symbolic_mode: str = "strict"
     thermo_symbolic_artifact_path: str | None = None
     strict_data: bool = True
     strict_tribology_data: bool | None = None

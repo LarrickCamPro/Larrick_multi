@@ -40,6 +40,8 @@ def test_orchestrate_manual_truth_plan_filters_truth_evals(tmp_path: Path) -> No
             "--allow-heuristic-surrogate-fallback",
             "--surrogate-validation-mode",
             "off",
+            "--thermo-symbolic-mode",
+            "off",
         ],
         capture_output=True,
         text=True,

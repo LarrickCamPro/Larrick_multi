@@ -8,14 +8,16 @@ from pathlib import Path
 import pytest
 
 from larrak2.surrogate.quality_contract import (
+    thermo_symbolic_quality_fail_reasons,
     validate_artifact_quality,
+    validate_thermo_symbolic_quality,
     validate_quality_report_schema,
     write_quality_report,
 )
 
 
 def _base_report(kind: str, artifact_file: str) -> dict:
-    return {
+    report = {
         "schema_version": "surrogate_quality_report_v1",
         "surrogate_kind": kind,
         "artifact_file": artifact_file,
@@ -28,9 +30,51 @@ def _base_report(kind: str, artifact_file: str) -> dict:
             "dataset_sha256": "",
         },
         "metrics": {
-            "train": {"rmse": 0.1},
-            "val": {"rmse": 0.2},
-            "test": {"rmse": 0.2},
+            "train": {
+                "rmse": 0.1,
+                "mae": 0.08,
+                "r2": 0.9,
+                "per_target": [
+                    {
+                        "name": "target0",
+                        "rmse": 0.1,
+                        "mae": 0.08,
+                        "r2": 0.9,
+                        "nrmse": 0.1,
+                        "target_scale": 1.0,
+                    }
+                ],
+            },
+            "val": {
+                "rmse": 0.2,
+                "mae": 0.12,
+                "r2": 0.8,
+                "per_target": [
+                    {
+                        "name": "target0",
+                        "rmse": 0.2,
+                        "mae": 0.12,
+                        "r2": 0.8,
+                        "nrmse": 0.2,
+                        "target_scale": 1.0,
+                    }
+                ],
+            },
+            "test": {
+                "rmse": 0.2,
+                "mae": 0.12,
+                "r2": 0.8,
+                "per_target": [
+                    {
+                        "name": "target0",
+                        "rmse": 0.2,
+                        "mae": 0.12,
+                        "r2": 0.8,
+                        "nrmse": 0.2,
+                        "target_scale": 1.0,
+                    }
+                ],
+            },
             "slice_metrics": [],
         },
         "ood_thresholds": {},
@@ -39,6 +83,15 @@ def _base_report(kind: str, artifact_file: str) -> dict:
         "pass": True,
         "fail_reasons": [],
     }
+    if kind == "thermo_symbolic":
+        report["quality_profile"] = {
+            "profile": "balanced_v1",
+            "normalization_method": "p95_p05_range",
+            "val_nrmse_max": 0.2,
+            "test_nrmse_max": 0.25,
+            "min_r2": 0.4,
+        }
+    return report
 
 
 def test_quality_report_schema_rejects_missing_fields() -> None:
@@ -107,3 +160,20 @@ def test_validate_artifact_quality_checks_hash_linkage(tmp_path: Path) -> None:
 def test_quality_report_schema_accepts_thermo_symbolic_kind() -> None:
     report = _base_report("thermo_symbolic", "thermo_symbolic_f1.npz")
     validate_quality_report_schema(report)
+
+
+def test_thermo_symbolic_quality_gate_strict_rejects_threshold_violation() -> None:
+    report = _base_report("thermo_symbolic", "thermo_symbolic_f1.npz")
+    report["metrics"]["val"]["per_target"][0]["nrmse"] = 0.5
+    report["metrics"]["test"]["per_target"][0]["r2"] = 0.1
+    reasons = thermo_symbolic_quality_fail_reasons(report)
+    assert reasons
+    with pytest.raises(ValueError):
+        validate_thermo_symbolic_quality(report, validation_mode="strict")
+
+
+def test_thermo_symbolic_quality_gate_warn_allows_degraded_report() -> None:
+    report = _base_report("thermo_symbolic", "thermo_symbolic_f1.npz")
+    report["metrics"]["val"]["per_target"][0]["nrmse"] = 0.35
+    reasons = validate_thermo_symbolic_quality(report, validation_mode="warn")
+    assert reasons

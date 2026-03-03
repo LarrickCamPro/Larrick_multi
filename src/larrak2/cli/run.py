@@ -545,7 +545,7 @@ def main() -> int:
     ee.add_argument(
         "--thermo-symbolic-mode",
         type=str,
-        default="off",
+        default="strict",
         choices=["strict", "warn", "off"],
     )
     ee.add_argument(
@@ -626,7 +626,7 @@ def main() -> int:
     orch.add_argument(
         "--thermo-symbolic-mode",
         type=str,
-        default="off",
+        default="strict",
         choices=["strict", "warn", "off"],
     )
     orch.add_argument(

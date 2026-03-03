@@ -42,6 +42,13 @@ def test_refine_pareto_slice_metadata_and_full_dimensionality():
                     "surrogate_stack_version": "testhash001",
                     "validation_attempts": 1,
                     "trust_radius_final": kwargs.get("trust_radius"),
+                    "thermo_symbolic_mode": "strict",
+                    "thermo_symbolic_used": True,
+                    "thermo_symbolic_version": "thermohash123",
+                    "thermo_symbolic_path": "outputs/artifacts/surrogates/thermo_symbolic/thermo_symbolic_f1.npz",
+                    "thermo_symbolic_overlay_objectives": ["eta_comb_gap"],
+                    "thermo_symbolic_overlay_constraints": ["mass_balance"],
+                    "thermo_symbolic_error": "",
                 },
             )
 
@@ -95,6 +102,8 @@ def test_refine_pareto_slice_metadata_and_full_dimensionality():
                     "sensitivity",
                     "--active-k",
                     "6",
+                    "--thermo-symbolic-mode",
+                    "strict",
                 ]
             )
             assert code == 0
@@ -116,3 +125,8 @@ def test_refine_pareto_slice_metadata_and_full_dimensionality():
         assert row["backend_used"] == "casadi"
         assert row["nlp_formulation"] == "global_surrogate_symbolic"
         assert row["surrogate_stack_version"] == "testhash001"
+        assert row["thermo_symbolic_mode"] == "strict"
+        assert row["thermo_symbolic_used"] is True
+        assert row["thermo_symbolic_version"] == "thermohash123"
+        assert row["thermo_symbolic_overlay_objectives"] == ["eta_comb_gap"]
+        assert row["thermo_symbolic_overlay_constraints"] == ["mass_balance"]

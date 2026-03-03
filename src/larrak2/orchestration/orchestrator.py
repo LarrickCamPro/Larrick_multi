@@ -143,7 +143,7 @@ class OrchestrationConfig:
     strict_tribology_data: bool | None = None
     tribology_scuff_method: str = "auto"
     surrogate_validation_mode: str = "strict"
-    thermo_symbolic_mode: str = "off"
+    thermo_symbolic_mode: str = "strict"
     thermo_symbolic_artifact_path: str | None = None
     machining_mode: str = "nn"
     machining_model_path: str | None = None
@@ -292,6 +292,8 @@ class Orchestrator:
         self._run_started_at = 0.0
         self._run_id = self.config.run_id or uuid.uuid4().hex[:12]
         self._truth_plan_tokens = self._normalize_truth_plan(self.config.truth_plan)
+        self._lifetime_input_modes_seen: set[str] = set()
+        self._lifetime_status_seen: set[str] = set()
 
     @property
     def run_id(self) -> str:
@@ -524,6 +526,7 @@ class Orchestrator:
         n_refine = min(n, max(1, n // 3))
         top_indices = sorted(range(n), key=lambda i: (-float(preds[i]), int(i)))[:n_refine]
         refined = [self._clone_candidate(c) for c in candidates]
+        strict_thermo = str(getattr(context, "thermo_symbolic_mode", "strict")).strip().lower() == "strict"
 
         for idx in top_indices:
             current = self._clone_candidate(refined[idx])
@@ -535,9 +538,28 @@ class Orchestrator:
                 updated = self.solver.refine(current, context=context, max_step=max_step)
                 updated["id"] = current.get("id", f"refined-{idx}")
                 updated.setdefault("global_index", current.get("global_index"))
+                if strict_thermo:
+                    solver_diag = updated.get("solver_diag", {})
+                    thermo_error = ""
+                    if isinstance(solver_diag, dict):
+                        thermo_error = str(solver_diag.get("thermo_symbolic_error", "")).strip()
+                    solver_error = str(updated.get("solver_error", "")).strip()
+                    if thermo_error:
+                        raise RuntimeError(thermo_error)
+                    if solver_error and (
+                        "thermo symbolic" in solver_error.lower()
+                        or "thermo_symbolic" in solver_error.lower()
+                    ):
+                        raise RuntimeError(solver_error)
                 refined[idx] = updated
             except Exception as exc:
-                current["refine_error"] = str(exc)
+                err_msg = str(exc)
+                if strict_thermo:
+                    raise RuntimeError(
+                        "Thermo symbolic strict-mode refinement failed for candidate "
+                        f"{current.get('id', idx)}: {err_msg}"
+                    ) from exc
+                current["refine_error"] = err_msg
                 refined[idx] = current
         return refined
 
@@ -648,6 +670,17 @@ class Orchestrator:
                     )
                     objective = self._extract_objective(payload if isinstance(payload, dict) else {})
                     payload_dict = payload if isinstance(payload, dict) else {"objective": objective}
+                    life_diag = (
+                        (payload_dict.get("diag", {}) or {})
+                        .get("realworld", {})
+                        .get("life_damage", {})
+                    )
+                    life_input_mode = str(life_diag.get("life_damage_input_mode", "unknown"))
+                    life_status = str(life_diag.get("life_damage_status", "unknown"))
+                    if life_input_mode:
+                        self._lifetime_input_modes_seen.add(life_input_mode)
+                    if life_status:
+                        self._lifetime_status_seen.add(life_status)
 
                     truth_records.append(
                         {
@@ -655,6 +688,8 @@ class Orchestrator:
                             "candidate_id": str(cand.get("id", idx)),
                             "objective": float(objective),
                             "cached": bool(was_cached),
+                            "life_damage_input_mode": life_input_mode,
+                            "life_damage_status": life_status,
                             "payload": _json_safe(payload_dict),
                         }
                     )
@@ -703,15 +738,39 @@ class Orchestrator:
 
             self.cem.update_distribution(self._history)
 
-            selected_payload = [
-                {
-                    "idx": int(idx),
-                    "candidate_id": str(refined[idx].get("id", idx)),
-                    "predicted_objective": float(np.asarray(ref_pred, dtype=np.float64)[idx]),
-                    "uncertainty": float(np.asarray(ref_unc, dtype=np.float64)[idx]),
-                }
-                for idx in selected
-            ]
+            selected_payload: list[dict[str, Any]] = []
+            for idx in selected:
+                solver_diag = refined[idx].get("solver_diag", {})
+                solver_diag_map = solver_diag if isinstance(solver_diag, dict) else {}
+                selected_payload.append(
+                    {
+                        "idx": int(idx),
+                        "candidate_id": str(refined[idx].get("id", idx)),
+                        "predicted_objective": float(np.asarray(ref_pred, dtype=np.float64)[idx]),
+                        "uncertainty": float(np.asarray(ref_unc, dtype=np.float64)[idx]),
+                        "thermo_symbolic_mode": str(
+                            solver_diag_map.get("thermo_symbolic_mode", "")
+                        ),
+                        "thermo_symbolic_used": bool(
+                            solver_diag_map.get("thermo_symbolic_used", False)
+                        ),
+                        "thermo_symbolic_version": str(
+                            solver_diag_map.get("thermo_symbolic_version", "")
+                        ),
+                        "thermo_symbolic_path": str(
+                            solver_diag_map.get("thermo_symbolic_path", "")
+                        ),
+                        "thermo_symbolic_overlay_objectives": list(
+                            solver_diag_map.get("thermo_symbolic_overlay_objectives", [])
+                        ),
+                        "thermo_symbolic_overlay_constraints": list(
+                            solver_diag_map.get("thermo_symbolic_overlay_constraints", [])
+                        ),
+                        "thermo_symbolic_error": str(
+                            solver_diag_map.get("thermo_symbolic_error", "")
+                        ),
+                    }
+                )
 
             iter_summary = {
                 "iteration": int(iteration),
@@ -748,6 +807,15 @@ class Orchestrator:
     def _write_manifest_and_result(self, *, stop_requested: bool) -> OrchestrationResult:
         elapsed = float(time.time() - self._run_started_at)
         provenance_path = str(getattr(self.provenance, "path", "")) if self.provenance else ""
+        degraded_life_statuses = sorted(
+            status for status in self._lifetime_status_seen if status and status != "ok"
+        )
+        release_reasons: list[str] = []
+        if str(self.config.constraint_phase) != "downselect":
+            release_reasons.append("constraint_phase_not_downselect")
+        if bool(self.config.strict_data) and degraded_life_statuses:
+            release_reasons.append("strict_lifetime_data_degraded")
+        release_ready = len(release_reasons) == 0
 
         manifest: dict[str, Any] = {
             "workflow": "orchestrate",
@@ -771,6 +839,17 @@ class Orchestrator:
                 "efficiency": float(self._n_surrogate_calls / max(1, self.budget.state.used)),
             },
             "iterations": _json_safe(self._iterations),
+            "lifetime": {
+                "input_modes_seen": sorted(self._lifetime_input_modes_seen),
+                "statuses_seen": sorted(self._lifetime_status_seen),
+                "degraded_statuses": degraded_life_statuses,
+            },
+            "release_readiness": {
+                "release_ready": bool(release_ready),
+                "strict_data": bool(self.config.strict_data),
+                "constraint_phase": str(self.config.constraint_phase),
+                "reasons": release_reasons,
+            },
             "stats": {
                 "budget": _json_safe(self.budget.get_statistics()),
                 "cache": _json_safe(self.cache.get_statistics()),

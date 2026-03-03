@@ -7,6 +7,7 @@ from typing import Any
 
 import numpy as np
 
+from ...core.artifact_paths import DEFAULT_THERMO_SYMBOLIC_ARTIFACT
 from ...core.encoding import N_TOTAL, bounds
 from ...core.evaluator import evaluate_candidate
 from ...core.types import EvalContext
@@ -71,6 +72,22 @@ def _fit_weights(weights: np.ndarray | None, n_obj: int):
         out[: w.size] = w
         return out
     return w[:n_obj]
+
+
+def _default_thermo_overlay_diag(ctx: EvalContext) -> dict[str, Any]:
+    mode = str(getattr(ctx, "thermo_symbolic_mode", "strict") or "strict")
+    artifact_path = (
+        str(getattr(ctx, "thermo_symbolic_artifact_path", "") or "").strip()
+        or str(DEFAULT_THERMO_SYMBOLIC_ARTIFACT)
+    )
+    return {
+        "thermo_symbolic_mode": mode,
+        "thermo_symbolic_used": False,
+        "thermo_symbolic_version": "",
+        "thermo_symbolic_path": artifact_path,
+        "thermo_symbolic_overlay_objectives": [],
+        "thermo_symbolic_overlay_constraints": [],
+    }
 
 
 def _build_nlp(
@@ -199,9 +216,7 @@ def solve_symbolic_slice_with_ipopt(
             iterations=0,
             diagnostics={
                 "nlp_formulation": "global_surrogate_symbolic",
-                "thermo_symbolic_mode": str(getattr(ctx, "thermo_symbolic_mode", "off")),
-                "thermo_symbolic_used": False,
-                "thermo_symbolic_version": "",
+                **_default_thermo_overlay_diag(ctx),
             },
         )
 
@@ -316,10 +331,26 @@ def solve_symbolic_slice_with_ipopt(
                 "attempt_radius": float(radius),
                 "surrogate_stack_version": artifact.version_hash,
                 "nlp_formulation": "global_surrogate_symbolic",
-                "thermo_symbolic_mode": str(getattr(ctx_eval, "thermo_symbolic_mode", "off")),
-                "thermo_symbolic_used": False,
-                "thermo_symbolic_version": "",
+                **_default_thermo_overlay_diag(ctx_eval),
+                "thermo_symbolic_error": str(exc),
             }
+            strict_mode = str(getattr(ctx_eval, "thermo_symbolic_mode", "strict")).strip().lower()
+            exc_txt = str(exc).lower()
+            if strict_mode == "strict" and (
+                "thermo symbolic" in exc_txt or "thermo_symbolic" in exc_txt
+            ):
+                return SymbolicSliceSolveResult(
+                    x_opt=last_x,
+                    success=False,
+                    message=last_msg,
+                    ipopt_status=last_status,
+                    iterations=total_iterations,
+                    diagnostics={
+                        **last_diag,
+                        "validation_attempts": int(attempt + 1),
+                        "trust_radius_final": float(radius),
+                    },
+                )
 
         attempt_radius *= 0.5
         if attempt_radius < 1e-4:

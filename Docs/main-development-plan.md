@@ -48,8 +48,8 @@ The following superseded plan documents were intentionally removed and folded in
 | Area | Present in codebase | Hard gap to close |
 | --- | --- | --- |
 | Two-stage plumbing | `src/larrak2/pipelines/explore_exploit.py`, `src/larrak2/optimization/candidate_store.py` | Needs strict fidelity gating and stronger high-fidelity objective parity |
-| CasADi refinement | `src/larrak2/adapters/casadi_refine.py`, `src/larrak2/optimization/slicing/*` | Nonlinear symbolic slice NLP is integrated; remaining gap is optional thermo symbolic overlay governance and artifact quality gating |
-| Thermo core | `src/larrak2/thermo/motionlaw.py`, `src/larrak2/thermo/two_zone.py`, `src/larrak2/thermo/combustion.py`, `src/larrak2/thermo/scavenging.py` | Equation-first two-zone path is integrated; remaining gap is strict anchor governance + reproducible anchor provenance + symbolic bridge support |
+| CasADi refinement | `src/larrak2/adapters/casadi_refine.py`, `src/larrak2/optimization/slicing/*` | Nonlinear symbolic slice NLP is integrated with strict thermo symbolic overlay preflight and diagnostics propagation; remaining gap is anchor-governance policy research |
+| Thermo core | `src/larrak2/thermo/motionlaw.py`, `src/larrak2/thermo/two_zone.py`, `src/larrak2/thermo/combustion.py`, `src/larrak2/thermo/scavenging.py` | Equation-first two-zone path is integrated; thermo symbolic bridge hardening and balanced per-target quality gates are integrated; remaining gap is anchor governance/provenance policy finalization |
 | Tribology/material | `src/larrak2/cem/*`, `src/larrak2/realworld/*` | ISO/FZG data contracts and method-aware scuff evaluation are integrated; remaining gap is lifetime-depth calibration and uncertainty calibration |
 | Lifetime model | `src/larrak2/realworld/life_damage.py` | Simplified Miner proxy needs calibrated SN/stress models and route-specific validation |
 | Surrogate workflows | `src/larrak2/training/workflows.py`, `src/larrak2/surrogate/*` | Need uncertainty-aware quality gates and stronger dataset contracts per operating regime |
@@ -58,13 +58,13 @@ The following superseded plan documents were intentionally removed and folded in
 ### 3.1 Thermo Remaining Gaps (Post Two-Zone)
 
 1. Anchor governance contract:
-   strict fidelity-2 runs require non-empty validated anchors with explicit schema checks and diagnostics.
+   strict fidelity-2 anchor requirements remain under policy review before lock-in.
 2. Anchor reproducibility:
-   baseline anchor manifest must be generated/maintained via a reproducible tooling path with provenance metadata.
-3. Symbolic bridge:
-   add thermo symbolic surrogate overlay for CasADi slice NLP without replacing the numeric two-zone truth path.
+   baseline anchor manifest generation/provenance tooling remains open.
+3. Symbolic bridge hardening:
+   complete for strict/warn/off runtime modes, preflight compatibility checks, and per-target balanced quality gating.
 4. Test isolation:
-   fidelity-2 strict tests unrelated to thermo anchors should provide anchor manifests explicitly to avoid accidental gate coupling.
+   thermo-symbolic and cross-stack hardening tests are isolated from unrelated CEM/tribology volatility.
 
 ## 4. Hard Missing Components (By Module Class)
 
@@ -211,3 +211,34 @@ The following migration foundation is already integrated and should not be treat
 4. Explore/exploit candidate-store and slice-refinement plumbing.
 
 Future work should extend these modules, not reintroduce parallel duplicate frameworks.
+
+## 9. Readiness Status Snapshot (2026-03-03)
+
+This section links the latest local readiness diagnosis artifacts for
+Explore -> Exploit -> Lifetime (A->C) and F2 probe status.
+
+### 9.1 Evidence Artifacts
+
+1. Gap ledger:
+   `outputs/readiness/gap_ledger.json`
+2. Artifact/data contract audit (pre-remediation):
+   `outputs/readiness/artifact_contract_audit_pre.json`
+3. Artifact/data contract audit (current):
+   `outputs/readiness/artifact_contract_audit.json`
+4. Runtime probe matrix:
+   `outputs/readiness/runtime_probe_results.json`
+5. Single-candidate lifetime extraction:
+   `outputs/readiness/single_candidate_lifetime_report.json`
+6. F2 blocker register:
+   `outputs/readiness/f2_blockers.json`
+7. Human-readable readiness summary:
+   `outputs/readiness/pipeline_readiness_summary.md`
+
+### 9.2 Snapshot Outcome
+
+1. A->C strict artifact/data prerequisites are green
+   (`a_to_c_hard_failed == 0` in `artifact_contract_audit.json`).
+2. A strict CasADi-backed A->C pass remains blocked by runtime dependency
+   (`No module named casadi`) and must be resolved before GO status.
+3. F2 probe blockers are captured and categorized in
+   `outputs/readiness/f2_blockers.json`.

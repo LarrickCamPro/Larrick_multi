@@ -9,7 +9,9 @@ from typing import Any
 import numpy as np
 
 from ..core.artifact_paths import DEFAULT_THERMO_SYMBOLIC_ARTIFACT
+from ..core.encoding import N_TOTAL
 from ..core.types import EvalContext
+from ..surrogate.quality_contract import load_quality_report, thermo_symbolic_quality_fail_reasons
 from ..surrogate.stack.runtime import parse_feature_index
 from .symbolic_artifact import ThermoSymbolicArtifact, load_thermo_symbolic_artifact
 
@@ -102,6 +104,90 @@ def _raise_or_warn(mode: str, message: str) -> None:
         LOGGER.warning(message)
 
 
+def _strict_remediation_message(*, artifact_path: str, reason: str) -> str:
+    train_cmd = (
+        "python -m larrak2.cli.run train-thermo-symbolic "
+        "--fidelity <fidelity> --rpm <rpm> --torque <torque>"
+    )
+    override_hint = (
+        "python -m larrak2.cli.run <entrypoint> "
+        f"--thermo-symbolic-artifact-path \"{artifact_path}\""
+    )
+    return (
+        f"{reason} | thermo_symbolic_path='{artifact_path}'. "
+        f"Remediation: run `{train_cmd}` then retry, or override with `{override_hint}`."
+    )
+
+
+def _find_duplicates(names: tuple[str, ...]) -> list[str]:
+    seen: set[str] = set()
+    dups: set[str] = set()
+    for name in names:
+        if name in seen:
+            dups.add(name)
+        seen.add(name)
+    return sorted(dups)
+
+
+def _preflight_overlay_contract_violations(
+    *,
+    artifact: ThermoSymbolicArtifact,
+    stack_objective_names: tuple[str, ...],
+    stack_constraint_names: tuple[str, ...],
+) -> list[str]:
+    errs: list[str] = []
+
+    stack_obj_dups = _find_duplicates(tuple(str(v) for v in stack_objective_names))
+    stack_con_dups = _find_duplicates(tuple(str(v) for v in stack_constraint_names))
+    art_obj_dups = _find_duplicates(tuple(str(v) for v in artifact.objective_names))
+    art_con_dups = _find_duplicates(tuple(str(v) for v in artifact.constraint_names))
+    if stack_obj_dups:
+        errs.append(f"stack objective names contain duplicates: {stack_obj_dups}")
+    if stack_con_dups:
+        errs.append(f"stack constraint names contain duplicates: {stack_con_dups}")
+    if art_obj_dups:
+        errs.append(f"artifact objective names contain duplicates: {art_obj_dups}")
+    if art_con_dups:
+        errs.append(f"artifact constraint names contain duplicates: {art_con_dups}")
+
+    stack_obj_set = {str(v) for v in stack_objective_names}
+    stack_con_set = {str(v) for v in stack_constraint_names}
+    art_obj_set = {str(v) for v in artifact.objective_names}
+    art_con_set = {str(v) for v in artifact.constraint_names}
+
+    stack_overlap = sorted(stack_obj_set.intersection(stack_con_set))
+    artifact_overlap = sorted(art_obj_set.intersection(art_con_set))
+    if stack_overlap:
+        errs.append(f"ambiguous stack output naming (objective/constraint overlap): {stack_overlap}")
+    if artifact_overlap:
+        errs.append(
+            "ambiguous thermo symbolic artifact naming "
+            f"(objective/constraint overlap): {artifact_overlap}"
+        )
+
+    missing_obj = [name for name in artifact.objective_names if str(name) not in stack_obj_set]
+    missing_con = [name for name in artifact.constraint_names if str(name) not in stack_con_set]
+    if missing_obj:
+        errs.append(f"artifact objectives are not subset-compatible with stack: {missing_obj}")
+    if missing_con:
+        errs.append(f"artifact constraints are not subset-compatible with stack: {missing_con}")
+
+    bad_features: list[str] = []
+    for name in artifact.feature_names:
+        if name in {"rpm", "torque"}:
+            continue
+        idx = parse_feature_index(name)
+        if idx is None or idx < 0 or idx >= int(N_TOTAL):
+            bad_features.append(str(name))
+    if bad_features:
+        errs.append(
+            "artifact feature names must resolve to x_###, rpm, or torque "
+            f"within [0, {int(N_TOTAL) - 1}]: {bad_features}"
+        )
+
+    return errs
+
+
 def apply_thermo_symbolic_overlay(
     *,
     ctx: EvalContext,
@@ -112,7 +198,7 @@ def apply_thermo_symbolic_overlay(
     G_hat,
 ) -> tuple[Any, Any, dict[str, Any]]:
     """Overlay stack objective/constraint expressions with thermo symbolic terms."""
-    mode = str(getattr(ctx, "thermo_symbolic_mode", "off") or "off").lower()
+    mode = str(getattr(ctx, "thermo_symbolic_mode", "strict") or "strict").lower()
     diag: dict[str, Any] = {
         "thermo_symbolic_mode": mode,
         "thermo_symbolic_used": False,
@@ -132,17 +218,50 @@ def apply_thermo_symbolic_overlay(
     try:
         artifact = load_thermo_symbolic_artifact(
             artifact_path,
-            validation_mode=str(getattr(ctx, "surrogate_validation_mode", "strict")),
+            validation_mode=mode,
         )
     except Exception as exc:  # pragma: no cover - exercised by strict/warn branches
-        _raise_or_warn(mode, f"Failed to load thermo symbolic artifact '{artifact_path}': {exc}")
-        diag["thermo_symbolic_error"] = str(exc)
+        msg = _strict_remediation_message(
+            artifact_path=artifact_path,
+            reason=f"Failed to load thermo symbolic artifact: {exc}",
+        )
+        _raise_or_warn(mode, msg)
+        diag["thermo_symbolic_error"] = msg
         return F_hat, G_hat, diag
 
+    if mode == "warn":
+        qpath = Path(artifact_path).parent / "quality_report.json"
+        if qpath.exists():
+            try:
+                reasons = thermo_symbolic_quality_fail_reasons(load_quality_report(qpath))
+            except Exception:
+                reasons = []
+            if reasons:
+                diag["thermo_symbolic_error"] = (
+                    "thermo symbolic quality degraded in warn mode: " + "; ".join(reasons)
+                )
+
     if int(artifact.fidelity) != int(ctx.fidelity):
-        msg = (
-            "Thermo symbolic artifact fidelity mismatch: "
-            f"artifact={artifact.fidelity}, context={ctx.fidelity}"
+        msg = _strict_remediation_message(
+            artifact_path=artifact_path,
+            reason=(
+                "Thermo symbolic artifact fidelity mismatch: "
+                f"artifact={artifact.fidelity}, context={ctx.fidelity}"
+            ),
+        )
+        _raise_or_warn(mode, msg)
+        diag["thermo_symbolic_error"] = msg
+        return F_hat, G_hat, diag
+
+    violations = _preflight_overlay_contract_violations(
+        artifact=artifact,
+        stack_objective_names=stack_objective_names,
+        stack_constraint_names=stack_constraint_names,
+    )
+    if violations:
+        msg = _strict_remediation_message(
+            artifact_path=artifact_path,
+            reason="Thermo symbolic overlay contract violation: " + "; ".join(violations),
         )
         _raise_or_warn(mode, msg)
         diag["thermo_symbolic_error"] = msg
@@ -171,15 +290,6 @@ def apply_thermo_symbolic_overlay(
         if name in con_idx_map:
             con_overlay[int(con_idx_map[name])] = con_expr[i]
 
-    if not obj_overlay and not con_overlay:
-        msg = (
-            "Thermo symbolic overlay had no name matches against stack outputs. "
-            f"artifact_obj={artifact.objective_names}, artifact_con={artifact.constraint_names}"
-        )
-        _raise_or_warn(mode, msg)
-        diag["thermo_symbolic_error"] = msg
-        return F_hat, G_hat, diag
-
     ca = _import_casadi()
     F_terms = [F_hat[i] for i in range(len(stack_objective_names))]
     G_terms = [G_hat[i] for i in range(len(stack_constraint_names))]
@@ -204,4 +314,3 @@ def apply_thermo_symbolic_overlay(
         }
     )
     return F_new, G_new, diag
-

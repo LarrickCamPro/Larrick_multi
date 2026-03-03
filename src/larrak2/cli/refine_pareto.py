@@ -144,6 +144,19 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Optional L-infinity trust region radius for active variables",
     )
+    parser.add_argument(
+        "--thermo-symbolic-mode",
+        type=str,
+        default="strict",
+        choices=["strict", "warn", "off"],
+        help="Thermo symbolic overlay mode for CasADi refinement",
+    )
+    parser.add_argument(
+        "--thermo-symbolic-artifact-path",
+        type=str,
+        default="",
+        help="Thermo symbolic artifact path for CasADi overlay",
+    )
 
     parser.add_argument("--rpm", type=float, default=3000.0, help="Engine speed (rpm)")
     parser.add_argument("--torque", type=float, default=200.0, help="Torque demand (Nm)")
@@ -172,6 +185,8 @@ def main(argv: list[str] | None = None) -> int:
         thermo_model=str(args.thermo_model),
         thermo_constants_path=str(args.thermo_constants_path).strip() or None,
         thermo_anchor_manifest_path=str(args.thermo_anchor_manifest).strip() or None,
+        thermo_symbolic_mode=str(args.thermo_symbolic_mode),
+        thermo_symbolic_artifact_path=str(args.thermo_symbolic_artifact_path).strip() or None,
     )
     mode = RefinementMode(args.mode)
 
@@ -247,6 +262,17 @@ def main(argv: list[str] | None = None) -> int:
             "surrogate_stack_version": result.diag.get("surrogate_stack_version", ""),
             "validation_attempts": result.diag.get("validation_attempts", 0),
             "trust_radius_final": result.diag.get("trust_radius_final", args.trust_radius),
+            "thermo_symbolic_mode": result.diag.get("thermo_symbolic_mode", ""),
+            "thermo_symbolic_used": bool(result.diag.get("thermo_symbolic_used", False)),
+            "thermo_symbolic_version": result.diag.get("thermo_symbolic_version", ""),
+            "thermo_symbolic_path": result.diag.get("thermo_symbolic_path", ""),
+            "thermo_symbolic_overlay_objectives": result.diag.get(
+                "thermo_symbolic_overlay_objectives", []
+            ),
+            "thermo_symbolic_overlay_constraints": result.diag.get(
+                "thermo_symbolic_overlay_constraints", []
+            ),
+            "thermo_symbolic_error": result.diag.get("thermo_symbolic_error", ""),
         }
         results_diag.append(candidate_diag)
         if args.backend == "casadi" and not bool(result.success):
@@ -280,6 +306,8 @@ def main(argv: list[str] | None = None) -> int:
                 "thermo_model": ctx.thermo_model,
                 "thermo_constants_path": ctx.thermo_constants_path,
                 "thermo_anchor_manifest_path": ctx.thermo_anchor_manifest_path,
+                "thermo_symbolic_mode": ctx.thermo_symbolic_mode,
+                "thermo_symbolic_artifact_path": ctx.thermo_symbolic_artifact_path,
                 "seed": ctx.seed,
                 "encoding_version": ENCODING_VERSION,
                 "model_versions": {

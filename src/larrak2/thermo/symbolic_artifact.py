@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -11,11 +12,17 @@ from typing import Any
 import numpy as np
 
 from ..surrogate.quality_contract import (
+    load_quality_report,
     regression_metrics,
     sha256_file,
+    thermo_symbolic_balanced_profile,
+    thermo_symbolic_quality_fail_reasons,
     validate_artifact_quality,
+    validate_thermo_symbolic_quality,
     write_quality_report,
 )
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -129,6 +136,50 @@ def _predict_affine(
     return Yn * y_scale.reshape(1, -1) + y_mean.reshape(1, -1)
 
 
+def _target_scales_from_train(y_train: np.ndarray) -> np.ndarray:
+    y = np.asarray(y_train, dtype=np.float64)
+    if y.ndim != 2 or y.shape[0] == 0:
+        return np.ones(y.shape[1] if y.ndim == 2 else 0, dtype=np.float64)
+    p05 = np.quantile(y, 0.05, axis=0)
+    p95 = np.quantile(y, 0.95, axis=0)
+    return np.maximum(p95 - p05, 1e-9).astype(np.float64)
+
+
+def _per_target_metrics(
+    *,
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    target_names: tuple[str, ...],
+    target_scale: np.ndarray,
+) -> list[dict[str, float | str]]:
+    yt = np.asarray(y_true, dtype=np.float64)
+    yp = np.asarray(y_pred, dtype=np.float64)
+    out: list[dict[str, float | str]] = []
+    for j, name in enumerate(target_names):
+        if yt.ndim != 2 or yp.ndim != 2 or yt.shape[0] == 0:
+            rmse = float("nan")
+            mae = float("nan")
+            r2 = float("nan")
+        else:
+            m = regression_metrics(yt[:, j], yp[:, j])
+            rmse = float(m["rmse"])
+            mae = float(m["mae"])
+            r2 = float(m["r2"])
+        scale = float(target_scale[j]) if j < target_scale.size else float("nan")
+        nrmse = float(rmse / scale) if np.isfinite(rmse) and np.isfinite(scale) and scale > 0.0 else float("nan")
+        out.append(
+            {
+                "name": str(name),
+                "rmse": rmse,
+                "mae": mae,
+                "r2": r2,
+                "nrmse": nrmse,
+                "target_scale": scale,
+            }
+        )
+    return out
+
+
 def train_thermo_symbolic_affine(
     X: np.ndarray,
     Y: np.ndarray,
@@ -195,10 +246,34 @@ def train_thermo_symbolic_affine(
         X=X,
     )
 
-    def _split_metrics(idx: np.ndarray) -> dict[str, float]:
+    target_names = tuple(str(v) for v in objective_names) + tuple(str(v) for v in constraint_names)
+    target_scale = _target_scales_from_train(Y_tr)
+
+    def _split_metrics(idx: np.ndarray) -> dict[str, Any]:
         if idx.size == 0:
-            return {"rmse": float("nan"), "mae": float("nan"), "r2": float("nan")}
-        return regression_metrics(Y[idx], Y_pred[idx])
+            return {
+                "rmse": float("nan"),
+                "mae": float("nan"),
+                "r2": float("nan"),
+                "per_target": _per_target_metrics(
+                    y_true=np.zeros((0, Y.shape[1]), dtype=np.float64),
+                    y_pred=np.zeros((0, Y.shape[1]), dtype=np.float64),
+                    target_names=target_names,
+                    target_scale=target_scale,
+                ),
+            }
+        agg = regression_metrics(Y[idx], Y_pred[idx])
+        return {
+            "rmse": float(agg["rmse"]),
+            "mae": float(agg["mae"]),
+            "r2": float(agg["r2"]),
+            "per_target": _per_target_metrics(
+                y_true=Y[idx],
+                y_pred=Y_pred[idx],
+                target_names=target_names,
+                target_scale=target_scale,
+            ),
+        }
 
     train_m = _split_metrics(train_idx)
     val_m = _split_metrics(val_idx)
@@ -210,6 +285,11 @@ def train_thermo_symbolic_affine(
         "train": train_m,
         "val": val_m,
         "test": test_m,
+        "normalization_method": "p95_p05_range",
+        "target_names": list(target_names),
+        "target_scale": {
+            str(target_names[i]): float(target_scale[i]) for i in range(len(target_names))
+        },
         "train_idx": train_idx.tolist(),
         "val_idx": val_idx.tolist(),
         "test_idx": test_idx.tolist(),
@@ -246,32 +326,86 @@ def save_thermo_symbolic_artifact(
         bias=np.asarray(artifact.bias, dtype=np.float64),
     )
 
-    report = quality_report or {
-        "schema_version": "surrogate_quality_report_v1",
-        "surrogate_kind": "thermo_symbolic",
-        "artifact_file": target.name,
-        "artifact_sha256": sha256_file(target),
-        "dataset_manifest": {
-            "source_path": "",
-            "num_samples": 0,
-            "num_features": int(len(artifact.feature_names)),
-            "num_targets": int(len(artifact.objective_names) + len(artifact.constraint_names)),
-            "dataset_sha256": "",
-        },
-        "metrics": {
-            "train": {"rmse": float("nan"), "mae": float("nan"), "r2": float("nan")},
-            "val": {"rmse": float("nan"), "mae": float("nan"), "r2": float("nan")},
-            "test": {"rmse": float("nan"), "mae": float("nan"), "r2": float("nan")},
-            "slice_metrics": [],
-        },
-        "ood_thresholds": {},
-        "uncertainty_calibration": {"method": "deterministic_affine", "status": "not_applicable"},
-        "required_artifacts": [target.name],
-        "pass": True,
-        "fail_reasons": [],
-    }
+    target_names = tuple(str(v) for v in artifact.objective_names) + tuple(
+        str(v) for v in artifact.constraint_names
+    )
+    default_per_target = [
+        {
+            "name": str(name),
+            "rmse": 0.0,
+            "mae": 0.0,
+            "r2": 1.0,
+            "nrmse": 0.0,
+            "target_scale": 1.0,
+        }
+        for name in target_names
+    ]
+    report = dict(quality_report or {})
+    if not report:
+        report = {
+            "schema_version": "surrogate_quality_report_v1",
+            "surrogate_kind": "thermo_symbolic",
+            "artifact_file": target.name,
+            "artifact_sha256": "",
+            "dataset_manifest": {
+                "source_path": "",
+                "num_samples": 0,
+                "num_features": int(len(artifact.feature_names)),
+                "num_targets": int(len(artifact.objective_names) + len(artifact.constraint_names)),
+                "dataset_sha256": "",
+            },
+            "metrics": {
+                "train": {
+                    "rmse": 0.0,
+                    "mae": 0.0,
+                    "r2": 1.0,
+                    "per_target": list(default_per_target),
+                },
+                "val": {
+                    "rmse": 0.0,
+                    "mae": 0.0,
+                    "r2": 1.0,
+                    "per_target": list(default_per_target),
+                },
+                "test": {
+                    "rmse": 0.0,
+                    "mae": 0.0,
+                    "r2": 1.0,
+                    "per_target": list(default_per_target),
+                },
+                "slice_metrics": [],
+            },
+            "quality_profile": thermo_symbolic_balanced_profile(),
+            "ood_thresholds": {},
+            "uncertainty_calibration": {"method": "deterministic_affine", "status": "not_applicable"},
+            "required_artifacts": [target.name],
+            "pass": True,
+            "fail_reasons": [],
+        }
+    report["schema_version"] = str(report.get("schema_version", "surrogate_quality_report_v1"))
+    report["surrogate_kind"] = "thermo_symbolic"
+    report["artifact_file"] = target.name
+    report["quality_profile"] = dict(
+        thermo_symbolic_balanced_profile() | dict(report.get("quality_profile", {}) or {})
+    )
+    required = [str(v) for v in (report.get("required_artifacts") or []) if str(v).strip()]
+    if target.name not in required:
+        required.append(target.name)
+    report["required_artifacts"] = required
+    report["artifact_sha256"] = sha256_file(target)
+    reasons = thermo_symbolic_quality_fail_reasons(report)
+    report["pass"] = bool(len(reasons) == 0)
+    report["fail_reasons"] = reasons
     write_quality_report(target.parent / "quality_report.json", report)
     return target
+
+
+def _raise_or_warn(mode: str, message: str) -> None:
+    m = str(mode).strip().lower()
+    if m == "strict":
+        raise ValueError(message)
+    if m == "warn":
+        LOGGER.warning(message)
 
 
 def load_thermo_symbolic_artifact(
@@ -283,7 +417,7 @@ def load_thermo_symbolic_artifact(
     p = Path(path)
     if not p.exists():
         raise FileNotFoundError(f"Thermo symbolic artifact not found: {p}")
-    validate_artifact_quality(
+    report = validate_artifact_quality(
         p,
         surrogate_kind="thermo_symbolic",
         validation_mode=str(validation_mode),
@@ -293,7 +427,7 @@ def load_thermo_symbolic_artifact(
         if "__meta_json__" not in data:
             raise ValueError(f"Artifact missing __meta_json__: {p}")
         meta = json.loads(str(data["__meta_json__"].item()))
-        return ThermoSymbolicArtifact(
+        artifact = ThermoSymbolicArtifact(
             feature_names=tuple(meta["feature_names"]),
             objective_names=tuple(meta["objective_names"]),
             constraint_names=tuple(meta["constraint_names"]),
@@ -306,4 +440,32 @@ def load_thermo_symbolic_artifact(
             bias=np.asarray(data["bias"], dtype=np.float64),
             version_hash=str(meta.get("version_hash", "")),
         )
-
+    declared_hash = str(artifact.version_hash).strip()
+    computed_hash = _compute_version_hash(artifact)
+    if declared_hash and declared_hash != computed_hash:
+        _raise_or_warn(
+            validation_mode,
+            "Thermo symbolic artifact version hash mismatch: "
+            f"declared={declared_hash}, computed={computed_hash}, path={p}",
+        )
+    if not declared_hash:
+        artifact = ThermoSymbolicArtifact(
+            feature_names=artifact.feature_names,
+            objective_names=artifact.objective_names,
+            constraint_names=artifact.constraint_names,
+            fidelity=artifact.fidelity,
+            x_mean=artifact.x_mean,
+            x_std=artifact.x_std,
+            y_mean=artifact.y_mean,
+            y_std=artifact.y_std,
+            weight=artifact.weight,
+            bias=artifact.bias,
+            version_hash=computed_hash,
+        )
+    if str(validation_mode).strip().lower() != "off":
+        qpath = p.parent / "quality_report.json"
+        if report is None and qpath.exists():
+            report = load_quality_report(qpath)
+        if isinstance(report, dict):
+            validate_thermo_symbolic_quality(report, validation_mode=str(validation_mode))
+    return artifact
