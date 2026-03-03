@@ -111,7 +111,9 @@ def evaluate_trend_checks(
 ) -> dict[str, bool]:
     """Core trend sanity checks demanded by hard-first gate."""
     return {
-        "intake_area_trend_ok": bool(float(trapped_mass_intake_up) >= float(trapped_mass_base) - 1e-9),
+        "intake_area_trend_ok": bool(
+            float(trapped_mass_intake_up) >= float(trapped_mass_base) - 1e-9
+        ),
         "backpressure_trend_ok": bool(
             float(scavenging_backpressure_up) <= float(scavenging_base) + 1e-9
         ),
