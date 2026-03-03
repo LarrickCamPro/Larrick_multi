@@ -1,7 +1,7 @@
 # Main Development Plan: Hard-First Compute/Optimize/Solve (Canonical)
 
 Status: active  
-Last updated: 2026-03-01  
+Last updated: 2026-03-03  
 Scope: backend-only (`src/larrak2`), no GUI/dashboard migration
 
 This is the single source of truth for development priorities.  
@@ -48,12 +48,23 @@ The following superseded plan documents were intentionally removed and folded in
 | Area | Present in codebase | Hard gap to close |
 | --- | --- | --- |
 | Two-stage plumbing | `src/larrak2/pipelines/explore_exploit.py`, `src/larrak2/optimization/candidate_store.py` | Needs strict fidelity gating and stronger high-fidelity objective parity |
-| CasADi refinement | `src/larrak2/adapters/casadi_refine.py`, `src/larrak2/optimization/slicing/*` | Current IPOPT path solves a local linearized slice model, not a true nonlinear high-fidelity NLP |
-| Thermo core | `src/larrak2/thermo/motionlaw.py` | `src/larrak2/thermo/combustion.py` and `src/larrak2/thermo/scavenging.py` remain placeholder-level |
-| Tribology/material | `src/larrak2/cem/*`, `src/larrak2/realworld/*` | Core coefficients/tables still placeholder-biased and sparsely populated; fallback behavior can mask missing physics |
+| CasADi refinement | `src/larrak2/adapters/casadi_refine.py`, `src/larrak2/optimization/slicing/*` | Nonlinear symbolic slice NLP is integrated; remaining gap is optional thermo symbolic overlay governance and artifact quality gating |
+| Thermo core | `src/larrak2/thermo/motionlaw.py`, `src/larrak2/thermo/two_zone.py`, `src/larrak2/thermo/combustion.py`, `src/larrak2/thermo/scavenging.py` | Equation-first two-zone path is integrated; remaining gap is strict anchor governance + reproducible anchor provenance + symbolic bridge support |
+| Tribology/material | `src/larrak2/cem/*`, `src/larrak2/realworld/*` | ISO/FZG data contracts and method-aware scuff evaluation are integrated; remaining gap is lifetime-depth calibration and uncertainty calibration |
 | Lifetime model | `src/larrak2/realworld/life_damage.py` | Simplified Miner proxy needs calibrated SN/stress models and route-specific validation |
 | Surrogate workflows | `src/larrak2/training/workflows.py`, `src/larrak2/surrogate/*` | Need uncertainty-aware quality gates and stronger dataset contracts per operating regime |
-| Orchestration backend | `src/larrak2/orchestration/*`, CLI `orchestrate` | Truth trigger policy still manual/off only; automation policy deferred |
+| Orchestration backend | `src/larrak2/orchestration/*`, CLI `orchestrate` | Auto truth dispatch is integrated; remaining gap is confidence-policy tuning and truth-budget calibration |
+
+### 3.1 Thermo Remaining Gaps (Post Two-Zone)
+
+1. Anchor governance contract:
+   strict fidelity-2 runs require non-empty validated anchors with explicit schema checks and diagnostics.
+2. Anchor reproducibility:
+   baseline anchor manifest must be generated/maintained via a reproducible tooling path with provenance metadata.
+3. Symbolic bridge:
+   add thermo symbolic surrogate overlay for CasADi slice NLP without replacing the numeric two-zone truth path.
+4. Test isolation:
+   fidelity-2 strict tests unrelated to thermo anchors should provide anchor manifests explicitly to avoid accidental gate coupling.
 
 ## 4. Hard Missing Components (By Module Class)
 

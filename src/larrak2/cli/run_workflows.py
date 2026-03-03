@@ -24,6 +24,7 @@ from larrak2.core.artifact_paths import (
     DEFAULT_GEAR_LOSS_NN_DIR,
     DEFAULT_HIFI_SURROGATE_DIR,
     DEFAULT_OPENFOAM_NN_ARTIFACT,
+    DEFAULT_THERMO_SYMBOLIC_ARTIFACT,
     assert_not_legacy_models_path,
     assert_not_legacy_models_write,
 )
@@ -124,7 +125,14 @@ def run_pareto_grid_workflow(args: argparse.Namespace) -> int:
                 str(getattr(args, "thermo_constants_path", "")),
                 "--thermo-anchor-manifest",
                 str(getattr(args, "thermo_anchor_manifest", "")),
+                "--tribology-scuff-method",
+                str(getattr(args, "tribology_scuff_method", "auto")),
             ]
+            strict_trib = getattr(args, "strict_tribology_data", None)
+            if strict_trib is True:
+                argv.append("--strict-tribology-data")
+            elif strict_trib is False:
+                argv.append("--no-strict-tribology-data")
             if args.verbose:
                 argv.append("--verbose")
 
@@ -411,7 +419,14 @@ def _build_eval_context_from_args(
         gear_loss_mode=str(getattr(args, "gear_loss_mode", "physics")),
         gear_loss_model_dir=str(getattr(args, "gear_loss_model_dir", "")).strip() or None,
         strict_data=bool(getattr(args, "strict_data", True)),
+        strict_tribology_data=getattr(args, "strict_tribology_data", None),
+        tribology_scuff_method=str(getattr(args, "tribology_scuff_method", "auto")),
         surrogate_validation_mode=str(getattr(args, "surrogate_validation_mode", "strict")),
+        thermo_symbolic_mode=str(getattr(args, "thermo_symbolic_mode", "off")),
+        thermo_symbolic_artifact_path=str(
+            getattr(args, "thermo_symbolic_artifact_path", "")
+        ).strip()
+        or None,
         machining_mode=str(getattr(args, "machining_mode", "nn")),
         machining_model_path=str(getattr(args, "machining_model_path", "")).strip() or None,
     )
@@ -1199,6 +1214,41 @@ def run_train_stack_surrogate_workflow(args: argparse.Namespace) -> int:
     return 0
 
 
+def run_train_thermo_symbolic_workflow(args: argparse.Namespace) -> int:
+    """Train thermo symbolic surrogate artifact used by CasADi thermo overlay."""
+    from larrak2.training.workflows import train_thermo_symbolic_workflow
+
+    outdir = Path(str(args.outdir))
+    outdir.mkdir(parents=True, exist_ok=True)
+    manifest_path = outdir / "train_thermo_symbolic_manifest.json"
+    manifest: dict[str, object] = {
+        "workflow": "train_thermo_symbolic",
+        "started_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "config": vars(args),
+        "ok": False,
+    }
+    try:
+        summary = train_thermo_symbolic_workflow(args)
+        manifest["ok"] = True
+        manifest["summary"] = summary
+        manifest["artifact_path"] = str(summary.get("artifact_path", ""))
+        print("Thermo symbolic training complete.")
+        print(f"Artifact: {manifest['artifact_path']}")
+    except Exception as exc:
+        manifest["error"] = str(exc)
+        manifest["traceback"] = traceback.format_exc()
+        print(f"Thermo symbolic training failed: {exc}")
+        manifest["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        print(f"Manifest: {manifest_path}")
+        return 1
+
+    manifest["finished_at"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    print(f"Manifest: {manifest_path}")
+    return 0
+
+
 def run_dress_rehearsal_workflow(args: argparse.Namespace) -> int:
     """Verify surrogate readiness, run optimization, and finish CEM validation."""
     from larrak2.cli.validate import format_report, validate_candidates
@@ -1897,7 +1947,14 @@ def run_explore_exploit_workflow(args: argparse.Namespace) -> int:
             str(getattr(args, "thermo_constants_path", "")),
             "--thermo-anchor-manifest",
             str(getattr(args, "thermo_anchor_manifest", "")),
+            "--tribology-scuff-method",
+            str(getattr(args, "tribology_scuff_method", "auto")),
         ]
+        strict_trib = getattr(args, "strict_tribology_data", None)
+        if strict_trib is True:
+            explore_argv.append("--strict-tribology-data")
+        elif strict_trib is False:
+            explore_argv.append("--no-strict-tribology-data")
         if bool(args.verbose):
             explore_argv.append("--verbose")
         code = run_pareto_main(explore_argv)
@@ -1923,6 +1980,13 @@ def run_explore_exploit_workflow(args: argparse.Namespace) -> int:
         thermo_constants_path=str(getattr(args, "thermo_constants_path", "")).strip() or None,
         thermo_anchor_manifest_path=str(getattr(args, "thermo_anchor_manifest", "")).strip()
         or None,
+        thermo_symbolic_mode=str(getattr(args, "thermo_symbolic_mode", "off")),
+        thermo_symbolic_artifact_path=str(
+            getattr(args, "thermo_symbolic_artifact_path", "")
+        ).strip()
+        or None,
+        strict_tribology_data=getattr(args, "strict_tribology_data", None),
+        tribology_scuff_method=str(getattr(args, "tribology_scuff_method", "auto")),
     )
     hifi_ctx = EvalContext(
         rpm=float(args.rpm),
@@ -1934,6 +1998,13 @@ def run_explore_exploit_workflow(args: argparse.Namespace) -> int:
         thermo_constants_path=str(getattr(args, "thermo_constants_path", "")).strip() or None,
         thermo_anchor_manifest_path=str(getattr(args, "thermo_anchor_manifest", "")).strip()
         or None,
+        thermo_symbolic_mode=str(getattr(args, "thermo_symbolic_mode", "off")),
+        thermo_symbolic_artifact_path=(
+            str(getattr(args, "thermo_symbolic_artifact_path", "")).strip()
+            or str(DEFAULT_THERMO_SYMBOLIC_ARTIFACT)
+        ),
+        strict_tribology_data=getattr(args, "strict_tribology_data", None),
+        tribology_scuff_method=str(getattr(args, "tribology_scuff_method", "auto")),
     )
 
     weights = _parse_float_list(str(args.rank_weights))
@@ -2063,7 +2134,14 @@ def run_orchestrate_workflow(args: argparse.Namespace) -> int:
         cache_path=str(args.cache_path).strip() or None,
         use_provenance=use_provenance,
         strict_data=bool(getattr(args, "strict_data", True)),
+        strict_tribology_data=getattr(args, "strict_tribology_data", None),
+        tribology_scuff_method=str(getattr(args, "tribology_scuff_method", "auto")),
         surrogate_validation_mode=str(getattr(args, "surrogate_validation_mode", "strict")),
+        thermo_symbolic_mode=str(getattr(args, "thermo_symbolic_mode", "off")),
+        thermo_symbolic_artifact_path=str(
+            getattr(args, "thermo_symbolic_artifact_path", "")
+        ).strip()
+        or None,
         machining_mode=str(getattr(args, "machining_mode", "nn")),
         machining_model_path=str(getattr(args, "machining_model_path", "")).strip() or None,
     )

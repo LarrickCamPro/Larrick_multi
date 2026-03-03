@@ -102,3 +102,8 @@ def test_validate_artifact_quality_checks_hash_linkage(tmp_path: Path) -> None:
             validation_mode="strict",
             required_artifacts=[artifact.name],
         )
+
+
+def test_quality_report_schema_accepts_thermo_symbolic_kind() -> None:
+    report = _base_report("thermo_symbolic", "thermo_symbolic_f1.npz")
+    validate_quality_report_schema(report)

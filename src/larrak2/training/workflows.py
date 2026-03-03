@@ -12,11 +12,12 @@ import numpy as np
 from larrak2.core.archive_io import load_archive
 from larrak2.core.artifact_paths import (
     DEFAULT_STACK_SURROGATE_DIR,
+    DEFAULT_THERMO_SYMBOLIC_DIR,
     assert_not_legacy_models_path,
     assert_not_legacy_models_write,
 )
-from larrak2.core.constraints import get_constraint_names
-from larrak2.core.encoding import N_TOTAL, mid_bounds_candidate
+from larrak2.core.constraints import THERMO_CONSTRAINTS_FID0, THERMO_CONSTRAINTS_FID1, get_constraint_names
+from larrak2.core.encoding import N_TOTAL, bounds, mid_bounds_candidate
 from larrak2.core.evaluator import evaluate_candidate
 from larrak2.core.types import EvalContext
 from larrak2.surrogate.quality_contract import (
@@ -29,6 +30,10 @@ from larrak2.surrogate.stack import (
     default_feature_names,
     save_stack_artifact,
     train_stack_surrogate,
+)
+from larrak2.thermo.symbolic_artifact import (
+    save_thermo_symbolic_artifact,
+    train_thermo_symbolic_affine,
 )
 
 # OpenFOAM Imports
@@ -382,6 +387,245 @@ def train_stack_surrogate_workflow(args: argparse.Namespace) -> dict[str, Any]:
         metrics=metrics,
     )
     print(f"Saved stack surrogate artifact to {out_path}")
+    print(f"Training summary: {summary_path}")
+    return summary
+
+
+def _parse_name_list(raw: str | None, *, default: tuple[str, ...]) -> tuple[str, ...]:
+    text = str(raw or "").strip()
+    if not text:
+        return tuple(default)
+    values = [tok.strip() for tok in text.split(",") if tok.strip()]
+    return tuple(values) if values else tuple(default)
+
+
+def _collect_thermo_targets(
+    *,
+    result: Any,
+    objective_names: tuple[str, ...],
+    constraint_names: tuple[str, ...],
+) -> np.ndarray:
+    diag = result.diag or {}
+    obj_names = [str(v) for v in (diag.get("objectives", {}) or {}).get("names", [])]
+    if len(obj_names) != len(result.F):
+        raise ValueError("Objective names/values mismatch in evaluator diagnostics")
+    obj_map = {name: float(result.F[i]) for i, name in enumerate(obj_names)}
+
+    constraints = diag.get("constraints", [])
+    con_map: dict[str, float] = {}
+    for rec in constraints:
+        if not isinstance(rec, dict):
+            continue
+        name = str(rec.get("name", "")).strip()
+        if not name:
+            continue
+        con_map[name] = float(rec.get("scaled_raw", rec.get("scaled", 0.0)))
+
+    missing_obj = [name for name in objective_names if name not in obj_map]
+    missing_con = [name for name in constraint_names if name not in con_map]
+    if missing_obj or missing_con:
+        raise ValueError(
+            "Thermo symbolic target mapping missing names: "
+            f"objectives={missing_obj}, constraints={missing_con}"
+        )
+    ordered = [obj_map[name] for name in objective_names] + [con_map[name] for name in constraint_names]
+    return np.asarray(ordered, dtype=np.float64)
+
+
+def _generate_thermo_symbolic_dataset(
+    *,
+    n_samples: int,
+    seed: int,
+    rpm: float,
+    torque: float,
+    fidelity: int,
+    objective_names: tuple[str, ...],
+    constraint_names: tuple[str, ...],
+    thermo_model: str,
+    thermo_constants_path: str | None,
+    thermo_anchor_manifest_path: str | None,
+    surrogate_validation_mode: str,
+) -> tuple[np.ndarray, np.ndarray, tuple[str, ...], dict[str, Any]]:
+    xl, xu = bounds()
+    rng = np.random.default_rng(int(seed))
+    n = max(8, int(n_samples))
+    X_design = rng.uniform(xl.reshape(1, -1), xu.reshape(1, -1), size=(n, N_TOTAL))
+    X = np.hstack(
+        [
+            np.asarray(X_design, dtype=np.float64),
+            np.full((n, 1), float(rpm), dtype=np.float64),
+            np.full((n, 1), float(torque), dtype=np.float64),
+        ]
+    )
+    feature_names = default_feature_names(N_TOTAL)
+
+    ctx = EvalContext(
+        rpm=float(rpm),
+        torque=float(torque),
+        fidelity=int(fidelity),
+        seed=int(seed),
+        thermo_model=str(thermo_model),
+        thermo_constants_path=str(thermo_constants_path).strip() or None,
+        thermo_anchor_manifest_path=str(thermo_anchor_manifest_path).strip() or None,
+        surrogate_validation_mode=str(surrogate_validation_mode),
+        thermo_symbolic_mode="off",
+        thermo_symbolic_artifact_path=None,
+    )
+    Y_rows: list[np.ndarray] = []
+    for i in range(n):
+        res = evaluate_candidate(np.asarray(X_design[i], dtype=np.float64), ctx)
+        Y_rows.append(
+            _collect_thermo_targets(
+                result=res,
+                objective_names=objective_names,
+                constraint_names=constraint_names,
+            )
+        )
+    Y = np.vstack(Y_rows).astype(np.float64)
+    source_meta = {
+        "source": "generated",
+        "seed": int(seed),
+        "n_samples": int(n),
+        "rpm": float(rpm),
+        "torque": float(torque),
+        "fidelity": int(fidelity),
+        "thermo_model": str(thermo_model),
+    }
+    return X, Y, feature_names, source_meta
+
+
+def train_thermo_symbolic_workflow(args: argparse.Namespace) -> dict[str, Any]:
+    """Workflow for thermo symbolic surrogate artifact training/export."""
+    print("Starting thermo symbolic surrogate training workflow...")
+    outdir = _resolve_artifact_outdir(
+        str(args.outdir or DEFAULT_THERMO_SYMBOLIC_DIR),
+        purpose="Thermo symbolic artifact output",
+    )
+    artifact_name = (
+        str(getattr(args, "name", "thermo_symbolic_f1.npz")).strip() or "thermo_symbolic_f1.npz"
+    )
+    out_path = outdir / artifact_name
+
+    default_constraints = THERMO_CONSTRAINTS_FID1 if int(args.fidelity) >= 1 else THERMO_CONSTRAINTS_FID0
+    objective_names = _parse_name_list(
+        getattr(args, "objective_names", ""),
+        default=("eta_comb_gap", "eta_exp_gap", "motion_law_penalty"),
+    )
+    constraint_names = _parse_name_list(
+        getattr(args, "constraint_names", ""),
+        default=tuple(default_constraints),
+    )
+
+    dataset_path = str(getattr(args, "dataset", "")).strip()
+    if dataset_path:
+        p = assert_not_legacy_models_path(dataset_path, purpose="thermo symbolic training dataset")
+        with np.load(p, allow_pickle=True) as data:
+            if "X" not in data or "Y" not in data:
+                raise ValueError("Thermo symbolic dataset NPZ must contain X and Y arrays")
+            X = np.asarray(data["X"], dtype=np.float64)
+            Y = np.asarray(data["Y"], dtype=np.float64)
+            feature_names = (
+                tuple(str(v) for v in data["feature_names"].tolist())
+                if "feature_names" in data
+                else default_feature_names(N_TOTAL)
+            )
+            if "objective_names" in data:
+                objective_names = tuple(str(v) for v in data["objective_names"].tolist())
+            if "constraint_names" in data:
+                constraint_names = tuple(str(v) for v in data["constraint_names"].tolist())
+        source_meta: dict[str, Any] = {"source": "npz", "path": str(p)}
+        dataset_manifest = dataset_manifest_for_file(
+            p,
+            n_samples=int(X.shape[0]),
+            n_features=int(X.shape[1]),
+            n_targets=int(Y.shape[1]),
+        )
+    else:
+        X, Y, feature_names, source_meta = _generate_thermo_symbolic_dataset(
+            n_samples=int(getattr(args, "n_samples", 256)),
+            seed=int(args.seed),
+            rpm=float(args.rpm),
+            torque=float(args.torque),
+            fidelity=int(args.fidelity),
+            objective_names=objective_names,
+            constraint_names=constraint_names,
+            thermo_model=str(getattr(args, "thermo_model", "two_zone_eq_v1")),
+            thermo_constants_path=str(getattr(args, "thermo_constants_path", "")).strip() or None,
+            thermo_anchor_manifest_path=str(getattr(args, "thermo_anchor_manifest", "")).strip() or None,
+            surrogate_validation_mode=str(getattr(args, "surrogate_validation_mode", "strict")),
+        )
+        dataset_manifest = {
+            "source": source_meta,
+            "num_samples": int(X.shape[0]),
+            "num_features": int(X.shape[1]),
+            "num_targets": int(Y.shape[1]),
+        }
+        dataset_dump = str(getattr(args, "dataset_out", "")).strip()
+        if dataset_dump:
+            dump_path = assert_not_legacy_models_write(
+                dataset_dump, purpose="thermo symbolic generated training dataset"
+            )
+            dump_path.parent.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(
+                dump_path,
+                X=np.asarray(X, dtype=np.float64),
+                Y=np.asarray(Y, dtype=np.float64),
+                feature_names=np.asarray(feature_names, dtype=object),
+                objective_names=np.asarray(objective_names, dtype=object),
+                constraint_names=np.asarray(constraint_names, dtype=object),
+            )
+            source_meta["dataset_dump"] = str(dump_path)
+
+    artifact, metrics = train_thermo_symbolic_affine(
+        X,
+        Y,
+        feature_names=feature_names,
+        objective_names=objective_names,
+        constraint_names=constraint_names,
+        fidelity=int(args.fidelity),
+        seed=int(args.seed),
+        val_frac=float(getattr(args, "val_frac", 0.2)),
+    )
+
+    val_rmse = float((metrics.get("val") or {}).get("rmse", float("nan")))
+    passed = bool(np.isfinite(val_rmse))
+    report = {
+        "schema_version": "surrogate_quality_report_v1",
+        "surrogate_kind": "thermo_symbolic",
+        "artifact_file": out_path.name,
+        "artifact_sha256": "",
+        "dataset_manifest": dataset_manifest,
+        "metrics": {
+            "train": dict(metrics.get("train", {})),
+            "val": dict(metrics.get("val", {})),
+            "test": dict(metrics.get("test", {})),
+            "slice_metrics": [],
+        },
+        "ood_thresholds": {
+            "max_val_rmse": float(max(1e-6, 2.0 * val_rmse)) if np.isfinite(val_rmse) else float("inf")
+        },
+        "uncertainty_calibration": {"method": "deterministic_affine", "status": "not_applicable"},
+        "required_artifacts": [out_path.name],
+        "pass": passed,
+        "fail_reasons": [] if passed else ["non-finite validation RMSE"],
+    }
+    save_thermo_symbolic_artifact(artifact, out_path, quality_report=report)
+    report["artifact_sha256"] = sha256_file(out_path)
+    write_quality_report(out_path.parent / "quality_report.json", report)
+
+    summary = {
+        "artifact_path": str(out_path),
+        "fidelity": int(args.fidelity),
+        "feature_names": list(feature_names),
+        "objective_names": list(objective_names),
+        "constraint_names": list(constraint_names),
+        "source": source_meta,
+        "metrics": metrics,
+        "version_hash": artifact.version_hash,
+    }
+    summary_path = outdir / "thermo_symbolic_training_summary.json"
+    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    print(f"Saved thermo symbolic artifact to {out_path}")
     print(f"Training summary: {summary_path}")
     return summary
 

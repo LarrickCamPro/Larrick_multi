@@ -1,0 +1,10 @@
+oil_type,finish_tier,temp_C_min,temp_C_max,ehl_constant,viscosity_speed_exp,pressure_exp,temp_ref_C,temp_exp,unit_system,provenance,version
+generic_ep,as_ground,40.0,100.0,0.038,0.70,0.13,90.0,0.18,um_based_proxy,ISO_TS_6336-22_proxy_calibration,iso6336_ts22_v1
+generic_ep,fine_ground,40.0,100.0,0.045,0.70,0.13,90.0,0.18,um_based_proxy,ISO_TS_6336-22_proxy_calibration,iso6336_ts22_v1
+generic_ep,superfinished,40.0,100.0,0.052,0.70,0.13,90.0,0.18,um_based_proxy,ISO_TS_6336-22_proxy_calibration,iso6336_ts22_v1
+generic_ep,as_ground,100.0,180.0,0.034,0.70,0.13,120.0,0.20,um_based_proxy,ISO_TS_6336-22_proxy_calibration,iso6336_ts22_v1
+generic_ep,fine_ground,100.0,180.0,0.040,0.70,0.13,120.0,0.20,um_based_proxy,ISO_TS_6336-22_proxy_calibration,iso6336_ts22_v1
+generic_ep,superfinished,100.0,180.0,0.047,0.70,0.13,120.0,0.20,um_based_proxy,ISO_TS_6336-22_proxy_calibration,iso6336_ts22_v1
+high_ep,as_ground,40.0,140.0,0.042,0.72,0.13,95.0,0.18,um_based_proxy,ISO_TS_6336-22_plus_ISO_14635_calibration,iso6336_ts22_v1
+high_ep,fine_ground,40.0,140.0,0.049,0.72,0.13,95.0,0.18,um_based_proxy,ISO_TS_6336-22_plus_ISO_14635_calibration,iso6336_ts22_v1
+high_ep,superfinished,40.0,140.0,0.056,0.72,0.13,95.0,0.18,um_based_proxy,ISO_TS_6336-22_plus_ISO_14635_calibration,iso6336_ts22_v1

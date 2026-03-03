@@ -61,6 +61,9 @@ def test_anchor_benchmark_gate_passes_for_small_disagreement(monkeypatch, tmp_pa
     assert res.diag["in_validated_envelope"] is True
     assert res.diag["thermo_benchmark_status"] == "pass"
     assert res.diag["thermo_hybrid_correction_active"] is True
+    assert res.diag["anchor_manifest_version"] == "test"
+    assert res.diag["anchor_count"] == 1
+    assert res.diag["anchor_path"] == str(manifest_path)
 
 
 def test_anchor_benchmark_gate_fails_for_large_disagreement(monkeypatch, tmp_path: Path) -> None:
@@ -114,7 +117,7 @@ def test_fidelity2_requires_nonempty_anchors_in_strict_mode(monkeypatch) -> None
         },
     )
     ctx = EvalContext(rpm=2800.0, torque=140.0, fidelity=2, seed=3, surrogate_validation_mode="strict")
-    with pytest.raises(RuntimeError, match="non-empty anchor manifest"):
+    with pytest.raises(RuntimeError, match="anchor_count=0"):
         two_zone.evaluate_two_zone_thermo(candidate.thermo, ctx)
 
 

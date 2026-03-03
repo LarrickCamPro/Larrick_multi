@@ -24,6 +24,8 @@ from larrak2.cem.tribology import (
     compute_lambda,
     compute_micropitting_safety,
     compute_scuff_margin,
+    compute_scuff_margins,
+    evaluate_tribology,
 )
 
 __all__ = [
@@ -36,6 +38,8 @@ __all__ = [
     "compute_lambda",
     "compute_micropitting_safety",
     "compute_scuff_margin",
+    "compute_scuff_margins",
+    "evaluate_tribology",
     "SurfaceFinishTier",
     "effective_composite_roughness",
     "LubricationMode",

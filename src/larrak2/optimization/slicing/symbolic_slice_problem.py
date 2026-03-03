@@ -16,6 +16,7 @@ from ...surrogate.stack import (
     load_stack_artifact,
     symbolic_objectives_constraints,
 )
+from ...thermo.symbolic_bridge import apply_thermo_symbolic_overlay
 from ..solvers.ipopt import IPOPTOptions, IPOPTSolver
 
 
@@ -82,7 +83,7 @@ def _build_nlp(
     weights: np.ndarray | None,
     eps_constraints: np.ndarray | None,
     regularization: float,
-):
+) -> tuple[Any, np.ndarray, np.ndarray, np.ndarray, dict[str, Any]]:
     ca = _import_casadi()
     z0 = np.asarray([x_base[i] for i in active_indices], dtype=np.float64)
     z = ca.MX.sym("z", len(active_indices))
@@ -97,6 +98,14 @@ def _build_nlp(
         torque=float(ctx.torque),
     )
     F_hat, G_hat = symbolic_objectives_constraints(artifact, feats_sym)
+    F_hat, G_hat, thermo_overlay_diag = apply_thermo_symbolic_overlay(
+        ctx=ctx,
+        x_full_sym=x_full_sym,
+        stack_objective_names=artifact.objective_names,
+        stack_constraint_names=artifact.constraint_names,
+        F_hat=F_hat,
+        G_hat=G_hat,
+    )
 
     constraints = []
     lbg = []
@@ -133,7 +142,13 @@ def _build_nlp(
 
     g_expr = ca.vertcat(*constraints) if constraints else ca.MX([])
     nlp = {"x": z, "f": objective, "g": g_expr}
-    return nlp, z0, np.asarray(lbg, dtype=np.float64), np.asarray(ubg, dtype=np.float64)
+    return (
+        nlp,
+        z0,
+        np.asarray(lbg, dtype=np.float64),
+        np.asarray(ubg, dtype=np.float64),
+        thermo_overlay_diag,
+    )
 
 
 def _build_bounds(
@@ -182,7 +197,12 @@ def solve_symbolic_slice_with_ipopt(
             message="No active variables selected",
             ipopt_status="no_active_variables",
             iterations=0,
-            diagnostics={"nlp_formulation": "global_surrogate_symbolic"},
+            diagnostics={
+                "nlp_formulation": "global_surrogate_symbolic",
+                "thermo_symbolic_mode": str(getattr(ctx, "thermo_symbolic_mode", "off")),
+                "thermo_symbolic_used": False,
+                "thermo_symbolic_version": "",
+            },
         )
 
     artifact = load_stack_artifact(
@@ -211,7 +231,7 @@ def solve_symbolic_slice_with_ipopt(
     for attempt in range(attempts):
         radius = attempt_radius if attempt_radius > 0 else 1e-3
         try:
-            nlp, z0, lbg, ubg = _build_nlp(
+            nlp, z0, lbg, ubg, thermo_overlay_diag = _build_nlp(
                 artifact=artifact,
                 x_base=x0,
                 ctx=ctx_eval,
@@ -265,6 +285,7 @@ def solve_symbolic_slice_with_ipopt(
                 "base_hard_violation": base_violation,
                 "surrogate_stack_version": artifact.version_hash,
                 "nlp_formulation": "global_surrogate_symbolic",
+                **thermo_overlay_diag,
             }
 
             violation_cap = max(base_violation + 1e-5, float(validation_tol))
@@ -295,6 +316,9 @@ def solve_symbolic_slice_with_ipopt(
                 "attempt_radius": float(radius),
                 "surrogate_stack_version": artifact.version_hash,
                 "nlp_formulation": "global_surrogate_symbolic",
+                "thermo_symbolic_mode": str(getattr(ctx_eval, "thermo_symbolic_mode", "off")),
+                "thermo_symbolic_used": False,
+                "thermo_symbolic_version": "",
             }
 
         attempt_radius *= 0.5

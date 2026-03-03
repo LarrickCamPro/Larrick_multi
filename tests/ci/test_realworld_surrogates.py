@@ -44,10 +44,14 @@ class TestSurrogateEvaluation:
         """Default params should produce finite results."""
         result = evaluate_realworld_surrogates(DEFAULT_REALWORLD_PARAMS)
         assert np.isfinite(result.lambda_min)
+        assert np.isfinite(result.scuff_margin_flash_C)
+        assert np.isfinite(result.scuff_margin_integral_C)
         assert np.isfinite(result.scuff_margin_C)
         assert np.isfinite(result.micropitting_safety)
         assert np.isfinite(result.material_temp_margin_C)
         assert np.isfinite(result.total_cost_index)
+        assert result.tribology_method_used in {"flash", "integral"}
+        assert result.tribology_data_status in {"ok", "degraded_warn", "degraded_off"}
 
     def test_extreme_low_finite(self):
         """All-zero levels should produce finite (possibly bad) results."""
@@ -98,6 +102,13 @@ class TestSurrogateEvaluation:
         """Lubrication regime should be one of the known values."""
         result = evaluate_realworld_surrogates(DEFAULT_REALWORLD_PARAMS)
         assert result.lube_regime in {"boundary", "mixed", "full_ehl"}
+
+    def test_auto_scuff_is_worst_case(self):
+        """Auto scuff selection should be min(flash, integral)."""
+        result = evaluate_realworld_surrogates(DEFAULT_REALWORLD_PARAMS)
+        assert result.scuff_margin_C == np.minimum(
+            result.scuff_margin_flash_C, result.scuff_margin_integral_C
+        )
 
 
 class TestConstraints:

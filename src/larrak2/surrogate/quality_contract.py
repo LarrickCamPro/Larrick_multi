@@ -13,7 +13,7 @@ import numpy as np
 LOGGER = logging.getLogger(__name__)
 
 _ALLOWED_MODES = {"strict", "warn", "off"}
-_ALLOWED_KINDS = {"stack", "openfoam", "calculix", "hifi"}
+_ALLOWED_KINDS = {"stack", "openfoam", "calculix", "hifi", "thermo_symbolic"}
 
 
 def sha256_file(path: str | Path) -> str:

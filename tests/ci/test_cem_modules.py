@@ -39,6 +39,8 @@ from larrak2.cem.tribology import (
     compute_lambda,
     compute_micropitting_safety,
     compute_scuff_margin,
+    compute_scuff_margins,
+    evaluate_tribology,
 )
 
 
@@ -92,6 +94,32 @@ class TestTribology:
         assert np.isfinite(lam)
         assert lam >= 0
 
+    def test_lambda_decreases_with_roughness_and_stress(self):
+        """Lambda should worsen with roughness/stress increases."""
+        base = TribologyParams(
+            hertz_stress_MPa=1000.0,
+            composite_roughness_um=0.20,
+            oil_viscosity_cSt=15.0,
+            entrainment_velocity_m_s=15.0,
+        )
+        rougher = TribologyParams(
+            hertz_stress_MPa=1000.0,
+            composite_roughness_um=0.60,
+            oil_viscosity_cSt=15.0,
+            entrainment_velocity_m_s=15.0,
+        )
+        higher_stress = TribologyParams(
+            hertz_stress_MPa=1800.0,
+            composite_roughness_um=0.20,
+            oil_viscosity_cSt=15.0,
+            entrainment_velocity_m_s=15.0,
+        )
+        lam_base = compute_lambda(base, validation_mode="strict")
+        lam_rougher = compute_lambda(rougher, validation_mode="strict")
+        lam_stress = compute_lambda(higher_stress, validation_mode="strict")
+        assert lam_rougher < lam_base
+        assert lam_stress < lam_base
+
     def test_lambda_zero_roughness(self):
         """Zero roughness should give maximum λ (capped)."""
         params = TribologyParams(composite_roughness_um=0.0)
@@ -110,6 +138,53 @@ class TestTribology:
         assert sf > 0
         # λ = 1.5 and default λ_perm = 0.3 → S_λ = 5.0
         assert sf == pytest.approx(5.0)
+
+    def test_micropitting_crosses_unity(self):
+        """Micropitting factor should cross at S_lambda = 1."""
+        assert compute_micropitting_safety(0.29, lambda_perm=0.30) < 1.0
+        assert compute_micropitting_safety(0.30, lambda_perm=0.30) == pytest.approx(1.0)
+        assert compute_micropitting_safety(0.31, lambda_perm=0.30) > 1.0
+
+    def test_scuff_margin_worsens_with_load_and_sliding(self):
+        """Scuff margin should decrease when load/sliding rise."""
+        mild = TribologyParams(hertz_stress_MPa=900.0, sliding_velocity_m_s=2.0)
+        severe = TribologyParams(hertz_stress_MPa=1700.0, sliding_velocity_m_s=9.0)
+        m_mild = compute_scuff_margin(mild, scuff_method="auto", validation_mode="strict")
+        m_severe = compute_scuff_margin(severe, scuff_method="auto", validation_mode="strict")
+        assert m_severe < m_mild
+
+    def test_scuff_auto_matches_worst_case_method(self):
+        """Auto scuff policy should equal min(flash, integral)."""
+        metrics = compute_scuff_margins(
+            TribologyParams(),
+            scuff_method="auto",
+            validation_mode="strict",
+        )
+        assert metrics["scuff_margin_C"] == pytest.approx(
+            min(metrics["scuff_margin_flash_C"], metrics["scuff_margin_integral_C"])
+        )
+
+    def test_strict_lookup_missing_row_raises(self):
+        """Strict mode should fail on unresolved lookup keys."""
+        with pytest.raises(ValueError):
+            evaluate_tribology(
+                TribologyParams(oil_type="unknown_oil"),
+                scuff_method="auto",
+                validation_mode="strict",
+            )
+
+    @pytest.mark.parametrize("mode", ["warn", "off"])
+    def test_warn_off_lookup_degrades_with_status(self, mode: str):
+        """Warn/off modes should continue with explicit degraded status."""
+        result = evaluate_tribology(
+            TribologyParams(oil_type="unknown_oil"),
+            scuff_method="auto",
+            validation_mode=mode,
+        )
+        assert np.isfinite(result.lambda_min)
+        assert np.isfinite(result.scuff_margin_C)
+        assert result.tribology_data_status.startswith("degraded")
+        assert len(result.tribology_data_messages) > 0
 
     def test_regime_classification(self):
         """Regime classification boundaries."""
@@ -206,17 +281,20 @@ class TestRegistry:
         r2 = get_registry()
         assert r1 is r2
 
-    def test_placeholders_registered(self):
-        """Placeholder datasets should be auto-registered."""
+    def test_registered_datasets_exist(self):
+        """Expected CEM datasets should be registered."""
         reg = get_registry()
         available = reg.list_available()
-        assert len(available) >= 7  # We registered 7 placeholder datasets
+        assert "tribology_ehl_coefficients" in available
+        assert "scuffing_critical_temperatures" in available
+        assert "micropitting_lambda_perm" in available
+        assert "fzg_step_load_map" in available
 
     def test_lookup_by_domain(self):
         """Should be able to filter by domain."""
         reg = get_registry()
         trib = reg.list_by_domain("tribology")
-        assert len(trib) >= 2  # ehl_coefficients + scuffing_critical_temps
+        assert len(trib) >= 4
 
     def test_load_empty_table(self):
         """Loading placeholder (no file) should return empty column dict."""
@@ -224,6 +302,47 @@ class TestRegistry:
         table = reg.load_table("material_properties")
         assert isinstance(table, dict)
         assert "alloy" in table
+
+    def test_tribology_tables_required_in_strict_mode(self):
+        """Required tribology tables should be non-empty in strict mode."""
+        reg = get_registry()
+        table_names = [
+            "tribology_ehl_coefficients",
+            "scuffing_critical_temperatures",
+            "micropitting_lambda_perm",
+            "fzg_step_load_map",
+        ]
+        key_columns = {
+            "tribology_ehl_coefficients": ("oil_type", "finish_tier", "ehl_constant"),
+            "scuffing_critical_temperatures": ("oil_type", "additive_package", "method", "T_crit_C"),
+            "micropitting_lambda_perm": ("oil_type", "finish_tier", "lambda_perm"),
+            "fzg_step_load_map": ("test_standard", "test_method", "load_stage", "T_crit_C"),
+        }
+        for name in table_names:
+            table, messages = reg.load_required_table(
+                name,
+                validation_mode="strict",
+                key_columns=key_columns[name],
+            )
+            assert not messages
+            assert table
+            n_rows = max((len(v) for v in table.values()), default=0)
+            assert n_rows > 0
+
+    def test_tribology_schema_has_units_provenance_version(self):
+        """Tribology dataset descriptors should require traceability columns."""
+        reg = get_registry()
+        datasets = [
+            "tribology_ehl_coefficients",
+            "scuffing_critical_temperatures",
+            "micropitting_lambda_perm",
+            "fzg_step_load_map",
+        ]
+        for name in datasets:
+            desc = reg.get(name)
+            assert "provenance" in desc.columns
+            assert "version" in desc.columns
+            assert any(col.startswith("unit") for col in desc.columns)
 
 
 class TestCEMEvaluator:

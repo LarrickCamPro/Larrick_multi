@@ -14,7 +14,11 @@ from ..core.constants import P_ATM, RATIO_SLOPE_LIMIT_FID0, RATIO_SLOPE_LIMIT_FI
 from ..core.encoding import ThermoParams
 from ..core.types import BreathingConfig, EvalContext
 from .combustion import burn_increment, double_wiebe_burn_fraction
-from .constants import ThermoConstants, load_thermo_constants
+from .constants import (
+    DEFAULT_THERMO_ANCHOR_MANIFEST_PATH,
+    ThermoConstants,
+    load_thermo_constants,
+)
 from .scavenging import ScavengingResult, evaluate_rotary_scavenging
 from .validation import (
     build_validation_report,
@@ -281,12 +285,18 @@ def evaluate_two_zone_thermo(
     residual_eq = float(scav_eq.residual_fraction)
     scav_eff_eq = float(scav_eq.scavenging_efficiency)
 
-    manifest = load_validation_manifest(ctx.thermo_anchor_manifest_path)
+    anchor_manifest_path = (
+        str(Path(str(ctx.thermo_anchor_manifest_path)).expanduser())
+        if str(ctx.thermo_anchor_manifest_path or "").strip()
+        else str(DEFAULT_THERMO_ANCHOR_MANIFEST_PATH)
+    )
+    manifest = load_validation_manifest(anchor_manifest_path)
     if int(ctx.fidelity) >= 2 and str(getattr(ctx, "surrogate_validation_mode", "strict")) == "strict":
         anchors = manifest.get("anchors", [])
         if not anchors:
             raise RuntimeError(
-                "Fidelity-2 thermo benchmark requires non-empty anchor manifest in strict mode."
+                "Fidelity-2 thermo benchmark requires non-empty anchor manifest in strict mode. "
+                f"path='{anchor_manifest_path}', anchor_count=0"
             )
     in_env = in_validated_envelope(rpm=ctx.rpm, torque=ctx.torque, manifest=manifest)
 
@@ -647,6 +657,9 @@ def evaluate_two_zone_thermo(
             "thermo_nn_disagreement": validation_report.nn_disagreement,
             "thermo_validation_messages": validation_report.messages,
             "thermo_trend_checks": validation_report.trend_checks,
+            "anchor_manifest_version": str(manifest.get("version", "")),
+            "anchor_count": int(len(manifest.get("anchors", []))),
+            "anchor_path": str(anchor_manifest_path),
             "in_validated_envelope": bool(validation_report.in_validated_envelope),
             "thermo_hybrid_correction_active": bool(hybrid_correction_active),
             "branch_continuity_error": float(scav_eq.branch_continuity_error),

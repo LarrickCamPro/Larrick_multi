@@ -7,7 +7,7 @@ between physics models and optimizers.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 
@@ -68,7 +68,11 @@ class EvalContext:
     thermo_model: str = "two_zone_eq_v1"
     thermo_constants_path: str | None = None
     thermo_anchor_manifest_path: str | None = None
+    thermo_symbolic_mode: str = "off"
+    thermo_symbolic_artifact_path: str | None = None
     strict_data: bool = True
+    strict_tribology_data: bool | None = None
+    tribology_scuff_method: Literal["auto", "flash", "integral"] = "auto"
     surrogate_validation_mode: str = "strict"
     machining_mode: str = "nn"
     machining_model_path: str | None = None
@@ -108,6 +112,23 @@ class EvalContext:
             raise ValueError(
                 "surrogate_validation_mode must be 'strict', 'warn', or 'off', "
                 f"got {self.surrogate_validation_mode}"
+            )
+        if self.thermo_symbolic_mode not in {"strict", "warn", "off"}:
+            raise ValueError(
+                "thermo_symbolic_mode must be 'strict', 'warn', or 'off', "
+                f"got {self.thermo_symbolic_mode}"
+            )
+        if self.tribology_scuff_method not in {"auto", "flash", "integral"}:
+            raise ValueError(
+                "tribology_scuff_method must be 'auto', 'flash', or 'integral', "
+                f"got {self.tribology_scuff_method}"
+            )
+        if self.strict_tribology_data is not None and not isinstance(
+            self.strict_tribology_data, bool
+        ):
+            raise ValueError(
+                "strict_tribology_data must be bool or None, "
+                f"got {type(self.strict_tribology_data).__name__}"
             )
         if self.machining_mode not in {"nn", "analytical"}:
             raise ValueError(

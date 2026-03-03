@@ -10,6 +10,7 @@ import numpy as np
 
 from larrak2.cli.refine_pareto import main as refine_main
 from larrak2.core.encoding import N_TOTAL, mid_bounds_candidate
+from larrak2.core.types import EvalResult
 from larrak2.optimization.slicing.slice_problem import SliceSolveResult
 
 
@@ -44,9 +45,42 @@ def test_refine_pareto_slice_metadata_and_full_dimensionality():
                 },
             )
 
+        def _mock_select_active_set(*_args, **_kwargs):
+            from larrak2.optimization.slicing.active_set import SliceSelection
+
+            active = [0, 1, 2, 3, 4, 5]
+            frozen = [i for i in range(N_TOTAL) if i not in active]
+            return SliceSelection(
+                active_indices=active,
+                frozen_indices=frozen,
+                scores=[1.0 for _ in active],
+            )
+
+        def _mock_eval_candidate(x, _ctx):
+            x_arr = np.asarray(x, dtype=np.float64)
+            return EvalResult(
+                F=np.array(
+                    [
+                        float(np.sum(x_arr)),
+                        float(np.mean(x_arr)),
+                        0.1,
+                        0.0,
+                        0.0,
+                        0.0,
+                    ],
+                    dtype=np.float64,
+                ),
+                G=np.zeros(23, dtype=np.float64),
+                diag={},
+            )
+
         from unittest.mock import patch
 
-        with patch("larrak2.adapters.casadi_refine.solve_slice_with_ipopt", _mock_slice_solve):
+        with (
+            patch("larrak2.adapters.casadi_refine.solve_slice_with_ipopt", _mock_slice_solve),
+            patch("larrak2.adapters.casadi_refine.select_active_set", _mock_select_active_set),
+            patch("larrak2.adapters.casadi_refine.evaluate_candidate", _mock_eval_candidate),
+        ):
             code = refine_main(
                 [
                     "--input",

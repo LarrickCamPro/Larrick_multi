@@ -16,6 +16,7 @@ from larrak2.training.workflows import (
     train_calculix_workflow,
     train_openfoam_workflow,
     train_stack_surrogate_workflow,
+    train_thermo_symbolic_workflow,
 )
 
 
@@ -114,3 +115,49 @@ def test_train_stack_emits_quality_report(tmp_path: Path) -> None:
     assert report["metrics"]["train"]
     assert report["metrics"]["val"]
     assert report["metrics"]["test"]
+
+
+def test_train_thermo_symbolic_emits_quality_report(tmp_path: Path) -> None:
+    n = 20
+    x_cols = 12
+    y_cols = 5
+    X = np.random.default_rng(6).normal(size=(n, x_cols)).astype(np.float64)
+    Y = np.random.default_rng(7).normal(size=(n, y_cols)).astype(np.float64)
+    data_path = tmp_path / "thermo_symbolic_data.npz"
+    np.savez(
+        data_path,
+        X=X,
+        Y=Y,
+        feature_names=np.array([f"x_{i:03d}" for i in range(10)] + ["rpm", "torque"], dtype=object),
+        objective_names=np.array(["eta_comb_gap", "eta_exp_gap", "motion_law_penalty"], dtype=object),
+        constraint_names=np.array(["thermo_power_balance", "thermo_pressure_limit"], dtype=object),
+    )
+
+    outdir = tmp_path / "thermo_symbolic_out"
+    args = argparse.Namespace(
+        outdir=str(outdir),
+        name="thermo_symbolic_f1.npz",
+        dataset=str(data_path),
+        dataset_out="",
+        n_samples=64,
+        fidelity=1,
+        rpm=2600.0,
+        torque=130.0,
+        objective_names="eta_comb_gap,eta_exp_gap,motion_law_penalty",
+        constraint_names="thermo_power_balance,thermo_pressure_limit",
+        val_frac=0.2,
+        seed=17,
+        thermo_model="two_zone_eq_v1",
+        thermo_constants_path="",
+        thermo_anchor_manifest="",
+        surrogate_validation_mode="strict",
+    )
+    train_thermo_symbolic_workflow(args)
+
+    report = json.loads((outdir / "quality_report.json").read_text(encoding="utf-8"))
+    summary = json.loads((outdir / "thermo_symbolic_training_summary.json").read_text(encoding="utf-8"))
+    assert report["surrogate_kind"] == "thermo_symbolic"
+    assert report["metrics"]["train"]
+    assert report["metrics"]["val"]
+    assert report["metrics"]["test"]
+    assert Path(summary["artifact_path"]).exists()

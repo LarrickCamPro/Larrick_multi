@@ -14,6 +14,10 @@ data/cem/*
 !data/cem/material_route_cloud.csv
 !data/cem/route_metadata.csv
 !data/cem/temperature_curves.csv
+!data/cem/tribology_ehl_coefficients.csv
+!data/cem/scuffing_critical_temperatures.csv
+!data/cem/micropitting_lambda_perm.csv
+!data/cem/fzg_step_load_map.csv
 models/
 openfoam_templates/
 

@@ -140,7 +140,11 @@ class OrchestrationConfig:
     truth_auto_min_feasibility: float = 0.0
     truth_auto_min_pred_quantile: float = 0.0
     strict_data: bool = True
+    strict_tribology_data: bool | None = None
+    tribology_scuff_method: str = "auto"
     surrogate_validation_mode: str = "strict"
+    thermo_symbolic_mode: str = "off"
+    thermo_symbolic_artifact_path: str | None = None
     machining_mode: str = "nn"
     machining_model_path: str | None = None
 
@@ -177,6 +181,14 @@ class OrchestrationConfig:
             raise ValueError(
                 "surrogate_validation_mode must be one of {'strict', 'warn', 'off'}"
             )
+        if self.strict_tribology_data is not None and not isinstance(self.strict_tribology_data, bool):
+            raise ValueError("strict_tribology_data must be bool or None")
+        if self.tribology_scuff_method not in {"auto", "flash", "integral"}:
+            raise ValueError(
+                "tribology_scuff_method must be one of {'auto', 'flash', 'integral'}"
+            )
+        if self.thermo_symbolic_mode not in {"strict", "warn", "off"}:
+            raise ValueError("thermo_symbolic_mode must be one of {'strict', 'warn', 'off'}")
         if self.machining_mode not in {"nn", "analytical"}:
             raise ValueError("machining_mode must be 'nn' or 'analytical'")
 
@@ -464,7 +476,15 @@ class Orchestrator:
             tolerance_constraint_mode=str(self.config.tolerance_constraint_mode),
             tolerance_threshold_mm=float(self.config.tolerance_threshold_mm),
             strict_data=bool(self.config.strict_data),
+            strict_tribology_data=self.config.strict_tribology_data,
+            tribology_scuff_method=str(self.config.tribology_scuff_method),
             surrogate_validation_mode=str(self.config.surrogate_validation_mode),
+            thermo_symbolic_mode=str(self.config.thermo_symbolic_mode),
+            thermo_symbolic_artifact_path=(
+                str(self.config.thermo_symbolic_artifact_path).strip()
+                if self.config.thermo_symbolic_artifact_path
+                else None
+            ),
             machining_mode=str(self.config.machining_mode),
             machining_model_path=(
                 str(self.config.machining_model_path).strip()

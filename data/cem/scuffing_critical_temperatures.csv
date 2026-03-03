@@ -1,0 +1,5 @@
+oil_type,additive_package,method,T_crit_C,load_stage,test_method,unit_temp,provenance,version
+generic_ep,standard_ep,flash,360.0,8,A_8.3_90,C,ISO_TS_6336-20_plus_ISO_14635-1,iso_scuff_v1
+generic_ep,standard_ep,integral,350.0,8,A_8.3_90,C,ISO_TS_6336-21_plus_ISO_14635-1,iso_scuff_v1
+high_ep,high_ep,flash,430.0,10,A10_16_6R_120,C,ISO_TS_6336-20_plus_ISO_14635-2,iso_scuff_v1
+high_ep,high_ep,integral,420.0,10,A10_16_6R_120,C,ISO_TS_6336-21_plus_ISO_14635-2,iso_scuff_v1

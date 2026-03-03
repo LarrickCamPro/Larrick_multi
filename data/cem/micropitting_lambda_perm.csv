@@ -1,0 +1,7 @@
+oil_type,finish_tier,lambda_perm,unit_lambda,provenance,version
+generic_ep,as_ground,0.40,lambda_ratio,ISO_TS_6336-22_micropitting_perm_lambda,iso_lambda_perm_v1
+generic_ep,fine_ground,0.30,lambda_ratio,ISO_TS_6336-22_micropitting_perm_lambda,iso_lambda_perm_v1
+generic_ep,superfinished,0.24,lambda_ratio,ISO_TS_6336-22_micropitting_perm_lambda,iso_lambda_perm_v1
+high_ep,as_ground,0.35,lambda_ratio,ISO_TS_6336-22_micropitting_perm_lambda,iso_lambda_perm_v1
+high_ep,fine_ground,0.28,lambda_ratio,ISO_TS_6336-22_micropitting_perm_lambda,iso_lambda_perm_v1
+high_ep,superfinished,0.22,lambda_ratio,ISO_TS_6336-22_micropitting_perm_lambda,iso_lambda_perm_v1

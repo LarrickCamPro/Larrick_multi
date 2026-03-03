@@ -264,6 +264,18 @@ def refine_candidate(
         diag["validation_attempts"] = int(slice_result.diagnostics.get("validation_attempts", 0))
         diag["trust_radius_final"] = slice_result.diagnostics.get("trust_radius_final", trust_radius)
         diag["surrogate_stack_path"] = stack_path
+        diag["thermo_symbolic_used"] = bool(
+            slice_result.diagnostics.get("thermo_symbolic_used", False)
+        )
+        diag["thermo_symbolic_version"] = str(
+            slice_result.diagnostics.get("thermo_symbolic_version", "")
+        )
+        diag["thermo_symbolic_mode"] = str(
+            slice_result.diagnostics.get(
+                "thermo_symbolic_mode",
+                getattr(ctx_refine, "thermo_symbolic_mode", "off"),
+            )
+        )
 
         if slice_result.success:
             x_refined = slice_result.x_opt

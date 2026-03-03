@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from larrak2.cem.lubrication import (
+    LubricationMode,
     LubricationParams,
     churning_loss_factor,
     cooling_effectiveness,
@@ -36,9 +37,8 @@ from larrak2.cem.surface_finish import (
 from larrak2.cem.tribology import (
     TribologyParams,
     classify_regime,
-    compute_lambda,
     compute_micropitting_safety,
-    compute_scuff_margin,
+    evaluate_tribology,
 )
 
 
@@ -64,6 +64,9 @@ class CEMEvalParams:
     entrainment_velocity_m_s: float = 15.0
     pitch_line_vel_m_s: float = 20.0
     base_friction_coeff: float = 0.06
+    tribology_scuff_method: str = "auto"
+    tribology_validation_mode: str = "strict"
+    strict_tribology_data: bool | None = None
 
 
 @dataclass
@@ -86,9 +89,13 @@ class CEMResult:
     """
 
     lambda_min: float
+    scuff_margin_flash_C: float
+    scuff_margin_integral_C: float
     scuff_margin_C: float
     micropitting_safety: float
     lube_regime: str
+    tribology_method_used: str
+    tribology_data_status: str
     cooling_eff: float
     fatigue_life_multiplier: float
     total_cost_index: float
@@ -140,28 +147,53 @@ def evaluate_cem(params: CEMEvalParams) -> CEMResult:
     # Surface finish also contributes to fatigue life
     fatigue_mult *= finish_props.micropitting_life_multiplier
 
-    # 6. Tribology calculations
-    trib_params = TribologyParams(
-        hertz_stress_MPa=params.hertz_stress_MPa,
-        sliding_velocity_m_s=params.sliding_velocity_m_s,
-        entrainment_velocity_m_s=params.entrainment_velocity_m_s,
-        oil_viscosity_cSt=visc,
-        composite_roughness_um=composite_roughness,
-        bulk_temp_C=params.operating_temp_C,
-        oil_inlet_temp_C=params.lubrication.supply_temp_C,
+    # 6. Tribology calculations (ISO data-backed)
+    oil_type = (
+        "high_ep"
+        if params.lubrication.mode in {LubricationMode.PRESSURIZED_JET, LubricationMode.PHASE_GATED_JET}
+        else "generic_ep"
+    )
+    additive_package = "high_ep" if oil_type == "high_ep" else "standard_ep"
+    effective_bulk_temp_C = max(20.0, float(params.operating_temp_C) - 35.0 * float(cool_eff))
+    validation_mode = str(params.tribology_validation_mode).strip().lower()
+    if params.strict_tribology_data is True:
+        validation_mode = "strict"
+    elif params.strict_tribology_data is False and validation_mode == "strict":
+        validation_mode = "warn"
+
+    trib_eval = evaluate_tribology(
+        TribologyParams(
+            hertz_stress_MPa=params.hertz_stress_MPa,
+            sliding_velocity_m_s=params.sliding_velocity_m_s,
+            entrainment_velocity_m_s=params.entrainment_velocity_m_s,
+            oil_viscosity_cSt=visc,
+            composite_roughness_um=composite_roughness,
+            bulk_temp_C=effective_bulk_temp_C,
+            oil_inlet_temp_C=params.lubrication.supply_temp_C,
+            oil_type=oil_type,
+            additive_package=additive_package,
+            finish_tier=params.surface_finish.value,
+            friction_coeff=modified_friction,
+        ),
+        scuff_method=params.tribology_scuff_method,
+        validation_mode=validation_mode,
     )
 
-    lambda_min = compute_lambda(trib_params)
+    lambda_min = float(trib_eval.lambda_min)
+    scuff_margin_flash = float(trib_eval.scuff_margin_flash_C * modified_scuff_mult)
+    scuff_margin_integral = float(trib_eval.scuff_margin_integral_C * modified_scuff_mult)
+    method_pref = str(params.tribology_scuff_method).strip().lower()
+    if method_pref == "flash":
+        scuff_margin = scuff_margin_flash
+        scuff_method_used = "flash"
+    elif method_pref == "integral":
+        scuff_margin = scuff_margin_integral
+        scuff_method_used = "integral"
+    else:
+        scuff_margin = min(scuff_margin_flash, scuff_margin_integral)
+        scuff_method_used = "flash" if scuff_margin_flash <= scuff_margin_integral else "integral"
 
-    # Scuff margin (modified by coating)
-    raw_scuff = compute_scuff_margin(trib_params)
-    scuff_margin = raw_scuff * modified_scuff_mult
-
-    # Apply cooling effectiveness as a scuff margin bonus
-    # Better cooling → lower bulk temperature → higher margin
-    scuff_margin += cool_eff * 50.0  # Placeholder: up to 50 °C improvement
-
-    micropitting_sf = compute_micropitting_safety(lambda_min)
+    micropitting_sf = compute_micropitting_safety(lambda_min, lambda_perm=trib_eval.lambda_perm)
     regime = classify_regime(lambda_min)
 
     # 7. Cost index
@@ -233,16 +265,26 @@ def evaluate_cem(params: CEMEvalParams) -> CEMResult:
         "tribology": {
             "lambda_min": lambda_min,
             "regime": regime.value,
+            "scuff_margin_flash_C": scuff_margin_flash,
+            "scuff_margin_integral_C": scuff_margin_integral,
             "scuff_margin_C": scuff_margin,
             "micropitting_safety": micropitting_sf,
+            "tribology_method_used": scuff_method_used,
+            "tribology_data_status": trib_eval.tribology_data_status,
+            "tribology_data_messages": list(trib_eval.tribology_data_messages),
+            "tribology_provenance": trib_eval.tribology_provenance,
         },
     }
 
     return CEMResult(
         lambda_min=lambda_min,
+        scuff_margin_flash_C=scuff_margin_flash,
+        scuff_margin_integral_C=scuff_margin_integral,
         scuff_margin_C=scuff_margin,
         micropitting_safety=micropitting_sf,
         lube_regime=regime.value,
+        tribology_method_used=scuff_method_used,
+        tribology_data_status=trib_eval.tribology_data_status,
         cooling_eff=cool_eff,
         fatigue_life_multiplier=fatigue_mult,
         total_cost_index=total_cost,

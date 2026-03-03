@@ -24,6 +24,7 @@ from larrak2.cli.run_workflows import (
     run_pareto_grid_workflow,
     run_pareto_staged_workflow,
     run_train_stack_surrogate_workflow,
+    run_train_thermo_symbolic_workflow,
     run_train_surrogates_workflow,
 )
 from larrak2.core.artifact_paths import (
@@ -31,6 +32,7 @@ from larrak2.core.artifact_paths import (
     DEFAULT_HIFI_SURROGATE_DIR,
     DEFAULT_OPENFOAM_NN_DIR,
     DEFAULT_STACK_SURROGATE_DIR,
+    DEFAULT_THERMO_SYMBOLIC_DIR,
 )
 
 
@@ -82,6 +84,19 @@ def main() -> int:
     )
     pg.add_argument("--thermo-constants-path", type=str, default="")
     pg.add_argument("--thermo-anchor-manifest", type=str, default="")
+    pg.add_argument(
+        "--tribology-scuff-method",
+        type=str,
+        default="auto",
+        choices=["auto", "flash", "integral"],
+    )
+    pg.add_argument("--strict-tribology-data", dest="strict_tribology_data", action="store_true")
+    pg.add_argument(
+        "--no-strict-tribology-data",
+        dest="strict_tribology_data",
+        action="store_false",
+    )
+    pg.set_defaults(strict_tribology_data=None)
     pg.add_argument("--rpm-min", type=float, default=1000.0)
     pg.add_argument("--rpm-max", type=float, default=7000.0)
     pg.add_argument("--rpm-n", type=int, default=6)
@@ -268,6 +283,64 @@ def main() -> int:
     tss.add_argument("--val-frac", type=float, default=0.2)
     tss.add_argument("--seed", type=int, default=42)
     tss.add_argument("--verbose", action="store_true")
+
+    # --- Train Thermo Symbolic ---
+    tts = subparsers.add_parser(
+        "train-thermo-symbolic",
+        help="Train thermo symbolic surrogate artifact for CasADi overlay",
+    )
+    tts.add_argument(
+        "--outdir",
+        type=str,
+        default=str(DEFAULT_THERMO_SYMBOLIC_DIR),
+        help="Output directory for thermo symbolic artifact",
+    )
+    tts.add_argument("--name", type=str, default="thermo_symbolic_f1.npz")
+    tts.add_argument(
+        "--dataset",
+        type=str,
+        default="",
+        help="Optional NPZ dataset path with X and Y arrays",
+    )
+    tts.add_argument(
+        "--dataset-out",
+        type=str,
+        default="",
+        help="Optional path to dump generated dataset NPZ",
+    )
+    tts.add_argument("--n-samples", type=int, default=256)
+    tts.add_argument("--fidelity", type=int, default=1, choices=[0, 1, 2])
+    tts.add_argument("--rpm", type=float, default=3000.0)
+    tts.add_argument("--torque", type=float, default=200.0)
+    tts.add_argument(
+        "--objective-names",
+        type=str,
+        default="eta_comb_gap,eta_exp_gap,motion_law_penalty",
+        help="Comma-separated objective names to model",
+    )
+    tts.add_argument(
+        "--constraint-names",
+        type=str,
+        default="",
+        help="Comma-separated constraint names to model (defaults to thermo constraints by fidelity)",
+    )
+    tts.add_argument("--val-frac", type=float, default=0.2)
+    tts.add_argument("--seed", type=int, default=42)
+    tts.add_argument(
+        "--thermo-model",
+        type=str,
+        default="two_zone_eq_v1",
+        choices=["two_zone_eq_v1"],
+    )
+    tts.add_argument("--thermo-constants-path", type=str, default="")
+    tts.add_argument("--thermo-anchor-manifest", type=str, default="")
+    tts.add_argument(
+        "--surrogate-validation-mode",
+        type=str,
+        default="strict",
+        choices=["strict", "warn", "off"],
+    )
+    tts.add_argument("--verbose", action="store_true")
 
     # --- Dress Rehearsal ---
     dr = subparsers.add_parser(
@@ -470,6 +543,18 @@ def main() -> int:
     ee.add_argument("--thermo-constants-path", type=str, default="")
     ee.add_argument("--thermo-anchor-manifest", type=str, default="")
     ee.add_argument(
+        "--thermo-symbolic-mode",
+        type=str,
+        default="off",
+        choices=["strict", "warn", "off"],
+    )
+    ee.add_argument(
+        "--thermo-symbolic-artifact-path",
+        type=str,
+        default="",
+        help="Thermo symbolic artifact path for symbolic overlay",
+    )
+    ee.add_argument(
         "--stack-model-path",
         type=str,
         default="",
@@ -478,6 +563,19 @@ def main() -> int:
     ee.add_argument("--ipopt-max-iter", type=int, default=None)
     ee.add_argument("--ipopt-tol", type=float, default=None)
     ee.add_argument("--ipopt-linear-solver", type=str, default=None)
+    ee.add_argument(
+        "--tribology-scuff-method",
+        type=str,
+        default="auto",
+        choices=["auto", "flash", "integral"],
+    )
+    ee.add_argument("--strict-tribology-data", dest="strict_tribology_data", action="store_true")
+    ee.add_argument(
+        "--no-strict-tribology-data",
+        dest="strict_tribology_data",
+        action="store_false",
+    )
+    ee.set_defaults(strict_tribology_data=None)
     ee.add_argument("--verbose", action="store_true")
 
     # --- Backend Orchestration ---
@@ -526,6 +624,18 @@ def main() -> int:
         choices=["strict", "warn", "off"],
     )
     orch.add_argument(
+        "--thermo-symbolic-mode",
+        type=str,
+        default="off",
+        choices=["strict", "warn", "off"],
+    )
+    orch.add_argument(
+        "--thermo-symbolic-artifact-path",
+        type=str,
+        default="",
+        help="Thermo symbolic artifact path for CasADi thermo overlay",
+    )
+    orch.add_argument(
         "--strict-data",
         dest="strict_data",
         action="store_true",
@@ -538,6 +648,19 @@ def main() -> int:
         help="Disable strict data-path checks",
     )
     orch.set_defaults(strict_data=True)
+    orch.add_argument("--strict-tribology-data", dest="strict_tribology_data", action="store_true")
+    orch.add_argument(
+        "--no-strict-tribology-data",
+        dest="strict_tribology_data",
+        action="store_false",
+    )
+    orch.set_defaults(strict_tribology_data=None)
+    orch.add_argument(
+        "--tribology-scuff-method",
+        type=str,
+        default="auto",
+        choices=["auto", "flash", "integral"],
+    )
     orch.add_argument(
         "--machining-mode",
         type=str,
@@ -587,6 +710,7 @@ def main() -> int:
         "active-learning": run_active_learning_workflow,
         "train-surrogates": run_train_surrogates_workflow,
         "train-stack-surrogate": run_train_stack_surrogate_workflow,
+        "train-thermo-symbolic": run_train_thermo_symbolic_workflow,
         "openfoam-doe": run_openfoam_doe_workflow,
         "dress-rehearsal": run_dress_rehearsal_workflow,
         "explore-exploit": run_explore_exploit_workflow,

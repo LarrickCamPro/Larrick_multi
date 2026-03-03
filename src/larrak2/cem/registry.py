@@ -156,6 +156,78 @@ class DatasetRegistry:
         self._cache[name] = table
         return table
 
+    def load_required_table(
+        self,
+        name: str,
+        *,
+        validation_mode: str = "strict",
+        key_columns: tuple[str, ...] = (),
+    ) -> tuple[dict[str, list], list[str]]:
+        """Load table with strict/warn/off validation semantics.
+
+        Returns:
+            (table, messages)
+            messages contains degradation notes in warn/off modes.
+        """
+        mode = str(validation_mode).strip().lower()
+        if mode not in {"strict", "warn", "off"}:
+            raise ValueError(
+                f"validation_mode must be one of ['strict', 'warn', 'off'], got {validation_mode!r}"
+            )
+
+        table = self.load_table(name)
+        desc = self.get(name)
+        messages: list[str] = []
+
+        if not table:
+            msg = f"Dataset '{name}' returned empty table object."
+            if mode == "strict":
+                raise ValueError(msg)
+            messages.append(msg)
+            logger.warning(msg)
+            return table, messages
+
+        # Determine row count from descriptor columns where possible.
+        candidate_cols = [c for c in desc.columns if c in table]
+        if not candidate_cols:
+            candidate_cols = list(table.keys())
+        n_rows = max((len(table.get(col, [])) for col in candidate_cols), default=0)
+
+        if n_rows <= 0:
+            msg = f"Dataset '{name}' has no rows."
+            if mode == "strict":
+                raise ValueError(msg)
+            messages.append(msg)
+            logger.warning(msg)
+            return table, messages
+
+        if key_columns:
+            for key in key_columns:
+                if key not in table:
+                    msg = f"Dataset '{name}' is missing required key column '{key}'."
+                    if mode == "strict":
+                        raise ValueError(msg)
+                    messages.append(msg)
+                    logger.warning(msg)
+                    continue
+                vals = table.get(key, [])
+                bad_rows = [
+                    int(i)
+                    for i, v in enumerate(vals)
+                    if str(v).strip() == "" or str(v).strip().lower() in {"nan", "none"}
+                ]
+                if bad_rows:
+                    msg = (
+                        f"Dataset '{name}' has empty required keys in column '{key}' "
+                        f"at rows {bad_rows[:5]}"
+                    )
+                    if mode == "strict":
+                        raise ValueError(msg)
+                    messages.append(msg)
+                    logger.warning(msg)
+
+        return table, messages
+
     @staticmethod
     def _load_file(path: Path, desc: DatasetDescriptor) -> dict[str, list]:
         """Load a CSV or JSON file into column-dict format.
@@ -266,13 +338,20 @@ def _register_placeholders(reg: DatasetRegistry) -> None:
         DatasetDescriptor(
             name="tribology_ehl_coefficients",
             domain="tribology",
-            source_ref="ISO/TS 6336-22 + NASA λ–life correlation",
+            source_ref="ISO/TS 6336-22 + ISO 14635-1/2 mapped calibration",
             columns=(
                 "oil_type",
-                "temperature_C",
-                "viscosity_cSt",
-                "pressure_viscosity_coeff",
+                "finish_tier",
+                "temp_C_min",
+                "temp_C_max",
                 "ehl_constant",
+                "viscosity_speed_exp",
+                "pressure_exp",
+                "temp_ref_C",
+                "temp_exp",
+                "unit_system",
+                "provenance",
+                "version",
             ),
         )
     )
@@ -281,13 +360,52 @@ def _register_placeholders(reg: DatasetRegistry) -> None:
         DatasetDescriptor(
             name="scuffing_critical_temperatures",
             domain="tribology",
-            source_ref="ISO/TS 6336-20/21 + FZG test data",
+            source_ref="ISO/TS 6336-20/21 + ISO 14635-1/2 FZG test procedures",
             columns=(
                 "oil_type",
                 "additive_package",
+                "method",
                 "T_crit_C",
                 "load_stage",
-                "method",
+                "test_method",
+                "unit_temp",
+                "provenance",
+                "version",
+            ),
+        )
+    )
+
+    reg.register(
+        DatasetDescriptor(
+            name="micropitting_lambda_perm",
+            domain="tribology",
+            source_ref="ISO/TS 6336-22 micropitting permissible film thickness",
+            columns=(
+                "oil_type",
+                "finish_tier",
+                "lambda_perm",
+                "unit_lambda",
+                "provenance",
+                "version",
+            ),
+        )
+    )
+
+    reg.register(
+        DatasetDescriptor(
+            name="fzg_step_load_map",
+            domain="tribology",
+            source_ref="ISO 14635-1/2 FZG procedure mapping to scuff calibration",
+            columns=(
+                "test_standard",
+                "test_method",
+                "load_stage",
+                "T_crit_C",
+                "oil_type",
+                "additive_package",
+                "unit_temp",
+                "provenance",
+                "version",
             ),
         )
     )

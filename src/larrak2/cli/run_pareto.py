@@ -152,9 +152,22 @@ def main(argv: list[str] | None = None) -> int:
         default="strict",
         choices=["strict", "warn", "off"],
     )
+    parser.add_argument(
+        "--tribology-scuff-method",
+        type=str,
+        default="auto",
+        choices=["auto", "flash", "integral"],
+    )
     parser.add_argument("--strict-data", dest="strict_data", action="store_true")
     parser.add_argument("--no-strict-data", dest="strict_data", action="store_false")
+    parser.add_argument("--strict-tribology-data", dest="strict_tribology_data", action="store_true")
+    parser.add_argument(
+        "--no-strict-tribology-data",
+        dest="strict_tribology_data",
+        action="store_false",
+    )
     parser.set_defaults(strict_data=True)
+    parser.set_defaults(strict_tribology_data=None)
     parser.add_argument("--machining-mode", type=str, default="nn", choices=["nn", "analytical"])
     parser.add_argument("--machining-model-path", type=str, default="")
 
@@ -207,6 +220,8 @@ def main(argv: list[str] | None = None) -> int:
         thermo_constants_path=str(args.thermo_constants_path).strip() or None,
         thermo_anchor_manifest_path=str(args.thermo_anchor_manifest).strip() or None,
         strict_data=bool(args.strict_data),
+        strict_tribology_data=args.strict_tribology_data,
+        tribology_scuff_method=str(args.tribology_scuff_method),
         surrogate_validation_mode=str(args.surrogate_validation_mode),
         machining_mode=str(args.machining_mode),
         machining_model_path=str(args.machining_model_path).strip() or None,
@@ -361,6 +376,11 @@ def main(argv: list[str] | None = None) -> int:
         "calculix_model_path": args.calculix_model_path,
         "gear_loss_mode": args.gear_loss_mode,
         "gear_loss_model_dir": args.gear_loss_model_dir,
+        "tribology_scuff_method": str(args.tribology_scuff_method),
+        "strict_data": bool(args.strict_data),
+        "strict_tribology_data": args.strict_tribology_data,
+        "surrogate_validation_mode": str(args.surrogate_validation_mode),
+        "machining_mode": str(args.machining_mode),
         "encoding_version": ENCODING_VERSION,
         "model_versions": {
             "thermo_v1": MODEL_VERSION_THERMO_V1,

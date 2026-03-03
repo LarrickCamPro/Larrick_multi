@@ -101,4 +101,7 @@ def test_symbolic_slice_solver_uses_nonlinear_nlp(monkeypatch, tmp_path: Path) -
     assert result.success is True
     assert result.ipopt_status == "Solve_Succeeded"
     assert result.diagnostics["nlp_formulation"] == "global_surrogate_symbolic"
+    assert result.diagnostics["thermo_symbolic_mode"] == "off"
+    assert result.diagnostics["thermo_symbolic_used"] is False
+    assert result.diagnostics["thermo_symbolic_version"] == ""
     assert result.x_opt.shape == x0.shape

@@ -27,8 +27,11 @@ class TestPhaseResolvedBasics:
         profs = self._make_flat_profiles()
         result = evaluate_realworld_phase_resolved(DEFAULT_REALWORLD_PARAMS, **profs)
         assert np.isfinite(result.lambda_min)
+        assert np.isfinite(result.scuff_margin_flash_C)
+        assert np.isfinite(result.scuff_margin_integral_C)
         assert np.isfinite(result.scuff_margin_C)
         assert np.isfinite(result.micropitting_safety)
+        assert result.tribology_method_used in {"flash", "integral"}
 
     def test_worst_phase_in_range(self):
         """Worst phase angle should be in [0, 360)."""
@@ -124,6 +127,10 @@ class TestPhaseResolvedVsScalar:
         assert phase_result.lambda_min == pytest.approx(scalar_result.lambda_min, rel=0.01), (
             f"Flat-profile phase-resolved λ ({phase_result.lambda_min:.4f}) "
             f"should match scalar λ ({scalar_result.lambda_min:.4f})"
+        )
+        assert phase_result.scuff_margin_C == pytest.approx(
+            min(phase_result.scuff_margin_flash_C, phase_result.scuff_margin_integral_C),
+            rel=1e-6,
         )
 
     def test_varying_profile_worse_than_mean(self):

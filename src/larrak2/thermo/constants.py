@@ -167,6 +167,30 @@ def load_anchor_manifest(path: str | Path | None = None) -> dict[str, Any]:
     if not isinstance(anchors, list):
         raise ValueError("anchors must be a list")
 
+    anchors_validated: list[dict[str, Any]] = []
+    for idx, rec in enumerate(anchors):
+        if not isinstance(rec, dict):
+            raise ValueError(f"Anchor at index {idx} must be an object")
+        if "rpm" not in rec or "torque" not in rec:
+            raise ValueError(f"Anchor at index {idx} must contain 'rpm' and 'torque'")
+        rpm = float(rec["rpm"])
+        torque = float(rec["torque"])
+        if not np.isfinite(rpm) or not np.isfinite(torque):
+            raise ValueError(f"Anchor at index {idx} has non-finite rpm/torque")
+        if rpm <= 0.0:
+            raise ValueError(f"Anchor at index {idx} has non-positive rpm={rpm}")
+        if torque < 0.0:
+            raise ValueError(f"Anchor at index {idx} has negative torque={torque}")
+        anchors_validated.append(
+            {
+                "rpm": rpm,
+                "torque": torque,
+                "label": str(rec.get("label", "")).strip(),
+                "source": str(rec.get("source", "")).strip(),
+                "provenance": rec.get("provenance", {}),
+            }
+        )
+
     return {
         "version": str(payload.get("version", "")),
         "validated_envelope": {
@@ -180,5 +204,5 @@ def load_anchor_manifest(path: str | Path | None = None) -> dict[str, Any]:
             "delta_residual_abs_max": float(thresholds.get("delta_residual_abs_max", 0.05)),
             "delta_scavenging_abs_max": float(thresholds.get("delta_scavenging_abs_max", 0.08)),
         },
-        "anchors": anchors,
+        "anchors": anchors_validated,
     }

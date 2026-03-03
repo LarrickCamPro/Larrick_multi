@@ -1,0 +1,7 @@
+test_standard,test_method,load_stage,T_crit_C,oil_type,additive_package,unit_temp,provenance,version
+ISO_14635-1:2023,A_8.3_90,7,345.0,generic_ep,standard_ep,C,ISO_14635-1_relative_scuff_capacity,iso_14635_map_v1
+ISO_14635-1:2023,A_8.3_90,8,360.0,generic_ep,standard_ep,C,ISO_14635-1_relative_scuff_capacity,iso_14635_map_v1
+ISO_14635-1:2023,A_8.3_90,9,375.0,generic_ep,standard_ep,C,ISO_14635-1_relative_scuff_capacity,iso_14635_map_v1
+ISO_14635-2:2023,A10_16_6R_120,9,415.0,high_ep,high_ep,C,ISO_14635-2_relative_scuff_capacity,iso_14635_map_v1
+ISO_14635-2:2023,A10_16_6R_120,10,430.0,high_ep,high_ep,C,ISO_14635-2_relative_scuff_capacity,iso_14635_map_v1
+ISO_14635-2:2023,A10_16_6R_120,11,445.0,high_ep,high_ep,C,ISO_14635-2_relative_scuff_capacity,iso_14635_map_v1

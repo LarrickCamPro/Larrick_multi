@@ -249,6 +249,16 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
     operating_temp_C = float(thermo_diag.get("T_mean_wall", 200.0))
     pitch_line_vel = omega * candidate.gear.base_radius / 1000.0  # m/s
 
+    strict_tribology_flag = (
+        bool(ctx.strict_data) if ctx.strict_tribology_data is None else bool(ctx.strict_tribology_data)
+    )
+    if strict_tribology_flag:
+        tribology_validation_mode = "strict"
+    else:
+        mode = str(getattr(ctx, "surrogate_validation_mode", "warn")).strip().lower()
+        tribology_validation_mode = mode if mode in {"warn", "off"} else "warn"
+    tribology_scuff_method = str(getattr(ctx, "tribology_scuff_method", "auto"))
+
     t_rw_start = time.perf_counter()
 
     # Phase-resolved evaluation if gear provides profile arrays
@@ -292,6 +302,9 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
             fn_profile=_np.asarray(fn_prof, dtype=_np.float64),
             operating_temp_C=operating_temp_C,
             pitch_line_vel_m_s=pitch_line_vel,
+            tribology_scuff_method=tribology_scuff_method,
+            tribology_validation_mode=tribology_validation_mode,
+            strict_tribology_data=strict_tribology_flag,
         )
         # 10,000 h life damage (phase-binned Miner accumulation)
         from larrak2.cem.registry import get_registry
@@ -345,6 +358,9 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
                 fn_profile=_np.asarray(fn_prof, dtype=_np.float64),
                 operating_temp_C=operating_temp_C,
                 pitch_line_vel_m_s=pitch_line_vel,
+                tribology_scuff_method=tribology_scuff_method,
+                tribology_validation_mode=tribology_validation_mode,
+                strict_tribology_data=strict_tribology_flag,
             )
 
             _sigma_ref = get_sigma_ref_for_route(
@@ -375,9 +391,27 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
 
         rw_result = PhaseResolvedResult(
             lambda_min=min(m.lambda_min for a, m in _rw_results),
+            scuff_margin_flash_C=min(m.scuff_margin_flash_C for a, m in _rw_results),
+            scuff_margin_integral_C=min(m.scuff_margin_integral_C for a, m in _rw_results),
             scuff_margin_C=min(m.scuff_margin_C for a, m in _rw_results),
             micropitting_safety=min(m.micropitting_safety for a, m in _rw_results),
             lube_regime=_rw_results[0][1].lube_regime,
+            tribology_method_used=_rw_results[0][1].tribology_method_used,
+            tribology_data_status=(
+                "degraded_off"
+                if any(
+                    str(m.tribology_data_status).strip().lower() == "degraded_off"
+                    for _, m in _rw_results
+                )
+                else (
+                    "degraded_warn"
+                    if any(
+                        str(m.tribology_data_status).strip().lower() == "degraded_warn"
+                        for _, m in _rw_results
+                    )
+                    else "ok"
+                )
+            ),
             material_temp_margin_C=min(m.material_temp_margin_C for a, m in _rw_results),
             total_cost_index=sum(a * m.total_cost_index for a, m in _rw_results),
             feature_importance=_rw_results[0][1].feature_importance,
@@ -386,6 +420,8 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
             n_bins_analyzed=_rw_results[0][1].n_bins_analyzed,
             force_threshold_N=_rw_results[0][1].force_threshold_N,
             lambda_profile=_rw_results[0][1].lambda_profile,
+            tribology_data_messages=tuple(_rw_results[0][1].tribology_data_messages),
+            tribology_provenance=dict(_rw_results[0][1].tribology_provenance),
         )
 
         life_damage_total = max(lr["D_total"] for a, lr in _life_damages)
@@ -415,6 +451,9 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
             sliding_velocity_m_s=sliding_vel,
             entrainment_velocity_m_s=entrainment_vel,
             pitch_line_vel_m_s=pitch_line_vel,
+            tribology_scuff_method=tribology_scuff_method,
+            tribology_validation_mode=tribology_validation_mode,
+            strict_tribology_data=strict_tribology_flag,
         )
         phase_diag = {"phase_resolved": False}
 
@@ -508,9 +547,15 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
         },
         "realworld": {
             "lambda_min": rw_result.lambda_min,
+            "scuff_margin_flash_C": rw_result.scuff_margin_flash_C,
+            "scuff_margin_integral_C": rw_result.scuff_margin_integral_C,
             "scuff_margin_C": rw_result.scuff_margin_C,
             "micropitting_safety": rw_result.micropitting_safety,
             "lube_regime": rw_result.lube_regime,
+            "tribology_method_used": rw_result.tribology_method_used,
+            "tribology_data_status": rw_result.tribology_data_status,
+            "tribology_data_messages": list(getattr(rw_result, "tribology_data_messages", ())),
+            "tribology_provenance": dict(getattr(rw_result, "tribology_provenance", {})),
             "material_temp_margin_C": rw_result.material_temp_margin_C,
             "cost_index": rw_result.total_cost_index,
             "feature_importance": rw_result.feature_importance,
@@ -523,6 +568,9 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
                 "oil_supply_temp_level": rw_params.oil_supply_temp_level,
                 "evacuation_level": rw_params.evacuation_level,
                 "hunting_level": candidate.realworld.hunting_level,
+                "tribology_scuff_method": tribology_scuff_method,
+                "tribology_validation_mode": tribology_validation_mode,
+                "strict_tribology_data": strict_tribology_flag,
             },
             "life_damage": life_damage_diag,
             **phase_diag,  # worst_phase_deg, n_bins_analyzed, etc.

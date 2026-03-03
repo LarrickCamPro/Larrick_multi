@@ -90,8 +90,12 @@ def test_smoke_eval_diag():
     # Check realworld diagnostics structure
     rw = result.diag["realworld"]
     assert "lambda_min" in rw
+    assert "scuff_margin_flash_C" in rw
+    assert "scuff_margin_integral_C" in rw
     assert "scuff_margin_C" in rw
     assert "micropitting_safety" in rw
+    assert "tribology_method_used" in rw
+    assert "tribology_data_status" in rw
     assert "feature_importance" in rw
 
     # Check gear-derived operating conditions

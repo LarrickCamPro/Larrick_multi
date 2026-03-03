@@ -12,7 +12,7 @@ range* (e.g., "λ requires at least splash-bath level oil delivery").
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -37,9 +37,8 @@ from larrak2.cem.surface_finish import (
 from larrak2.cem.tribology import (
     TribologyParams,
     classify_regime,
-    compute_lambda,
     compute_micropitting_safety,
-    compute_scuff_margin,
+    evaluate_tribology,
 )
 
 
@@ -100,6 +99,36 @@ def _material_from_level(level: float | None) -> MaterialClass:
     return best
 
 
+def _resolve_tribology_validation_mode(
+    *,
+    tribology_validation_mode: str,
+    strict_tribology_data: bool | None,
+) -> str:
+    mode = str(tribology_validation_mode).strip().lower()
+    if strict_tribology_data is True:
+        return "strict"
+    if strict_tribology_data is False:
+        return mode if mode in {"warn", "off"} else "warn"
+    return mode if mode in {"strict", "warn", "off"} else "strict"
+
+
+def _tribology_identifiers(params: RealWorldSurrogateParams) -> tuple[str, str]:
+    oil_type = "high_ep" if (params.lube_mode_level >= 0.67 or params.oil_flow_level >= 0.70) else "generic_ep"
+    additive_package = "high_ep" if oil_type == "high_ep" else "standard_ep"
+    return oil_type, additive_package
+
+
+def _merge_data_status(statuses: list[str]) -> str:
+    normalized = [str(s).strip().lower() for s in statuses if str(s).strip()]
+    if not normalized:
+        return "ok"
+    if any("degraded_off" in s for s in normalized):
+        return "degraded_off"
+    if any("degraded_warn" in s for s in normalized):
+        return "degraded_warn"
+    return "ok"
+
+
 @dataclass
 class RealWorldSurrogateResult:
     """Output of the surrogate evaluation.
@@ -109,13 +138,19 @@ class RealWorldSurrogateResult:
     """
 
     lambda_min: float
+    scuff_margin_flash_C: float
+    scuff_margin_integral_C: float
     scuff_margin_C: float
     micropitting_safety: float
     lube_regime: str
+    tribology_method_used: str
+    tribology_data_status: str
     material_temp_margin_C: float
     total_cost_index: float
     feature_importance: list[tuple[str, float]]
     min_snap_distance: float = 0.0
+    tribology_data_messages: tuple[str, ...] = ()
+    tribology_provenance: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
 def evaluate_realworld_surrogates(
@@ -125,6 +160,9 @@ def evaluate_realworld_surrogates(
     sliding_velocity_m_s: float = 5.0,
     entrainment_velocity_m_s: float = 15.0,
     pitch_line_vel_m_s: float = 20.0,
+    tribology_scuff_method: str = "auto",
+    tribology_validation_mode: str = "strict",
+    strict_tribology_data: bool | None = None,
 ) -> RealWorldSurrogateResult:
     """Evaluate real-world surrogates for the optimization loop.
 
@@ -169,25 +207,46 @@ def evaluate_realworld_surrogates(
     evac_boost = 1.0 + 0.3 * params.evacuation_level  # up to 30% boost
     cool_eff = float(np.clip(cool_eff * evac_boost, 0.0, 1.0))
 
-    # 3. Tribology (fast simplified calculation)
-    trib_params = TribologyParams(
-        hertz_stress_MPa=hertz_stress_MPa,
-        sliding_velocity_m_s=sliding_velocity_m_s,
-        entrainment_velocity_m_s=entrainment_velocity_m_s,
-        oil_viscosity_cSt=visc,
-        composite_roughness_um=composite_roughness,
-        bulk_temp_C=operating_temp_C,
-        oil_inlet_temp_C=lube_params.supply_temp_C,
+    scuff_mult, _ = apply_coating_modifiers(1.0, 0.06, coating)
+    oil_type, additive_package = _tribology_identifiers(params)
+    effective_bulk_temp_C = max(20.0, float(operating_temp_C) - 35.0 * float(cool_eff))
+    validation_mode = _resolve_tribology_validation_mode(
+        tribology_validation_mode=tribology_validation_mode,
+        strict_tribology_data=strict_tribology_data,
     )
 
-    lambda_min = compute_lambda(trib_params)
+    # 3. Tribology (data-backed)
+    trib_eval = evaluate_tribology(
+        TribologyParams(
+            hertz_stress_MPa=hertz_stress_MPa,
+            sliding_velocity_m_s=sliding_velocity_m_s,
+            entrainment_velocity_m_s=entrainment_velocity_m_s,
+            oil_viscosity_cSt=visc,
+            composite_roughness_um=composite_roughness,
+            bulk_temp_C=effective_bulk_temp_C,
+            oil_inlet_temp_C=lube_params.supply_temp_C,
+            oil_type=oil_type,
+            additive_package=additive_package,
+            finish_tier=finish_tier.value,
+        ),
+        scuff_method=tribology_scuff_method,
+        validation_mode=validation_mode,
+    )
 
-    # Scuff margin (with coating modifier)
-    raw_scuff = compute_scuff_margin(trib_params)
-    scuff_mult, _ = apply_coating_modifiers(1.0, 0.06, coating)
-    scuff_margin = raw_scuff * scuff_mult + cool_eff * 50.0
+    lambda_min = float(trib_eval.lambda_min)
+    scuff_margin_flash = float(trib_eval.scuff_margin_flash_C * scuff_mult)
+    scuff_margin_integral = float(trib_eval.scuff_margin_integral_C * scuff_mult)
+    if str(tribology_scuff_method).strip().lower() == "flash":
+        scuff_margin = scuff_margin_flash
+        scuff_method_used = "flash"
+    elif str(tribology_scuff_method).strip().lower() == "integral":
+        scuff_margin = scuff_margin_integral
+        scuff_method_used = "integral"
+    else:
+        scuff_margin = min(scuff_margin_flash, scuff_margin_integral)
+        scuff_method_used = "flash" if scuff_margin_flash <= scuff_margin_integral else "integral"
 
-    micropitting_sf = compute_micropitting_safety(lambda_min)
+    micropitting_sf = compute_micropitting_safety(lambda_min, lambda_perm=trib_eval.lambda_perm)
     regime = classify_regime(lambda_min)
 
     # --- Soft Material Selection & Safe Constraint Aggregation ---
@@ -243,13 +302,19 @@ def evaluate_realworld_surrogates(
 
     return RealWorldSurrogateResult(
         lambda_min=safe_lambda_min,
+        scuff_margin_flash_C=scuff_margin_flash,
+        scuff_margin_integral_C=scuff_margin_integral,
         scuff_margin_C=safe_scuff_margin,
         micropitting_safety=safe_micropitting,
         lube_regime=safe_regime.value,
+        tribology_method_used=scuff_method_used,
+        tribology_data_status=str(trib_eval.tribology_data_status),
         material_temp_margin_C=safe_temp_margin,
         total_cost_index=expected_cost,
         feature_importance=_rankings,
         min_snap_distance=min_snap_dist,
+        tribology_data_messages=tuple(trib_eval.tribology_data_messages),
+        tribology_provenance=dict(trib_eval.tribology_provenance),
     )
 
 
@@ -261,9 +326,13 @@ class PhaseResolvedResult:
     """
 
     lambda_min: float
+    scuff_margin_flash_C: float
+    scuff_margin_integral_C: float
     scuff_margin_C: float
     micropitting_safety: float
     lube_regime: str
+    tribology_method_used: str
+    tribology_data_status: str
     material_temp_margin_C: float
     total_cost_index: float
     feature_importance: list[tuple[str, float]]
@@ -273,6 +342,8 @@ class PhaseResolvedResult:
     force_threshold_N: float
     lambda_profile: np.ndarray  # Full 360-point λ(θ) — NaN for non-analyzed bins
     min_snap_distance: float = 0.0
+    tribology_data_messages: tuple[str, ...] = ()
+    tribology_provenance: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
 def evaluate_realworld_phase_resolved(
@@ -284,6 +355,9 @@ def evaluate_realworld_phase_resolved(
     operating_temp_C: float = 200.0,
     pitch_line_vel_m_s: float = 20.0,
     force_threshold_fraction: float = 0.8,
+    tribology_scuff_method: str = "auto",
+    tribology_validation_mode: str = "strict",
+    strict_tribology_data: bool | None = None,
 ) -> PhaseResolvedResult:
     """Phase-resolved tribology: only analyze high-load bins.
 
@@ -319,6 +393,16 @@ def evaluate_realworld_phase_resolved(
     lube_params = LubricationParams(mode=lube_mode)
     visc = effective_viscosity(lube_params, operating_temp_C)
     cool_eff = cooling_effectiveness(lube_params, pitch_line_vel_m_s)
+    evac_boost = 1.0 + 0.3 * params.evacuation_level
+    cool_eff = float(np.clip(cool_eff * evac_boost, 0.0, 1.0))
+    effective_bulk_temp_C = max(20.0, float(operating_temp_C) - 35.0 * float(cool_eff))
+    scuff_mult, _ = apply_coating_modifiers(1.0, 0.06, coating)
+    oil_type, additive_package = _tribology_identifiers(params)
+    validation_mode = _resolve_tribology_validation_mode(
+        tribology_validation_mode=tribology_validation_mode,
+        strict_tribology_data=strict_tribology_data,
+    )
+    method = str(tribology_scuff_method).strip().lower()
 
     # 2. Force-gate: identify high-load bins
     fn_mean = float(np.mean(np.abs(fn_profile)))
@@ -333,7 +417,12 @@ def evaluate_realworld_phase_resolved(
 
     # 3. Vectorized tribology over high-load bins
     lambda_profile = np.full(n_bins, np.nan)
-    scuff_profile = np.full(n_bins, np.nan)
+    scuff_flash_profile = np.full(n_bins, np.nan)
+    scuff_integral_profile = np.full(n_bins, np.nan)
+    data_statuses: list[str] = []
+    data_messages: list[str] = []
+    provenance_ref: dict[str, dict[str, str]] = {}
+    lambda_perm_ref: float | None = None
 
     # Extract high-load values
     hl_hertz = hertz_stress_profile[high_load_mask]
@@ -342,31 +431,62 @@ def evaluate_realworld_phase_resolved(
     hl_indices = np.where(high_load_mask)[0]
 
     for i, idx in enumerate(hl_indices):
-        trib = TribologyParams(
-            hertz_stress_MPa=float(hl_hertz[i]),
-            sliding_velocity_m_s=float(hl_sliding[i]),
-            entrainment_velocity_m_s=float(hl_entrainment[i]),
-            oil_viscosity_cSt=visc,
-            composite_roughness_um=composite_roughness,
-            bulk_temp_C=operating_temp_C,
-            oil_inlet_temp_C=lube_params.supply_temp_C,
+        trib_eval = evaluate_tribology(
+            TribologyParams(
+                hertz_stress_MPa=float(hl_hertz[i]),
+                sliding_velocity_m_s=float(hl_sliding[i]),
+                entrainment_velocity_m_s=float(hl_entrainment[i]),
+                oil_viscosity_cSt=visc,
+                composite_roughness_um=composite_roughness,
+                bulk_temp_C=effective_bulk_temp_C,
+                oil_inlet_temp_C=lube_params.supply_temp_C,
+                oil_type=oil_type,
+                additive_package=additive_package,
+                finish_tier=finish_tier.value,
+            ),
+            scuff_method=tribology_scuff_method,
+            validation_mode=validation_mode,
         )
-        lambda_profile[idx] = compute_lambda(trib)
-
-        raw_scuff = compute_scuff_margin(trib)
-        scuff_mult, _ = apply_coating_modifiers(1.0, 0.06, coating)
-        scuff_profile[idx] = raw_scuff * scuff_mult + cool_eff * 50.0
+        lambda_profile[idx] = float(trib_eval.lambda_min)
+        scuff_flash_profile[idx] = float(trib_eval.scuff_margin_flash_C * scuff_mult)
+        scuff_integral_profile[idx] = float(trib_eval.scuff_margin_integral_C * scuff_mult)
+        lambda_perm_ref = float(trib_eval.lambda_perm)
+        data_statuses.append(str(trib_eval.tribology_data_status))
+        data_messages.extend(list(trib_eval.tribology_data_messages))
+        if not provenance_ref and trib_eval.tribology_provenance:
+            provenance_ref = dict(trib_eval.tribology_provenance)
 
     # 4. Worst-case values from analyzed bins
     lambda_analyzed = lambda_profile[high_load_mask]
-    scuff_analyzed = scuff_profile[high_load_mask]
+    scuff_flash_analyzed = scuff_flash_profile[high_load_mask]
+    scuff_integral_analyzed = scuff_integral_profile[high_load_mask]
 
     lambda_min = float(np.nanmin(lambda_analyzed))
-    scuff_margin = float(np.nanmin(scuff_analyzed))
-    micropitting_sf = compute_micropitting_safety(lambda_min)
+    scuff_margin_flash = float(np.nanmin(scuff_flash_analyzed))
+    scuff_margin_integral = float(np.nanmin(scuff_integral_analyzed))
+    if method == "flash":
+        scuff_margin = scuff_margin_flash
+        method_used = "flash"
+    elif method == "integral":
+        scuff_margin = scuff_margin_integral
+        method_used = "integral"
+    else:
+        scuff_margin = min(scuff_margin_flash, scuff_margin_integral)
+        method_used = "flash" if scuff_margin_flash <= scuff_margin_integral else "integral"
+
+    micropitting_sf = compute_micropitting_safety(
+        lambda_min,
+        lambda_perm=lambda_perm_ref,
+        validation_mode=validation_mode,
+        params=TribologyParams(
+            oil_type=oil_type,
+            finish_tier=finish_tier.value,
+            additive_package=additive_package,
+        ),
+    )
     regime = classify_regime(lambda_min)
 
-    # Worst-case phase angle (minimum λ)
+    # Worst-case phase angle (minimum lambda)
     worst_idx = int(np.nanargmin(lambda_profile))
     worst_phase_deg = float(worst_idx) / n_bins * 360.0
 
@@ -406,12 +526,18 @@ def evaluate_realworld_phase_resolved(
 
     safe_temp_margin = min(_temp_margins)
     expected_cost = sum(_costs)
+    data_status = _merge_data_status(data_statuses)
+    data_messages_dedup = tuple(dict.fromkeys(msg for msg in data_messages if str(msg).strip()))
 
     return PhaseResolvedResult(
         lambda_min=lambda_min,
+        scuff_margin_flash_C=scuff_margin_flash,
+        scuff_margin_integral_C=scuff_margin_integral,
         scuff_margin_C=scuff_margin,
         micropitting_safety=micropitting_sf,
         lube_regime=regime.value,
+        tribology_method_used=method_used,
+        tribology_data_status=data_status,
         material_temp_margin_C=safe_temp_margin,
         total_cost_index=expected_cost,
         feature_importance=_rankings,
@@ -420,4 +546,6 @@ def evaluate_realworld_phase_resolved(
         n_bins_analyzed=n_analyzed,
         force_threshold_N=force_threshold,
         lambda_profile=lambda_profile,
+        tribology_data_messages=data_messages_dedup,
+        tribology_provenance=provenance_ref,
     )
