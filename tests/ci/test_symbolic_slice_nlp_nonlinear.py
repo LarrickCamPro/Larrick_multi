@@ -11,7 +11,12 @@ from larrak2.core.encoding import N_TOTAL, mid_bounds_candidate
 from larrak2.core.types import EvalContext, EvalResult
 from larrak2.optimization.slicing.symbolic_slice_problem import solve_symbolic_slice_with_ipopt
 from larrak2.optimization.solvers.ipopt.types import IPOPTResult
-from larrak2.surrogate.stack import DenseLayer, StackSurrogateArtifact, default_feature_names, save_stack_artifact
+from larrak2.surrogate.stack import (
+    DenseLayer,
+    StackSurrogateArtifact,
+    default_feature_names,
+    save_stack_artifact,
+)
 
 
 def test_symbolic_slice_solver_uses_nonlinear_nlp(monkeypatch, tmp_path: Path) -> None:
@@ -66,7 +71,7 @@ def test_symbolic_slice_solver_uses_nonlinear_nlp(monkeypatch, tmp_path: Path) -
         g_val = np.asarray(g_fn(x0), dtype=np.float64).reshape(-1)
         return IPOPTResult(
             x_opt=np.asarray(x0, dtype=np.float64).reshape(-1),
-            f_opt=float(0.0),
+            f_opt=0.0,
             g_opt=g_val,
             success=True,
             status="Solve_Succeeded",

@@ -59,7 +59,9 @@ def _scalarized_objective(
     elif mode == RefinementMode.EPS_CONSTRAINT:
         objective = float(F[0])
         if F.size > 1:
-            eps = np.asarray(eps_constraints if eps_constraints is not None else F, dtype=np.float64)
+            eps = np.asarray(
+                eps_constraints if eps_constraints is not None else F, dtype=np.float64
+            )
             if eps.size != F.size:
                 raise ValueError(f"eps length {eps.size} != n_obj {F.size}")
             objective += violation_penalty * float(np.maximum(F[1:] - eps[1:], 0.0).sum())
@@ -146,7 +148,9 @@ def _scipy_refine_slice(
         res = evaluate_candidate(x, ctx)
         all_g = [-res.G]
         if mode == RefinementMode.EPS_CONSTRAINT and len(res.F) > 1:
-            eps = np.asarray(eps_constraints if eps_constraints is not None else res.F, dtype=np.float64)
+            eps = np.asarray(
+                eps_constraints if eps_constraints is not None else res.F, dtype=np.float64
+            )
             all_g.append(-(res.F[1:] - eps[1:]))
         return np.concatenate(all_g)
 
@@ -262,7 +266,9 @@ def refine_candidate(
             slice_result.diagnostics.get("surrogate_stack_version", "")
         )
         diag["validation_attempts"] = int(slice_result.diagnostics.get("validation_attempts", 0))
-        diag["trust_radius_final"] = slice_result.diagnostics.get("trust_radius_final", trust_radius)
+        diag["trust_radius_final"] = slice_result.diagnostics.get(
+            "trust_radius_final", trust_radius
+        )
         diag["surrogate_stack_path"] = stack_path
         diag["thermo_symbolic_used"] = bool(
             slice_result.diagnostics.get("thermo_symbolic_used", False)
@@ -276,9 +282,7 @@ def refine_candidate(
                 getattr(ctx_refine, "thermo_symbolic_mode", "strict"),
             )
         )
-        diag["thermo_symbolic_path"] = str(
-            slice_result.diagnostics.get("thermo_symbolic_path", "")
-        )
+        diag["thermo_symbolic_path"] = str(slice_result.diagnostics.get("thermo_symbolic_path", ""))
         diag["thermo_symbolic_overlay_objectives"] = list(
             slice_result.diagnostics.get("thermo_symbolic_overlay_objectives", [])
         )

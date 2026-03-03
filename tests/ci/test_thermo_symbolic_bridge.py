@@ -71,7 +71,12 @@ def _quality_report(
         },
         "metrics": {
             "train": {"rmse": 0.05, "mae": 0.04, "r2": 0.9, "per_target": _rows(0.05, 0.9)},
-            "val": {"rmse": val_nrmse, "mae": val_nrmse * 0.8, "r2": val_r2, "per_target": _rows(val_nrmse, val_r2)},
+            "val": {
+                "rmse": val_nrmse,
+                "mae": val_nrmse * 0.8,
+                "r2": val_r2,
+                "per_target": _rows(val_nrmse, val_r2),
+            },
             "test": {
                 "rmse": test_nrmse,
                 "mae": test_nrmse * 0.8,
@@ -233,7 +238,9 @@ def test_apply_overlay_strict_quality_failure_raises(tmp_path) -> None:
     save_thermo_symbolic_artifact(
         artifact,
         artifact_path,
-        quality_report=_quality_report(artifact, val_nrmse=0.4, test_nrmse=0.5, val_r2=0.2, test_r2=0.3),
+        quality_report=_quality_report(
+            artifact, val_nrmse=0.4, test_nrmse=0.5, val_r2=0.2, test_r2=0.3
+        ),
     )
     x_sym = ca.MX.sym("x", N_TOTAL)
     ctx = EvalContext(

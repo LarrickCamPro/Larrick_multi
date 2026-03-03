@@ -160,7 +160,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--strict-data", dest="strict_data", action="store_true")
     parser.add_argument("--no-strict-data", dest="strict_data", action="store_false")
-    parser.add_argument("--strict-tribology-data", dest="strict_tribology_data", action="store_true")
+    parser.add_argument(
+        "--strict-tribology-data", dest="strict_tribology_data", action="store_true"
+    )
     parser.add_argument(
         "--no-strict-tribology-data",
         dest="strict_tribology_data",

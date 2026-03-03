@@ -41,7 +41,9 @@ def _import_casadi():
     return ca
 
 
-def _reconstruct_full_np(x_base: np.ndarray, active_indices: list[int], z: np.ndarray) -> np.ndarray:
+def _reconstruct_full_np(
+    x_base: np.ndarray, active_indices: list[int], z: np.ndarray
+) -> np.ndarray:
     x = np.array(x_base, dtype=np.float64, copy=True)
     for j, idx in enumerate(active_indices):
         x[idx] = float(z[j])
@@ -76,9 +78,8 @@ def _fit_weights(weights: np.ndarray | None, n_obj: int):
 
 def _default_thermo_overlay_diag(ctx: EvalContext) -> dict[str, Any]:
     mode = str(getattr(ctx, "thermo_symbolic_mode", "strict") or "strict")
-    artifact_path = (
-        str(getattr(ctx, "thermo_symbolic_artifact_path", "") or "").strip()
-        or str(DEFAULT_THERMO_SYMBOLIC_ARTIFACT)
+    artifact_path = str(getattr(ctx, "thermo_symbolic_artifact_path", "") or "").strip() or str(
+        DEFAULT_THERMO_SYMBOLIC_ARTIFACT
     )
     return {
         "thermo_symbolic_mode": mode,
@@ -137,7 +138,9 @@ def _build_nlp(
         objective = F_hat[0]
         if len(artifact.objective_names) > 1:
             eps = np.asarray(
-                eps_constraints if eps_constraints is not None else np.zeros(len(artifact.objective_names)),
+                eps_constraints
+                if eps_constraints is not None
+                else np.zeros(len(artifact.objective_names)),
                 dtype=np.float64,
             )
             if eps.size != len(artifact.objective_names):
@@ -286,11 +289,15 @@ def solve_symbolic_slice_with_ipopt(
             )
             total_iterations += int(res.iterations)
             last_status = str(res.status)
-            last_x = _reconstruct_full_np(x0, active_indices, np.asarray(res.x_opt, dtype=np.float64))
+            last_x = _reconstruct_full_np(
+                x0, active_indices, np.asarray(res.x_opt, dtype=np.float64)
+            )
 
             truth_eval = evaluate_candidate(last_x, ctx_eval)
             hard_violation = float(max(0.0, np.max(truth_eval.G))) if truth_eval.G.size else 0.0
-            finite_ok = bool(np.all(np.isfinite(truth_eval.F)) and np.all(np.isfinite(truth_eval.G)))
+            finite_ok = bool(
+                np.all(np.isfinite(truth_eval.F)) and np.all(np.isfinite(truth_eval.G))
+            )
 
             last_diag = {
                 "f_opt_surrogate": float(res.f_opt),

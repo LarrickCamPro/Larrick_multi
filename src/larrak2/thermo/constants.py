@@ -88,9 +88,7 @@ def _extract_constant(constants_payload: dict[str, Any], symbol: str) -> float:
     v_min = float(v_range[0])
     v_max = float(v_range[1])
     if not (v_min <= value <= v_max):
-        raise ValueError(
-            f"Constant '{symbol}'={value} out of range [{v_min}, {v_max}]"
-        )
+        raise ValueError(f"Constant '{symbol}'={value} out of range [{v_min}, {v_max}]")
     return value
 
 

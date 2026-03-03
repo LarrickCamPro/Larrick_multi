@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -103,7 +103,7 @@ def build_manifest(args: argparse.Namespace) -> dict[str, Any]:
         },
         "provenance": {
             "generated_by": "tools/build_thermo_anchor_manifest.py",
-            "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+            "generated_at_utc": datetime.now(UTC).isoformat(),
             "source_type": str(args.source),
             "input_files": [str(p) for p in inputs],
         },

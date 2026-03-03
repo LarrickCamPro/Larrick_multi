@@ -109,8 +109,7 @@ def _normalize_validation_mode(validation_mode: str) -> str:
     mode = str(validation_mode).strip().lower()
     if mode not in _VALIDATION_MODES:
         raise ValueError(
-            "validation_mode must be one of {'strict', 'warn', 'off'}, "
-            f"got {validation_mode!r}"
+            f"validation_mode must be one of {{'strict', 'warn', 'off'}}, got {validation_mode!r}"
         )
     return mode
 
@@ -119,8 +118,7 @@ def _normalize_scuff_method(scuff_method: str) -> str:
     method = str(scuff_method).strip().lower()
     if method not in _SCUFF_METHODS:
         raise ValueError(
-            "scuff_method must be one of {'auto', 'flash', 'integral'}, "
-            f"got {scuff_method!r}"
+            f"scuff_method must be one of {{'auto', 'flash', 'integral'}}, got {scuff_method!r}"
         )
     return method
 
@@ -225,8 +223,7 @@ def _pick_temperature_row(
 
     if not candidates:
         msg = (
-            "No valid tribology_ehl_coefficients row with numeric "
-            "temp_C_min/temp_C_max was found."
+            "No valid tribology_ehl_coefficients row with numeric temp_C_min/temp_C_max was found."
         )
         if mode == "strict":
             raise ValueError(msg)
@@ -425,7 +422,9 @@ def _resolve_scuff_critical_temperature(
         and _eq_text(row.get("additive_package"), params.additive_package)
     ]
     if test_method:
-        method_rows = [row for row in fzg_candidates if _eq_text(row.get("test_method"), test_method)]
+        method_rows = [
+            row for row in fzg_candidates if _eq_text(row.get("test_method"), test_method)
+        ]
         if method_rows:
             fzg_candidates = method_rows
 
@@ -532,7 +531,9 @@ def _compute_lambda_from_coeffs(params: TribologyParams, coeffs: dict[str, float
     if viscosity_speed <= 0.0:
         return 0.0
 
-    h_min = float(coeffs["ehl_constant"]) * (viscosity_speed ** float(coeffs["viscosity_speed_exp"]))
+    h_min = float(coeffs["ehl_constant"]) * (
+        viscosity_speed ** float(coeffs["viscosity_speed_exp"])
+    )
 
     stress = max(float(params.hertz_stress_MPa), 100.0)
     pressure_factor = (1500.0 / stress) ** float(coeffs["pressure_exp"])
@@ -563,7 +564,10 @@ def _integral_contact_temp(params: TribologyParams) -> float:
     load_proxy = (max(float(params.hertz_stress_MPa), 100.0) / 1000.0) ** 2
     thermal_path = 0.6 * sliding + 0.4 * entrainment
     integral_rise = (
-        float(params.friction_coeff) * load_proxy * thermal_path / (0.018 * np.power(entrainment, 0.25))
+        float(params.friction_coeff)
+        * load_proxy
+        * thermal_path
+        / (0.018 * np.power(entrainment, 0.25))
     )
     integral_rise = float(np.clip(integral_rise, 0.0, 650.0))
     base_temp = 0.6 * float(params.bulk_temp_C) + 0.4 * float(params.oil_inlet_temp_C)
@@ -636,6 +640,7 @@ def evaluate_tribology(
         tribology_data_messages=dedup_messages,
         tribology_provenance=provenance,
     )
+
 
 def compute_lambda(
     params: TribologyParams,

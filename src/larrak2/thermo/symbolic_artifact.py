@@ -166,7 +166,11 @@ def _per_target_metrics(
             mae = float(m["mae"])
             r2 = float(m["r2"])
         scale = float(target_scale[j]) if j < target_scale.size else float("nan")
-        nrmse = float(rmse / scale) if np.isfinite(rmse) and np.isfinite(scale) and scale > 0.0 else float("nan")
+        nrmse = (
+            float(rmse / scale)
+            if np.isfinite(rmse) and np.isfinite(scale) and scale > 0.0
+            else float("nan")
+        )
         out.append(
             {
                 "name": str(name),
@@ -205,7 +209,9 @@ def train_thermo_symbolic_affine(
     if X.shape[0] < 5:
         raise ValueError("Need at least 5 samples for train/val/test splits")
 
-    train_idx, val_idx, test_idx = _split_indices(X.shape[0], seed=int(seed), val_frac=float(val_frac))
+    train_idx, val_idx, test_idx = _split_indices(
+        X.shape[0], seed=int(seed), val_frac=float(val_frac)
+    )
     X_tr = X[train_idx]
     Y_tr = Y[train_idx]
 
@@ -377,7 +383,10 @@ def save_thermo_symbolic_artifact(
             },
             "quality_profile": thermo_symbolic_balanced_profile(),
             "ood_thresholds": {},
-            "uncertainty_calibration": {"method": "deterministic_affine", "status": "not_applicable"},
+            "uncertainty_calibration": {
+                "method": "deterministic_affine",
+                "status": "not_applicable",
+            },
             "required_artifacts": [target.name],
             "pass": True,
             "fail_reasons": [],

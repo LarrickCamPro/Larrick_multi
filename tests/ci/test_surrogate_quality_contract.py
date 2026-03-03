@@ -10,8 +10,8 @@ import pytest
 from larrak2.surrogate.quality_contract import (
     thermo_symbolic_quality_fail_reasons,
     validate_artifact_quality,
-    validate_thermo_symbolic_quality,
     validate_quality_report_schema,
+    validate_thermo_symbolic_quality,
     write_quality_report,
 )
 

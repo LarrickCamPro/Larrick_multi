@@ -76,7 +76,9 @@ def _load_calibration(path: Path = _CALIBRATION_PATH) -> dict[str, Any]:
     }
     if not calib["baseline_route_id"].strip():
         raise ValueError("baseline_route_id must be non-empty in life-damage calibration")
-    calib["sigma_ref_mpa"] = _require_finite_positive("sigma_ref_mpa", float(calib["sigma_ref_mpa"]))
+    calib["sigma_ref_mpa"] = _require_finite_positive(
+        "sigma_ref_mpa", float(calib["sigma_ref_mpa"])
+    )
     calib["stress_exponent"] = _require_finite_positive(
         "stress_exponent", float(calib["stress_exponent"])
     )
@@ -107,8 +109,7 @@ def _strict_data_enabled(strict_data: bool | None) -> bool:
 
     if not _EMITTED_STRICT_DATA_DEPRECATION:
         logger.warning(
-            "LARRAK_STRICT_DATA env fallback is deprecated. "
-            "Set EvalContext.strict_data instead."
+            "LARRAK_STRICT_DATA env fallback is deprecated. Set EvalContext.strict_data instead."
         )
         _EMITTED_STRICT_DATA_DEPRECATION = True
     return env_raw == "1"
@@ -249,9 +250,7 @@ def get_sigma_ref_for_route(
             raise ValueError(
                 f"Route '{route_id}' cleanliness_proxy must be finite when strict_data=True."
             )
-        logger.warning(
-            "Route '%s' cleanliness_proxy is non-finite; defaulting to 0.5", route_id
-        )
+        logger.warning("Route '%s' cleanliness_proxy is non-finite; defaulting to 0.5", route_id)
         clean = 0.5
 
     cmin = float(calib["cleanliness_scale_min"])
@@ -269,9 +268,7 @@ def get_route_cleanliness_proxy(
     """Resolve route cleanliness proxy with strict/warn/off behavior."""
     strict = _strict_data_enabled(strict_data)
     mode = (
-        "strict"
-        if strict
-        else ("off" if str(validation_mode).strip().lower() == "off" else "warn")
+        "strict" if strict else ("off" if str(validation_mode).strip().lower() == "off" else "warn")
     )
     degrade_token = "degraded_off" if mode == "off" else "degraded_warn"
 

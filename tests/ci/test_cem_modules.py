@@ -314,7 +314,12 @@ class TestRegistry:
         ]
         key_columns = {
             "tribology_ehl_coefficients": ("oil_type", "finish_tier", "ehl_constant"),
-            "scuffing_critical_temperatures": ("oil_type", "additive_package", "method", "T_crit_C"),
+            "scuffing_critical_temperatures": (
+                "oil_type",
+                "additive_package",
+                "method",
+                "T_crit_C",
+            ),
             "micropitting_lambda_perm": ("oil_type", "finish_tier", "lambda_perm"),
             "fzg_step_load_map": ("test_standard", "test_method", "load_stage", "T_crit_C"),
         }

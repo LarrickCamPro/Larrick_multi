@@ -155,7 +155,8 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
         "surrogate_used": False,
         "residual_correction_used": False,
         "residual_correction_engine": "disabled",
-        "openfoam_model_path": ctx.openfoam_model_path or os.environ.get("LARRAK2_OPENFOAM_NN_PATH", ""),
+        "openfoam_model_path": ctx.openfoam_model_path
+        or os.environ.get("LARRAK2_OPENFOAM_NN_PATH", ""),
         "calculix_stress_mode": ctx.calculix_stress_mode,
         "gear_loss_mode": ctx.gear_loss_mode,
         "machining_mode": str(getattr(ctx, "machining_mode", "nn")),
@@ -250,7 +251,9 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
     pitch_line_vel = omega * candidate.gear.base_radius / 1000.0  # m/s
 
     strict_tribology_flag = (
-        bool(ctx.strict_data) if ctx.strict_tribology_data is None else bool(ctx.strict_tribology_data)
+        bool(ctx.strict_data)
+        if ctx.strict_tribology_data is None
+        else bool(ctx.strict_tribology_data)
     )
     if strict_tribology_flag:
         tribology_validation_mode = "strict"
@@ -276,7 +279,9 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
     lifetime_validation_mode = (
         "strict" if strict_lifetime_data else ("off" if lifetime_mode_hint == "off" else "warn")
     )
-    degraded_lifetime_token = "degraded_off" if lifetime_validation_mode == "off" else "degraded_warn"
+    degraded_lifetime_token = (
+        "degraded_off" if lifetime_validation_mode == "off" else "degraded_warn"
+    )
     lifetime_data_messages: list[str] = []
 
     from larrak2.realworld.life_damage import (
@@ -296,9 +301,13 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
     hunting_level_for_life = float(rw_params.hunting_level)
     if not np.isfinite(hunting_level_for_life):
         if strict_lifetime_data:
-            raise ValueError("strict_data=True but hunting_level is non-finite for lifetime evaluation.")
+            raise ValueError(
+                "strict_data=True but hunting_level is non-finite for lifetime evaluation."
+            )
         hunting_level_for_life = 0.5
-        lifetime_data_messages.append("Non-finite hunting_level in lifetime path; defaulting to 0.5.")
+        lifetime_data_messages.append(
+            "Non-finite hunting_level in lifetime path; defaulting to 0.5."
+        )
 
     life_damage_total = 0.0
     life_damage_diag: dict[str, object] = {
@@ -339,7 +348,9 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
         route_iter = list(routes_weights)
         if not route_iter:
             if strict_lifetime_data:
-                raise ValueError("strict_data=True but no material routes were resolved for life damage.")
+                raise ValueError(
+                    "strict_data=True but no material routes were resolved for life damage."
+                )
             route_iter = [(str(dominant_rid), 1.0)]
             lifetime_data_messages.append(
                 "No route weights available; using dominant route fallback for life-damage evaluation."
@@ -544,7 +555,9 @@ def evaluate_candidate(x: np.ndarray, ctx: EvalContext) -> EvalResult:
         route_iter = list(routes_weights)
         if not route_iter:
             if strict_lifetime_data:
-                raise ValueError("strict_data=True but no material routes were resolved for life damage.")
+                raise ValueError(
+                    "strict_data=True but no material routes were resolved for life damage."
+                )
             route_iter = [(str(dominant_rid), 1.0)]
             lifetime_data_messages.append(
                 "No route weights available; using dominant route fallback for life-damage evaluation."

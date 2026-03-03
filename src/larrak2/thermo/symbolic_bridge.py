@@ -90,8 +90,7 @@ def numeric_thermo_forward(
     x_scale = np.where(np.abs(artifact.x_std) > 0.0, artifact.x_std, 1.0)
     y_scale = np.where(np.abs(artifact.y_std) > 0.0, artifact.y_std, 1.0)
     y = (
-        artifact.weight @ ((feats - artifact.x_mean) / x_scale)
-        + artifact.bias
+        artifact.weight @ ((feats - artifact.x_mean) / x_scale) + artifact.bias
     ) * y_scale + artifact.y_mean
     n_obj = len(artifact.objective_names)
     return np.asarray(y[:n_obj], dtype=np.float64), np.asarray(y[n_obj:], dtype=np.float64)
@@ -110,8 +109,7 @@ def _strict_remediation_message(*, artifact_path: str, reason: str) -> str:
         "--fidelity <fidelity> --rpm <rpm> --torque <torque>"
     )
     override_hint = (
-        "python -m larrak2.cli.run <entrypoint> "
-        f"--thermo-symbolic-artifact-path \"{artifact_path}\""
+        f'python -m larrak2.cli.run <entrypoint> --thermo-symbolic-artifact-path "{artifact_path}"'
     )
     return (
         f"{reason} | thermo_symbolic_path='{artifact_path}'. "
@@ -158,7 +156,9 @@ def _preflight_overlay_contract_violations(
     stack_overlap = sorted(stack_obj_set.intersection(stack_con_set))
     artifact_overlap = sorted(art_obj_set.intersection(art_con_set))
     if stack_overlap:
-        errs.append(f"ambiguous stack output naming (objective/constraint overlap): {stack_overlap}")
+        errs.append(
+            f"ambiguous stack output naming (objective/constraint overlap): {stack_overlap}"
+        )
     if artifact_overlap:
         errs.append(
             "ambiguous thermo symbolic artifact naming "
@@ -210,9 +210,8 @@ def apply_thermo_symbolic_overlay(
     if mode == "off":
         return F_hat, G_hat, diag
 
-    artifact_path = (
-        str(getattr(ctx, "thermo_symbolic_artifact_path", "") or "").strip()
-        or str(DEFAULT_THERMO_SYMBOLIC_ARTIFACT)
+    artifact_path = str(getattr(ctx, "thermo_symbolic_artifact_path", "") or "").strip() or str(
+        DEFAULT_THERMO_SYMBOLIC_ARTIFACT
     )
     diag["thermo_symbolic_path"] = artifact_path
     try:

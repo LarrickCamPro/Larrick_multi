@@ -13,7 +13,9 @@ from larrak2.thermo.symbolic_artifact import (
 )
 
 
-def _build_dataset() -> tuple[np.ndarray, np.ndarray, tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+def _build_dataset() -> tuple[
+    np.ndarray, np.ndarray, tuple[str, ...], tuple[str, ...], tuple[str, ...]
+]:
     rng = np.random.default_rng(123)
     n = 80
     X = rng.normal(size=(n, 6)).astype(np.float64)

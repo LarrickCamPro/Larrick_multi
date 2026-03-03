@@ -76,7 +76,9 @@ def _install_realworld_stub(monkeypatch) -> None:
             min_snap_distance=0.0,
         )
 
-    monkeypatch.setattr("larrak2.realworld.surrogates.evaluate_realworld_phase_resolved", _fake_phase)
+    monkeypatch.setattr(
+        "larrak2.realworld.surrogates.evaluate_realworld_phase_resolved", _fake_phase
+    )
     monkeypatch.setattr("larrak2.realworld.surrogates.evaluate_realworld_surrogates", _fake_scalar)
 
 

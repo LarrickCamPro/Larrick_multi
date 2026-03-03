@@ -129,7 +129,9 @@ def test_train_thermo_symbolic_emits_quality_report(tmp_path: Path) -> None:
         X=X,
         Y=Y,
         feature_names=np.array([f"x_{i:03d}" for i in range(10)] + ["rpm", "torque"], dtype=object),
-        objective_names=np.array(["eta_comb_gap", "eta_exp_gap", "motion_law_penalty"], dtype=object),
+        objective_names=np.array(
+            ["eta_comb_gap", "eta_exp_gap", "motion_law_penalty"], dtype=object
+        ),
         constraint_names=np.array(["thermo_power_balance", "thermo_pressure_limit"], dtype=object),
     )
 
@@ -155,7 +157,9 @@ def test_train_thermo_symbolic_emits_quality_report(tmp_path: Path) -> None:
     train_thermo_symbolic_workflow(args)
 
     report = json.loads((outdir / "quality_report.json").read_text(encoding="utf-8"))
-    summary = json.loads((outdir / "thermo_symbolic_training_summary.json").read_text(encoding="utf-8"))
+    summary = json.loads(
+        (outdir / "thermo_symbolic_training_summary.json").read_text(encoding="utf-8")
+    )
     assert report["surrogate_kind"] == "thermo_symbolic"
     assert report["quality_profile"]["normalization_method"] == "p95_p05_range"
     assert report["metrics"]["train"]

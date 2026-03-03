@@ -150,7 +150,8 @@ def evaluate_cem(params: CEMEvalParams) -> CEMResult:
     # 6. Tribology calculations (ISO data-backed)
     oil_type = (
         "high_ep"
-        if params.lubrication.mode in {LubricationMode.PRESSURIZED_JET, LubricationMode.PHASE_GATED_JET}
+        if params.lubrication.mode
+        in {LubricationMode.PRESSURIZED_JET, LubricationMode.PHASE_GATED_JET}
         else "generic_ep"
     )
     additive_package = "high_ep" if oil_type == "high_ep" else "standard_ep"

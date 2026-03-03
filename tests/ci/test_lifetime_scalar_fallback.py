@@ -90,7 +90,9 @@ def test_scalar_lifetime_fallback_computes_damage(monkeypatch) -> None:
     assert float(life["D_total"]) > 0.0
     assert isinstance(life["N_set"], int)
     assert int(life["N_set"]) >= 1
-    assert float(res.diag["objectives"]["life_damage_total"]) == pytest.approx(float(life["D_total"]))
+    assert float(res.diag["objectives"]["life_damage_total"]) == pytest.approx(
+        float(life["D_total"])
+    )
     assert res.diag["realworld"]["life_damage_status"] == life["life_damage_status"]
 
 

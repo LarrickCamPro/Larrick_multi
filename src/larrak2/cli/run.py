@@ -24,8 +24,8 @@ from larrak2.cli.run_workflows import (
     run_pareto_grid_workflow,
     run_pareto_staged_workflow,
     run_train_stack_surrogate_workflow,
-    run_train_thermo_symbolic_workflow,
     run_train_surrogates_workflow,
+    run_train_thermo_symbolic_workflow,
 )
 from larrak2.core.artifact_paths import (
     DEFAULT_CALCULIX_NN_DIR,

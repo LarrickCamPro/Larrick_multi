@@ -113,7 +113,11 @@ def _resolve_tribology_validation_mode(
 
 
 def _tribology_identifiers(params: RealWorldSurrogateParams) -> tuple[str, str]:
-    oil_type = "high_ep" if (params.lube_mode_level >= 0.67 or params.oil_flow_level >= 0.70) else "generic_ep"
+    oil_type = (
+        "high_ep"
+        if (params.lube_mode_level >= 0.67 or params.oil_flow_level >= 0.70)
+        else "generic_ep"
+    )
     additive_package = "high_ep" if oil_type == "high_ep" else "standard_ep"
     return oil_type, additive_package
 
