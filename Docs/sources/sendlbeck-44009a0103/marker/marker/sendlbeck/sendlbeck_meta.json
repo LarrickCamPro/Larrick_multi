@@ -1,0 +1,191 @@
+{
+  "table_of_contents": [
+    {
+      "title": "Effect of the ISO 6336-3:2019 Standard Update on the Specified Load Carrying Capacity Against Tooth Root Breakage of Involute Gears",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          21.0,
+          36.75
+        ],
+        [
+          533.25,
+          36.75
+        ],
+        [
+          533.25,
+          123.205078125
+        ],
+        [
+          21.0,
+          123.205078125
+        ]
+      ]
+    },
+    {
+      "title": "Nomenclature",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          26.25,
+          169.5
+        ],
+        [
+          96.75,
+          170.068359375
+        ],
+        [
+          96.75,
+          180.0
+        ],
+        [
+          26.25,
+          179.25
+        ]
+      ]
+    },
+    {
+      "title": "Introduction",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          290.53125,
+          168.1787109375
+        ],
+        [
+          353.25,
+          168.1787109375
+        ],
+        [
+          353.25,
+          179.25
+        ],
+        [
+          290.53125,
+          179.25
+        ]
+      ]
+    },
+    {
+      "title": "Overview of the Current ISO 6336 Structure",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          290.25,
+          434.2412109375
+        ],
+        [
+          501.0,
+          434.2412109375
+        ],
+        [
+          501.0,
+          444.0
+        ],
+        [
+          290.25,
+          444.0
+        ]
+      ]
+    },
+    {
+      "title": "International standards (ISO 6336):",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          290.25,
+          494.7099609375
+        ],
+        [
+          444.75,
+          494.7099609375
+        ],
+        [
+          444.75,
+          504.75
+        ],
+        [
+          290.25,
+          504.75
+        ]
+      ]
+    },
+    {
+      "title": "Technical specifications (ISO/TS 6336):",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          289.6875,
+          579.3662109375
+        ],
+        [
+          464.25,
+          579.3662109375
+        ],
+        [
+          464.25,
+          589.5
+        ],
+        [
+          289.6875,
+          589.5
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Line",
+          171
+        ],
+        [
+          "Span",
+          108
+        ],
+        [
+          "ListItem",
+          53
+        ],
+        [
+          "Text",
+          7
+        ],
+        [
+          "SectionHeader",
+          6
+        ],
+        [
+          "PageFooter",
+          3
+        ],
+        [
+          "ListGroup",
+          3
+        ],
+        [
+          "PageHeader",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/sendlbeck"
+}

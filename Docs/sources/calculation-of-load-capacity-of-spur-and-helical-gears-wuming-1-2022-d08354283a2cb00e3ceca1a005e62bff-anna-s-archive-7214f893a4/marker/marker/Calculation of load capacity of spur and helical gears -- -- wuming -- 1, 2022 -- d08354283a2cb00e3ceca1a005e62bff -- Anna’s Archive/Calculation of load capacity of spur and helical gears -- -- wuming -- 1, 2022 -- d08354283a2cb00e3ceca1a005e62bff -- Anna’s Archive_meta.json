@@ -1,0 +1,114 @@
+{
+  "table_of_contents": [
+    {
+      "title": "TECHNICAL SPECIFICATION",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          238.70025188916875,
+          34.48975957257346
+        ],
+        [
+          402.3375314861461,
+          34.48975957257346
+        ],
+        [
+          402.3375314861461,
+          79.759765625
+        ],
+        [
+          238.70025188916875,
+          79.759765625
+        ]
+      ]
+    },
+    {
+      "title": "Calculation of load capacity of spur and helical gears \u2014",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          238.70025188916875,
+          257.173642030276
+        ],
+        [
+          530.6952141057934,
+          257.173642030276
+        ],
+        [
+          530.6952141057934,
+          295.41228851291186
+        ],
+        [
+          238.70025188916875,
+          295.41228851291186
+        ]
+      ]
+    },
+    {
+      "title": "Calculation of tooth flank fracture load capacity",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          237.19899244332493,
+          321.65449688334814
+        ],
+        [
+          520.9370277078085,
+          321.65449688334814
+        ],
+        [
+          520.9370277078085,
+          359.893143365984
+        ],
+        [
+          237.19899244332493,
+          359.893143365984
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Line",
+          27
+        ],
+        [
+          "Span",
+          13
+        ],
+        [
+          "Text",
+          5
+        ],
+        [
+          "SectionHeader",
+          3
+        ],
+        [
+          "PageFooter",
+          2
+        ],
+        [
+          "Picture",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/Calculation of load capacity of spur and helical gears -- -- wuming -- 1, 2022 -- d08354283a2cb00e3ceca1a005e62bff -- Anna\u2019s Archive"
+}

@@ -1,0 +1,12 @@
+{
+  "source_id": "tian-scaffold-ring-film-e025379785-7c8d12497c",
+  "source_path": "/Users/maxholden/GitHub/larrak-audio/annas raw/tian_scaffold_ring_film__e025379785.pdf",
+  "source_type": "pdf",
+  "output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/tian-scaffold-ring-film-e025379785-7c8d12497c/marker",
+  "marker_output_dir": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/tian-scaffold-ring-film-e025379785-7c8d12497c/marker/marker",
+  "markdown_path": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/tian-scaffold-ring-film-e025379785-7c8d12497c/marker/source.md",
+  "chapter_count": 2,
+  "assets_manifest_path": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/tian-scaffold-ring-film-e025379785-7c8d12497c/marker/assets_manifest.json",
+  "chapters_path": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/tian-scaffold-ring-film-e025379785-7c8d12497c/marker/chapters.json",
+  "audio_output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/tian-scaffold-ring-film-e025379785-7c8d12497c/audio"
+}

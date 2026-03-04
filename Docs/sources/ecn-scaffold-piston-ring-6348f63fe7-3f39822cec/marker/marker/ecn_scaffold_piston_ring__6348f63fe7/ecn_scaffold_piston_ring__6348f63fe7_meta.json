@@ -1,0 +1,99 @@
+{
+  "table_of_contents": [
+    {
+      "title": "Characterization of PPS Piston and Packing Ring Materials for\nHigh-Pressure Hydrogen Applications",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          35.715938568115234,
+          119.14569091796875
+        ],
+        [
+          546.72900390625,
+          117.9951171875
+        ],
+        [
+          546.72900390625,
+          155.907470703125
+        ],
+        [
+          34.921875,
+          155.907470703125
+        ]
+      ]
+    },
+    {
+      "title": "1. Introduction",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          164.423828125,
+          556.2626953125
+        ],
+        [
+          234.5082244873047,
+          556.2626953125
+        ],
+        [
+          234.5082244873047,
+          570.2708129882812
+        ],
+        [
+          163.259765625,
+          570.2708129882812
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          246
+        ],
+        [
+          "Line",
+          79
+        ],
+        [
+          "Text",
+          12
+        ],
+        [
+          "ListItem",
+          8
+        ],
+        [
+          "Picture",
+          3
+        ],
+        [
+          "SectionHeader",
+          2
+        ],
+        [
+          "PageFooter",
+          2
+        ],
+        [
+          "ListGroup",
+          2
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/ecn_scaffold_piston_ring__6348f63fe7"
+}

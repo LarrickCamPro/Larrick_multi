@@ -1,0 +1,12 @@
+{
+  "source_id": "iso-6336-2-2006-9a40b189a2",
+  "source_path": "/Users/maxholden/GitHub/larrak-audio/test files/ISO-6336-2-2006.pdf",
+  "source_type": "pdf",
+  "output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/marker/iso-6336-2-2006-9a40b189a2",
+  "marker_output_dir": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/marker/iso-6336-2-2006-9a40b189a2/marker",
+  "markdown_path": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/marker/iso-6336-2-2006-9a40b189a2/source.md",
+  "chapter_count": 2,
+  "assets_manifest_path": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/marker/iso-6336-2-2006-9a40b189a2/assets_manifest.json",
+  "chapters_path": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/marker/iso-6336-2-2006-9a40b189a2/chapters.json",
+  "audio_output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/audio/iso-6336-2-2006-9a40b189a2"
+}

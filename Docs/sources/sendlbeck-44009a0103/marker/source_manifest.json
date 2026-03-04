@@ -1,0 +1,12 @@
+{
+  "source_id": "sendlbeck-1a6501d89f",
+  "source_path": "/Users/maxholden/GitHub/larrak-audio/test files/sendlbeck.pdf",
+  "source_type": "pdf",
+  "output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/marker/sendlbeck-1a6501d89f",
+  "marker_output_dir": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/marker/sendlbeck-1a6501d89f/marker",
+  "markdown_path": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/marker/sendlbeck-1a6501d89f/source.md",
+  "chapter_count": 5,
+  "assets_manifest_path": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/marker/sendlbeck-1a6501d89f/assets_manifest.json",
+  "chapters_path": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/marker/sendlbeck-1a6501d89f/chapters.json",
+  "audio_output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/audio/sendlbeck-1a6501d89f"
+}

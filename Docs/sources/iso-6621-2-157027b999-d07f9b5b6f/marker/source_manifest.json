@@ -1,0 +1,12 @@
+{
+  "source_id": "iso-6621-2-157027b999-d07f9b5b6f",
+  "source_path": "/Users/maxholden/GitHub/larrak-audio/annas raw/iso_6621_2__157027b999.pdf",
+  "source_type": "pdf",
+  "output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/iso-6621-2-157027b999-d07f9b5b6f/marker",
+  "marker_output_dir": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/iso-6621-2-157027b999-d07f9b5b6f/marker/marker",
+  "markdown_path": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/iso-6621-2-157027b999-d07f9b5b6f/marker/source.md",
+  "chapter_count": 2,
+  "assets_manifest_path": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/iso-6621-2-157027b999-d07f9b5b6f/marker/assets_manifest.json",
+  "chapters_path": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/iso-6621-2-157027b999-d07f9b5b6f/marker/chapters.json",
+  "audio_output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/iso-6621-2-157027b999-d07f9b5b6f/audio"
+}

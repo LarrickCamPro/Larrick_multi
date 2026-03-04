@@ -1,0 +1,12 @@
+{
+  "source_id": "ecn-scaffold-piston-ring-6348f63fe7-3f39822cec",
+  "source_path": "/Users/maxholden/GitHub/larrak-audio/annas raw/ecn_scaffold_piston_ring__6348f63fe7.pdf",
+  "source_type": "pdf",
+  "output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/ecn-scaffold-piston-ring-6348f63fe7-3f39822cec/marker",
+  "marker_output_dir": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/ecn-scaffold-piston-ring-6348f63fe7-3f39822cec/marker/marker",
+  "markdown_path": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/ecn-scaffold-piston-ring-6348f63fe7-3f39822cec/marker/source.md",
+  "chapter_count": 2,
+  "assets_manifest_path": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/ecn-scaffold-piston-ring-6348f63fe7-3f39822cec/marker/assets_manifest.json",
+  "chapters_path": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/ecn-scaffold-piston-ring-6348f63fe7-3f39822cec/marker/chapters.json",
+  "audio_output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/ecn-scaffold-piston-ring-6348f63fe7-3f39822cec/audio"
+}

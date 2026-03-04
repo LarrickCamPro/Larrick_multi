@@ -1,0 +1,114 @@
+{
+  "table_of_contents": [
+    {
+      "title": "BS ISO 6622-2:2013",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          404.9951171875,
+          86.74749755859375
+        ],
+        [
+          566.9290161132812,
+          85.9267578125
+        ],
+        [
+          566.9290161132812,
+          104.74749755859375
+        ],
+        [
+          403.8330078125,
+          104.74749755859375
+        ]
+      ]
+    },
+    {
+      "title": "BSI Standards Publication",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          55.78620147705078,
+          225.7119140625
+        ],
+        [
+          319.7341613769531,
+          225.7119140625
+        ],
+        [
+          319.7341613769531,
+          250.386962890625
+        ],
+        [
+          54.90966796875,
+          250.386962890625
+        ]
+      ]
+    },
+    {
+      "title": "Internal combustion engines \u2014\nPiston rings",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          154.85107421875,
+          291.4931640625
+        ],
+        [
+          546.5010375976562,
+          291.4931640625
+        ],
+        [
+          546.5010375976562,
+          349.8959045410156
+        ],
+        [
+          154.85107421875,
+          349.8959045410156
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          9
+        ],
+        [
+          "Line",
+          5
+        ],
+        [
+          "SectionHeader",
+          3
+        ],
+        [
+          "Picture",
+          2
+        ],
+        [
+          "Text",
+          1
+        ],
+        [
+          "PageFooter",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/iso_6622_2__8abfff867a"
+}

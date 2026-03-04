@@ -1,0 +1,114 @@
+{
+  "table_of_contents": [
+    {
+      "title": "INTERNATIONAL \nSTANDARD",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          239.68060302734375,
+          45.71124267578125
+        ],
+        [
+          425.0295715332031,
+          45.71124267578125
+        ],
+        [
+          425.0295715332031,
+          92.63092041015625
+        ],
+        [
+          239.68060302734375,
+          92.63092041015625
+        ]
+      ]
+    },
+    {
+      "title": "Gears \u2014 FZG test procedures \u2014",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          238.52294921875,
+          274.1368408203125
+        ],
+        [
+          491.2900390625,
+          272.9921875
+        ],
+        [
+          491.2900390625,
+          290.0968017578125
+        ],
+        [
+          237.36083984375,
+          290.0968017578125
+        ]
+      ]
+    },
+    {
+      "title": "Part 2:",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          239.10400390625,
+          299.69677734375
+        ],
+        [
+          291.16119384765625,
+          299.69677734375
+        ],
+        [
+          291.16119384765625,
+          315.65673828125
+        ],
+        [
+          239.10400390625,
+          315.65673828125
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          44
+        ],
+        [
+          "Line",
+          21
+        ],
+        [
+          "Text",
+          5
+        ],
+        [
+          "PageFooter",
+          4
+        ],
+        [
+          "SectionHeader",
+          3
+        ],
+        [
+          "Picture",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/SC 2 Gear capacity calculation -- ISO 14635, 1, 2004 -- ISO -- 87d7db7b19375fdd50cfcea421c88cfd -- Anna\u2019s Archive"
+}

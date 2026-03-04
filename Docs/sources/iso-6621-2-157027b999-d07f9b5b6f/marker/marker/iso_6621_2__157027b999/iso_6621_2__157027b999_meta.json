@@ -1,0 +1,91 @@
+{
+  "table_of_contents": [
+    {
+      "title": "INTERNATIONAL \nSTANDARD",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          239.68060302734375,
+          45.71124267578125
+        ],
+        [
+          425.0361633300781,
+          45.71124267578125
+        ],
+        [
+          425.0361633300781,
+          92.63970947265625
+        ],
+        [
+          239.68060302734375,
+          92.63970947265625
+        ]
+      ]
+    },
+    {
+      "title": "Internal combustion engines \u2014 \nPiston rings \u2014",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          238.8134765625,
+          274.1368408203125
+        ],
+        [
+          482.511962890625,
+          273.4033203125
+        ],
+        [
+          482.511962890625,
+          307.62091064453125
+        ],
+        [
+          237.6513671875,
+          308.7607421875
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          31
+        ],
+        [
+          "Line",
+          15
+        ],
+        [
+          "Text",
+          4
+        ],
+        [
+          "SectionHeader",
+          2
+        ],
+        [
+          "PageFooter",
+          2
+        ],
+        [
+          "Picture",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/iso_6621_2__157027b999"
+}

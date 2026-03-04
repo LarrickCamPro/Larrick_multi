@@ -1,0 +1,91 @@
+{
+  "table_of_contents": [
+    {
+      "title": "TECHNICAL \nREPORT",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          239.52700805664062,
+          37.82421875
+        ],
+        [
+          368.5509948730469,
+          37.82421875
+        ],
+        [
+          368.5509948730469,
+          89.8045654296875
+        ],
+        [
+          239.52700805664062,
+          89.8045654296875
+        ]
+      ]
+    },
+    {
+      "title": "Calculation of load capacity of spur \nand helical gears \u2014",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          239.5279998779297,
+          257.7802734375
+        ],
+        [
+          531.5780639648438,
+          257.7802734375
+        ],
+        [
+          531.5780639648438,
+          295.4305419921875
+        ],
+        [
+          239.5279998779297,
+          295.4305419921875
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          41
+        ],
+        [
+          "Line",
+          17
+        ],
+        [
+          "Text",
+          6
+        ],
+        [
+          "SectionHeader",
+          2
+        ],
+        [
+          "PageFooter",
+          2
+        ],
+        [
+          "Picture",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/[ISO_TR 6336-30_2017] Calculation of load capacity of spur and helical gears -- Part 30_ Calculation examples for the a...{108243182} libgen.li"
+}

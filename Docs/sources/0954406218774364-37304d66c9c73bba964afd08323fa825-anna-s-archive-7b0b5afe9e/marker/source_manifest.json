@@ -1,0 +1,12 @@
+{
+  "source_id": "0954406218774364-37304d66c9c73bba964afd08323fa825-anna-s-archive-7b0b5afe9e",
+  "source_path": "/Users/maxholden/GitHub/larrak-audio/annas raw/0954406218774364 -- 37304d66c9c73bba964afd08323fa825 -- Anna\u2019s Archive.pdf",
+  "source_type": "pdf",
+  "output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/0954406218774364-37304d66c9c73bba964afd08323fa825-anna-s-archive-7b0b5afe9e/marker",
+  "marker_output_dir": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/0954406218774364-37304d66c9c73bba964afd08323fa825-anna-s-archive-7b0b5afe9e/marker/marker",
+  "markdown_path": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/0954406218774364-37304d66c9c73bba964afd08323fa825-anna-s-archive-7b0b5afe9e/marker/source.md",
+  "chapter_count": 2,
+  "assets_manifest_path": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/0954406218774364-37304d66c9c73bba964afd08323fa825-anna-s-archive-7b0b5afe9e/marker/assets_manifest.json",
+  "chapters_path": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/0954406218774364-37304d66c9c73bba964afd08323fa825-anna-s-archive-7b0b5afe9e/marker/chapters.json",
+  "audio_output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/0954406218774364-37304d66c9c73bba964afd08323fa825-anna-s-archive-7b0b5afe9e/audio"
+}

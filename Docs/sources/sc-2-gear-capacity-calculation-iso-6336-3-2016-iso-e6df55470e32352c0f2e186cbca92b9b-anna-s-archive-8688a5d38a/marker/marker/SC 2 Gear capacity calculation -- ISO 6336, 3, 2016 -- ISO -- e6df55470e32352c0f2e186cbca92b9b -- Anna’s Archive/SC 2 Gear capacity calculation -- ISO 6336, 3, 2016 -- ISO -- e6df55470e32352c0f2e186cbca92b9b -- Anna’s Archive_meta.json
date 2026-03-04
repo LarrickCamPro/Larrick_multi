@@ -1,0 +1,114 @@
+{
+  "table_of_contents": [
+    {
+      "title": "INTERNATIONAL \nSTANDARD",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          239.5,
+          38.296875
+        ],
+        [
+          418.9404296875,
+          36.701171875
+        ],
+        [
+          418.90283203125,
+          79.9169921875
+        ],
+        [
+          238.8134765625,
+          79.9169921875
+        ]
+      ]
+    },
+    {
+      "title": "Calculation of load capacity of spur \nand helical gears \u2014",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          238.232421875,
+          258.90283203125
+        ],
+        [
+          527.57958984375,
+          257.30712890625
+        ],
+        [
+          527.57958984375,
+          293.21044921875
+        ],
+        [
+          238.232421875,
+          294.80615234375
+        ]
+      ]
+    },
+    {
+      "title": "Strength and quality of materials",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          238.8134765625,
+          325.12451171875
+        ],
+        [
+          510.1977844238281,
+          323.52880859375
+        ],
+        [
+          510.1977844238281,
+          340.28369140625
+        ],
+        [
+          238.8134765625,
+          341.87939453125
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          29
+        ],
+        [
+          "Line",
+          15
+        ],
+        [
+          "Text",
+          6
+        ],
+        [
+          "SectionHeader",
+          3
+        ],
+        [
+          "PageFooter",
+          2
+        ],
+        [
+          "Picture",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/SC 2 Gear capacity calculation -- ISO 6336, 3, 2016 -- ISO -- e6df55470e32352c0f2e186cbca92b9b -- Anna\u2019s Archive"
+}

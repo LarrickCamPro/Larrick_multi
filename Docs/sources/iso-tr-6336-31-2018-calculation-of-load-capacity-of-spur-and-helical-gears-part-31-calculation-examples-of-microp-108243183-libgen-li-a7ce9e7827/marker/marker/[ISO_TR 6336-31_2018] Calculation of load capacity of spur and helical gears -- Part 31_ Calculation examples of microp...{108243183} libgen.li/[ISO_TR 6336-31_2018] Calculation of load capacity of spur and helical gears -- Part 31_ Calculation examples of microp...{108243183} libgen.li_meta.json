@@ -1,0 +1,114 @@
+{
+  "table_of_contents": [
+    {
+      "title": "TECHNICAL \nREPORT",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          239.52700805664062,
+          36.5908203125
+        ],
+        [
+          368.5606384277344,
+          36.5908203125
+        ],
+        [
+          368.5606384277344,
+          89.8045654296875
+        ],
+        [
+          239.52700805664062,
+          89.8045654296875
+        ]
+      ]
+    },
+    {
+      "title": "Calculation of load capacity of spur \nand helical gears \u2014",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          239.5279998779297,
+          258.19140625
+        ],
+        [
+          531.5780639648438,
+          258.19140625
+        ],
+        [
+          531.5780639648438,
+          295.4305419921875
+        ],
+        [
+          239.5279998779297,
+          295.4305419921875
+        ]
+      ]
+    },
+    {
+      "title": "Calculation examples of micropitting \nload capacity",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          238.6328125,
+          322.328125
+        ],
+        [
+          546.7076416015625,
+          322.328125
+        ],
+        [
+          546.7076416015625,
+          360.95050048828125
+        ],
+        [
+          238.6328125,
+          360.95050048828125
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          43
+        ],
+        [
+          "Line",
+          18
+        ],
+        [
+          "Text",
+          5
+        ],
+        [
+          "SectionHeader",
+          3
+        ],
+        [
+          "PageFooter",
+          2
+        ],
+        [
+          "Picture",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/[ISO_TR 6336-31_2018] Calculation of load capacity of spur and helical gears -- Part 31_ Calculation examples of microp...{108243183} libgen.li"
+}

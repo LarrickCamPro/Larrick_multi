@@ -1,0 +1,12 @@
+{
+  "source_id": "litvin-gear-supplementary-note-30cb36ac98",
+  "source_path": "/Users/maxholden/GitHub/larrak-audio/annas raw/Litvin_Gear_Supplementary_Note.pdf",
+  "source_type": "pdf",
+  "output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/litvin-gear-supplementary-note-30cb36ac98/marker",
+  "marker_output_dir": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/litvin-gear-supplementary-note-30cb36ac98/marker/marker",
+  "markdown_path": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/litvin-gear-supplementary-note-30cb36ac98/marker/source.md",
+  "chapter_count": 2,
+  "assets_manifest_path": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/litvin-gear-supplementary-note-30cb36ac98/marker/assets_manifest.json",
+  "chapters_path": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/litvin-gear-supplementary-note-30cb36ac98/marker/chapters.json",
+  "audio_output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/audiobooks/sources/litvin-gear-supplementary-note-30cb36ac98/audio"
+}

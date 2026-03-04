@@ -1,0 +1,114 @@
+{
+  "table_of_contents": [
+    {
+      "title": "INTERNATIONAL\nSTANDARD",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          238.70025188916875,
+          35.23953695458593
+        ],
+        [
+          419.6020151133501,
+          35.23953695458593
+        ],
+        [
+          419.6020151133501,
+          79.47640249332146
+        ],
+        [
+          238.70025188916875,
+          79.47640249332146
+        ]
+      ]
+    },
+    {
+      "title": "Gears \u2014 FZG test procedures \u2014",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          237.94962216624685,
+          256.4238646482636
+        ],
+        [
+          501.12890625,
+          256.4238646482636
+        ],
+        [
+          501.12890625,
+          275.16829919857526
+        ],
+        [
+          237.94962216624685,
+          275.16829919857526
+        ]
+      ]
+    },
+    {
+      "title": "Part 1:",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          237.94962216624685,
+          286.41495992876224
+        ],
+        [
+          291.9949622166247,
+          286.41495992876224
+        ],
+        [
+          291.9949622166247,
+          301.3603515625
+        ],
+        [
+          237.94962216624685,
+          301.3603515625
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "surya",
+      "block_counts": [
+        [
+          "Line",
+          29
+        ],
+        [
+          "Span",
+          16
+        ],
+        [
+          "Text",
+          8
+        ],
+        [
+          "SectionHeader",
+          3
+        ],
+        [
+          "PageFooter",
+          2
+        ],
+        [
+          "Picture",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/ISO-14635-1-2023"
+}

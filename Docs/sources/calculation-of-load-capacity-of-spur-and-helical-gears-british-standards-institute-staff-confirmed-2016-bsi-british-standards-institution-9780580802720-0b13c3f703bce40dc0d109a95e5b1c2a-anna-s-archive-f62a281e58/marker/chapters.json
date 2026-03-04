@@ -1,0 +1,30 @@
+[
+  {
+    "chapter_id": "chapter_000",
+    "title": "**BS ISO 6336-5:2016**",
+    "text": "## **BS ISO 6336-5:2016**\n\n![](_page_0_Picture_1.jpeg)",
+    "page_start": 0,
+    "page_end": 0,
+    "asset_refs": [
+      "asset_00000"
+    ]
+  },
+  {
+    "chapter_id": "chapter_001",
+    "title": "BSI Standards Publication",
+    "text": "## BSI Standards Publication",
+    "page_start": null,
+    "page_end": null,
+    "asset_refs": []
+  },
+  {
+    "chapter_id": "chapter_002",
+    "title": "**Calculation of load capacity of spur and helical gears**",
+    "text": "## **Calculation of load capacity of spur and helical gears**\n\nPart 5: Strength and quality of materials\n\n![](_page_0_Picture_5.jpeg)",
+    "page_start": 0,
+    "page_end": 0,
+    "asset_refs": [
+      "asset_00001"
+    ]
+  }
+]

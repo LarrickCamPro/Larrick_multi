@@ -1,0 +1,160 @@
+{
+  "table_of_contents": [
+    {
+      "title": "Supplementary Technical Note",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          166.74609375,
+          58.546142578125
+        ],
+        [
+          443.989990234375,
+          58.546142578125
+        ],
+        [
+          443.989990234375,
+          78.546142578125
+        ],
+        [
+          166.74609375,
+          78.546142578125
+        ]
+      ]
+    },
+    {
+      "title": "1. Scope and System Context",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          62.15625,
+          254.27545166015625
+        ],
+        [
+          230.0439910888672,
+          254.27545166015625
+        ],
+        [
+          230.0439910888672,
+          268.27545166015625
+        ],
+        [
+          62.15625,
+          268.3828125
+        ]
+      ]
+    },
+    {
+      "title": "1.1 Operating envelope assumed in this supplement",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          62.45000076293945,
+          370.4765625
+        ],
+        [
+          342.6520080566406,
+          368.9296875
+        ],
+        [
+          342.6520080566406,
+          383.70574951171875
+        ],
+        [
+          61.55859375,
+          383.70574951171875
+        ]
+      ]
+    },
+    {
+      "title": "2. Litvin Pair: Functional Requirements and Design Constraints",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          62.15625,
+          572.34375
+        ],
+        [
+          423.31390380859375,
+          570.796875
+        ],
+        [
+          423.31390380859375,
+          586.6254119873047
+        ],
+        [
+          60.9609375,
+          587.8125
+        ]
+      ]
+    },
+    {
+      "title": "2.1 Conjugacy and continuity requirements (motion-law integrity)",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          62.45000076293945,
+          659.35546875
+        ],
+        [
+          416.3879089355469,
+          657.80859375
+        ],
+        [
+          416.3879089355469,
+          673.0557327270508
+        ],
+        [
+          61.857421875,
+          674.05078125
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          75
+        ],
+        [
+          "Line",
+          34
+        ],
+        [
+          "ListItem",
+          9
+        ],
+        [
+          "SectionHeader",
+          5
+        ],
+        [
+          "Text",
+          4
+        ],
+        [
+          "ListGroup",
+          2
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/Litvin_Gear_Supplementary_Note"
+}

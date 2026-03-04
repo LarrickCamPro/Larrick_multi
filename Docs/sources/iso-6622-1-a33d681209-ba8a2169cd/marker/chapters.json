@@ -1,0 +1,20 @@
+[
+  {
+    "chapter_id": "chapter_000",
+    "title": "INTERNATIONAL STANDARD",
+    "text": "## INTERNATIONAL STANDARD\n\n**ISO 6622-1**\n\n> Second edition 2003-12-01",
+    "page_start": null,
+    "page_end": null,
+    "asset_refs": []
+  },
+  {
+    "chapter_id": "chapter_001",
+    "title": "**Internal combustion engines \u2014 Piston rings \u2014**",
+    "text": "## **Internal combustion engines \u2014 Piston rings \u2014**\n\nPart 1:\n\n**Rectangular rings made of cast iron** \n\n*Moteurs \u00e0 combustion interne \u2014 Segments de piston \u2014 Partie 1: Segments rectangulaires en fonte moul\u00e9e* \n\n![](_page_0_Picture_7.jpeg)",
+    "page_start": 0,
+    "page_end": 0,
+    "asset_refs": [
+      "asset_00000"
+    ]
+  }
+]

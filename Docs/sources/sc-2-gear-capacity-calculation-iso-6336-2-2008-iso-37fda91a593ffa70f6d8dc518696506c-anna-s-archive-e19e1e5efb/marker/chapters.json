@@ -1,0 +1,28 @@
+[
+  {
+    "chapter_id": "chapter_000",
+    "title": "**INTERNATIONAL STANDARD ISO 6336-2:2006** TECHNICAL CORRIGENDUM 1",
+    "text": "## **INTERNATIONAL STANDARD ISO 6336-2:2006** TECHNICAL CORRIGENDUM 1\n\nPublished 2008-06-01\n\nINTERNATIONAL ORGANIZATION FOR STANDARDIZATION \u2022 \u041c\u0415\u0416\u0414\u0423\u041d\u0410\u0420\u041e\u0414\u041d\u0410\u042f \u041e\u0420\u0413\u0410\u041d\u0418\u0417\u0410\u0426\u0418\u042f \u041f\u041e \u0421\u0422\u0410\u041d\u0414\u0410\u0420\u0422\u0418\u0417\u0410\u0426\u0418\u0418 \u2022 ORGANISATION INTERNATIONALE DE NORMALISATION",
+    "page_start": 0,
+    "page_end": 0,
+    "asset_refs": [
+      "asset_00000"
+    ]
+  },
+  {
+    "chapter_id": "chapter_001",
+    "title": "**Calculation of load capacity of spur and helical gears \u2014** Part 2:",
+    "text": "## **Calculation of load capacity of spur and helical gears \u2014** Part 2:",
+    "page_start": null,
+    "page_end": null,
+    "asset_refs": []
+  },
+  {
+    "chapter_id": "chapter_002",
+    "title": "**Calculation of surface durability (pitting)**",
+    "text": "## **Calculation of surface durability (pitting)**\n\nTECHNICAL CORRIGENDUM 1\n\n*Calcul de la capacit\u00e9 de charge des engrenages cylindriques \u00e0 dentures droite et h\u00e9lico\u00efdale \u2014 Partie 2: Calcul de la r\u00e9sistance \u00e0 la pression de contact (piq\u00fbre)* \n\n*RECTIFICATIF TECHNIQUE 1*\n\nTechnical Corrigendum 1 to ISO 6336-2:2006 was prepared by Technical Committee ISO/TC 60, *Gears*, Subcommittee SC 2, *Gear capacity calculation*.\n\n*Page 3, 5.1 d)* \n\nReplace \"Helical gears with <sup>\u03b5</sup>\u03b1u 1 and with <sup>\u03b5</sup> <sup>\u03b3</sup> > 1\" with\n\nHelical gears with <sup>\u03b5</sup><sup>\u03b1</sup> < 1 and with <sup>\u03b5</sup> <sup>\u03b3</sup> > 1\n\n*Page 8, 5.4.3.2* \n\nReplace Equation (15) with the following:\n\n$$exp = 0.768 6 log \\frac{\\sigma_{HP stat}}{\\sigma_{HP ref}}$$\n\n**ICS 21.200 Ref. No. ISO 6336-2:2006/Cor.1:2008(E)**",
+    "page_start": null,
+    "page_end": null,
+    "asset_refs": []
+  }
+]

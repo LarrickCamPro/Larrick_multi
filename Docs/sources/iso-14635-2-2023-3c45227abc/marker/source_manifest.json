@@ -1,0 +1,12 @@
+{
+  "source_id": "iso-14635-2-2023-2a4ba9aa3c",
+  "source_path": "/Users/maxholden/GitHub/larrak-audio/test files/ISO-14635-2-2023.pdf",
+  "source_type": "pdf",
+  "output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/marker/iso-14635-2-2023-2a4ba9aa3c",
+  "marker_output_dir": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/marker/iso-14635-2-2023-2a4ba9aa3c/marker",
+  "markdown_path": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/marker/iso-14635-2-2023-2a4ba9aa3c/source.md",
+  "chapter_count": 2,
+  "assets_manifest_path": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/marker/iso-14635-2-2023-2a4ba9aa3c/assets_manifest.json",
+  "chapters_path": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/marker/iso-14635-2-2023-2a4ba9aa3c/chapters.json",
+  "audio_output_root": "/Users/maxholden/GitHub/larrak-audio/outputs/marker-validation/audio/iso-14635-2-2023-2a4ba9aa3c"
+}

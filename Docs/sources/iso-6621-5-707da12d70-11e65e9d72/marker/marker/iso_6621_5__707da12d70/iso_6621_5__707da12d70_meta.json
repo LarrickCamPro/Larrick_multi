@@ -1,0 +1,91 @@
+{
+  "table_of_contents": [
+    {
+      "title": "Kolbenringe\nG\u00fctebedingungen",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          237.3046875,
+          28.4033203125
+        ],
+        [
+          358.0990295410156,
+          26.7802734375
+        ],
+        [
+          358.0990295410156,
+          60.7249755859375
+        ],
+        [
+          237.3046875,
+          60.8642578125
+        ]
+      ]
+    },
+    {
+      "title": "Nationales Vorwort",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          139.16015625,
+          302.29248046875
+        ],
+        [
+          236.0552520751953,
+          302.29248046875
+        ],
+        [
+          236.0552520751953,
+          314.8966064453125
+        ],
+        [
+          139.16015625,
+          314.8966064453125
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          89
+        ],
+        [
+          "Line",
+          33
+        ],
+        [
+          "Text",
+          13
+        ],
+        [
+          "PageHeader",
+          3
+        ],
+        [
+          "PageFooter",
+          3
+        ],
+        [
+          "SectionHeader",
+          2
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/iso_6621_5__707da12d70"
+}

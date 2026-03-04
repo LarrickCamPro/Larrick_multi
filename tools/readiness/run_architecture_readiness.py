@@ -374,7 +374,25 @@ def run_probes(outdir: Path) -> dict[str, Any]:
 
         blocker_type = ""
         blocker_detail = ""
-        if proc.returncode != 0:
+        manifest_exists = bool(spec.manifest_path.exists())
+        contract_trace_exists = bool(trace_path.exists())
+        contract_summary_exists = bool(summary_path.exists())
+        contract_artifacts_emitted = bool(
+            manifest_exists and contract_trace_exists and contract_summary_exists
+        )
+        lower_output = full_output.lower()
+        no_hard_feasible_winner = (
+            "no hard-feasible high-fidelity candidates qualified for downselect"
+            in lower_output
+        )
+        f0_no_winner_nonblocking = bool(
+            spec.workflow == "explore_exploit"
+            and int(spec.fidelity) == 0
+            and no_hard_feasible_winner
+            and contract_artifacts_emitted
+        )
+
+        if proc.returncode != 0 and not f0_no_winner_nonblocking:
             blocker_type = _classify_failure(full_output)
             blocker_detail = (full_output.strip().splitlines() or [""])[-1][:400]
 
@@ -386,13 +404,21 @@ def run_probes(outdir: Path) -> dict[str, Any]:
                 "outdir": str(spec.outdir),
                 "log_file": str(log_path),
                 "exit_code": int(proc.returncode),
-                "success": bool(proc.returncode == 0),
+                "process_success": bool(proc.returncode == 0),
+                "success": bool(proc.returncode == 0 or f0_no_winner_nonblocking),
                 "manifest_file": str(spec.manifest_path),
-                "manifest_exists": bool(spec.manifest_path.exists()),
+                "manifest_exists": manifest_exists,
                 "contract_trace_file": str(trace_path),
                 "contract_summary_file": str(summary_path),
-                "contract_trace_exists": bool(trace_path.exists()),
-                "contract_summary_exists": bool(summary_path.exists()),
+                "contract_trace_exists": contract_trace_exists,
+                "contract_summary_exists": contract_summary_exists,
+                "contract_artifacts_emitted": contract_artifacts_emitted,
+                "expected_non_blocking": bool(f0_no_winner_nonblocking),
+                "expected_non_blocking_reason": (
+                    "f0_explore_exploit_no_hard_feasible_winner_manifest_emitted"
+                    if f0_no_winner_nonblocking
+                    else ""
+                ),
                 "blocker_type": blocker_type,
                 "blocker_detail": blocker_detail,
             }

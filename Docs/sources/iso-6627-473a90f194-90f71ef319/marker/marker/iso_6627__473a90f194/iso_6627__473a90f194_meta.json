@@ -1,0 +1,91 @@
+{
+  "table_of_contents": [
+    {
+      "title": "INTERNATIONAL \nSTANDARD",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          239.6999969482422,
+          34.7030029296875
+        ],
+        [
+          425.0951843261719,
+          34.7030029296875
+        ],
+        [
+          425.0951843261719,
+          81.7376708984375
+        ],
+        [
+          239.6999969482422,
+          81.7376708984375
+        ]
+      ]
+    },
+    {
+      "title": "Internal combustion engines \u2014 Piston \nrings \u2014 Expander/segment oil-control \nrings",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          239.6999969482422,
+          263.36859130859375
+        ],
+        [
+          535.7880859375,
+          262.302734375
+        ],
+        [
+          535.7880859375,
+          314.37628173828125
+        ],
+        [
+          238.6328125,
+          314.927734375
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          33
+        ],
+        [
+          "Line",
+          15
+        ],
+        [
+          "PageFooter",
+          4
+        ],
+        [
+          "Text",
+          3
+        ],
+        [
+          "SectionHeader",
+          2
+        ],
+        [
+          "Picture",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/iso_6627__473a90f194"
+}

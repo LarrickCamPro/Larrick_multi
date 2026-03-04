@@ -1,0 +1,64 @@
+{
+  "table_of_contents": [
+    {
+      "title": "British Standard",
+      "heading_level": null,
+      "page_id": 0,
+      "polygon": [
+        [
+          192.12005615234375,
+          166.919921875
+        ],
+        [
+          405.5400390625,
+          166.919921875
+        ],
+        [
+          405.5400390625,
+          197.1995849609375
+        ],
+        [
+          192.12005615234375,
+          197.1995849609375
+        ]
+      ]
+    }
+  ],
+  "page_stats": [
+    {
+      "page_id": 0,
+      "text_extraction_method": "pdftext",
+      "block_counts": [
+        [
+          "Span",
+          15
+        ],
+        [
+          "Line",
+          8
+        ],
+        [
+          "Text",
+          2
+        ],
+        [
+          "PageHeader",
+          1
+        ],
+        [
+          "SectionHeader",
+          1
+        ]
+      ],
+      "block_metadata": {
+        "llm_request_count": 0,
+        "llm_error_count": 0,
+        "llm_tokens_used": 0,
+        "previous_text": "",
+        "previous_type": "",
+        "previous_order": 0
+      }
+    }
+  ],
+  "debug_data_path": "debug_data/iso_3046_1__935d084c6e"
+}
