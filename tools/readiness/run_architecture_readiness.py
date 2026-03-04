@@ -382,8 +382,7 @@ def run_probes(outdir: Path) -> dict[str, Any]:
         )
         lower_output = full_output.lower()
         no_hard_feasible_winner = (
-            "no hard-feasible high-fidelity candidates qualified for downselect"
-            in lower_output
+            "no hard-feasible high-fidelity candidates qualified for downselect" in lower_output
         )
         f0_no_winner_nonblocking = bool(
             spec.workflow == "explore_exploit"
