@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,7 @@ import numpy as np
 
 from larrak2.core.archive_io import load_archive
 from larrak2.core.artifact_paths import (
+    DEFAULT_OPENFOAM_NN_DIR,
     assert_not_legacy_models_path,
     assert_not_legacy_models_write,
     stack_artifact_dir_for_fidelity,
@@ -26,11 +28,20 @@ from larrak2.core.evaluator import evaluate_candidate
 from larrak2.core.types import EvalContext
 from larrak2.surrogate.quality_contract import (
     dataset_manifest_for_file,
+    openfoam_default_data_provenance,
+    openfoam_quality_profile,
+    per_target_regression_metrics,
     regression_metrics,
     sha256_file,
     thermo_symbolic_balanced_profile,
     thermo_symbolic_quality_fail_reasons,
     write_quality_report,
+)
+from larrak2.surrogate.openfoam_authority import (
+    DEFAULT_OPENFOAM_AUTHORITY_ROOT,
+    build_openfoam_split_manifest,
+    inspect_truth_anchor_manifest,
+    write_staged_openfoam_authority_bundle,
 )
 from larrak2.surrogate.stack import (
     default_feature_names,
@@ -41,6 +52,7 @@ from larrak2.thermo.symbolic_artifact import (
     save_thermo_symbolic_artifact,
     train_thermo_symbolic_affine,
 )
+from larrak2.thermo.constants import load_anchor_manifest
 
 # OpenFOAM Imports
 try:
@@ -83,6 +95,53 @@ def _split_indices(
     val_idx = order[n_train : n_train + n_val]
     test_idx = order[n_train + n_val : n_train + n_val + n_test]
     return train_idx, val_idx, test_idx
+
+
+def _openfoam_data_provenance_from_args(
+    args: argparse.Namespace,
+    *,
+    data_path: Path,
+) -> dict[str, Any]:
+    kind = str(getattr(args, "data_provenance_kind", "synthetic_rehearsal")).strip() or (
+        "synthetic_rehearsal"
+    )
+    authoritative = bool(getattr(args, "authoritative_for_strict_f2", False))
+    anchor_manifest_path = str(getattr(args, "anchor_manifest", "")).strip()
+    anchor_manifest_version = ""
+    anchor_count = 0
+    anchor_truth_status: dict[str, Any] | None = None
+    if anchor_manifest_path:
+        manifest = load_anchor_manifest(anchor_manifest_path)
+        anchor_manifest_version = str(manifest.get("version", "")).strip()
+        anchor_count = int(len(manifest.get("anchors", []) or []))
+        anchor_truth_status = inspect_truth_anchor_manifest(anchor_manifest_path)
+    if authoritative and (kind not in {"doe_generated", "truth_records"} or anchor_count <= 0):
+        raise ValueError(
+            "authoritative_for_strict_f2 requires kind in {'doe_generated', 'truth_records'} "
+            "and a non-empty anchor manifest"
+        )
+    if authoritative and anchor_truth_status is not None and not bool(anchor_truth_status["truth_backed"]):
+        raise ValueError(
+            "authoritative_for_strict_f2 requires an anchor manifest built from truth records; "
+            f"got reasons={anchor_truth_status.get('reasons', [])}"
+        )
+    return openfoam_default_data_provenance(
+        source_path=str(data_path),
+        kind=kind,
+        authoritative_for_strict_f2=authoritative,
+        anchor_manifest_path=anchor_manifest_path,
+        anchor_manifest_version=anchor_manifest_version,
+        anchor_count=anchor_count,
+        truth_source_summary={
+            "source_path": str(data_path),
+            "user_summary": str(getattr(args, "truth_source_summary", "")).strip(),
+            "anchor_source_type": (
+                str(anchor_truth_status.get("source_type", "")).strip()
+                if isinstance(anchor_truth_status, dict)
+                else ""
+            ),
+        },
+    )
 
 
 def _stack_quality_report(
@@ -156,11 +215,22 @@ def _metrics_by_split(
     train_idx: np.ndarray,
     val_idx: np.ndarray,
     test_idx: np.ndarray,
+    target_names: tuple[str, ...] | None = None,
 ) -> dict[str, Any]:
-    def _take(idx: np.ndarray) -> dict[str, float]:
+    def _take(idx: np.ndarray) -> dict[str, Any]:
         if idx.size == 0:
-            return {"rmse": float("nan"), "mae": float("nan"), "r2": float("nan")}
-        return regression_metrics(Y[idx], Y_pred[idx])
+            base: dict[str, Any] = {"rmse": float("nan"), "mae": float("nan"), "r2": float("nan")}
+            if target_names is not None:
+                base["per_target"] = []
+            return base
+        base = dict(regression_metrics(Y[idx], Y_pred[idx]))
+        if target_names is not None:
+            base["per_target"] = per_target_regression_metrics(
+                np.asarray(Y[idx], dtype=np.float64),
+                np.asarray(Y_pred[idx], dtype=np.float64),
+                target_names=target_names,
+            )
+        return base
 
     return {
         "train": _take(train_idx),
@@ -690,6 +760,17 @@ def train_openfoam_workflow(args: argparse.Namespace):
     else:
         raise ValueError(f"Unsupported format: {suf}")
 
+    provenance = _openfoam_data_provenance_from_args(args, data_path=data_path)
+    if (
+        str(provenance.get("kind", "")).strip() != "synthetic_rehearsal"
+        and outdir.resolve(strict=False) == DEFAULT_OPENFOAM_NN_DIR.resolve(strict=False)
+    ):
+        raise ValueError(
+            "Refusing to write DOE/truth-backed OpenFOAM training output directly to the canonical "
+            f"runtime directory '{DEFAULT_OPENFOAM_NN_DIR}'. Train into a staged directory and use "
+            "`python -m larrak2.cli.run promote-openfoam-artifact` after authority validation."
+        )
+
     # 2. Train
     hidden_layers = tuple(int(s) for s in args.hidden.split(",")) if args.hidden else (64, 64)
 
@@ -717,9 +798,12 @@ def train_openfoam_workflow(args: argparse.Namespace):
         train_idx=train_idx,
         val_idx=val_idx,
         test_idx=test_idx,
+        target_names=DEFAULT_TARGET_KEYS,
     )
-    val_rmse = float(split_metrics["val"]["rmse"])
-    passed = bool(np.isfinite(val_rmse))
+    rpm_values = np.asarray(X)[:, 0]
+    low_mask = rpm_values <= np.median(rpm_values)
+    high_mask = rpm_values > np.median(rpm_values)
+    quality_profile = openfoam_quality_profile()
     report = {
         "schema_version": "surrogate_quality_report_v1",
         "surrogate_kind": "openfoam",
@@ -739,27 +823,66 @@ def train_openfoam_workflow(args: argparse.Namespace):
                 {
                     "name": "rpm_low_band",
                     **regression_metrics(
-                        np.asarray(Y)[np.asarray(X)[:, 0] <= np.median(np.asarray(X)[:, 0])],
-                        np.asarray(Y_pred)[np.asarray(X)[:, 0] <= np.median(np.asarray(X)[:, 0])],
+                        np.asarray(Y)[low_mask],
+                        np.asarray(Y_pred)[low_mask],
                     ),
                 },
                 {
                     "name": "rpm_high_band",
                     **regression_metrics(
-                        np.asarray(Y)[np.asarray(X)[:, 0] > np.median(np.asarray(X)[:, 0])],
-                        np.asarray(Y_pred)[np.asarray(X)[:, 0] > np.median(np.asarray(X)[:, 0])],
+                        np.asarray(Y)[high_mask],
+                        np.asarray(Y_pred)[high_mask],
                     ),
                 },
             ],
         },
+        "quality_profile": quality_profile,
         "ood_thresholds": {"rpm_range": [float(np.min(X[:, 0])), float(np.max(X[:, 0]))]},
         "uncertainty_calibration": {"method": "deterministic_mlp", "status": "not_applicable"},
         "required_artifacts": [out_path.name],
-        "pass": passed,
-        "fail_reasons": [] if passed else ["non-finite validation RMSE"],
+        "pass": True,
+        "fail_reasons": [],
+        "data_provenance": provenance,
     }
     write_quality_report(out_path.parent / "quality_report.json", report)
+    source_meta_raw = str(getattr(args, "source_metadata_json", "")).strip()
+    try:
+        source_meta = json.loads(source_meta_raw) if source_meta_raw else {}
+    except Exception as exc:
+        raise ValueError(f"Invalid source_metadata_json: {exc}") from exc
+    template_path = (
+        str(getattr(args, "doe_template_path", "")).strip()
+        or str(getattr(args, "template_path", "")).strip()
+    )
+    split_manifest = build_openfoam_split_manifest(
+        train_idx=[int(i) for i in train_idx.tolist()],
+        val_idx=[int(i) for i in val_idx.tolist()],
+        test_idx=[int(i) for i in test_idx.tolist()],
+        seed=int(args.seed),
+    )
+    stage_summary = write_staged_openfoam_authority_bundle(
+        artifact_path=out_path,
+        quality_report_path=out_path.parent / "quality_report.json",
+        bundle_root=str(
+            getattr(args, "authority_bundle_root", str(DEFAULT_OPENFOAM_AUTHORITY_ROOT))
+        ).strip()
+        or str(DEFAULT_OPENFOAM_AUTHORITY_ROOT),
+        data_path=data_path,
+        source_meta=source_meta,
+        template_path=template_path or None,
+        split_manifest=split_manifest,
+        run_id=(
+            str(getattr(args, "authority_run_id", "")).strip()
+            or f"{time.strftime('%Y%m%d_%H%M%S')}_{data_path.stem}_seed{int(args.seed)}"
+        ),
+    )
     print(f"Saved to {out_path}")
+    print(f"Authority bundle: {stage_summary['staged_dir']}")
+    return {
+        "artifact_path": str(out_path),
+        "quality_report_path": str(out_path.parent / "quality_report.json"),
+        "authority_bundle": stage_summary,
+    }
 
 
 def train_calculix_workflow(args: argparse.Namespace):

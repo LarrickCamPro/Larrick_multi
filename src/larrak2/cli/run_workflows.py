@@ -1116,23 +1116,57 @@ def run_train_surrogates_workflow(args: argparse.Namespace) -> int:
             operating_conditions=operating_conditions,
             log_fn=_log,
         )
+        effective_openfoam_outdir = openfoam_outdir
+        if (
+            str(openfoam_data_meta.get("source", "")).strip() == "doe_generated"
+            and openfoam_outdir.resolve(strict=False) == DEFAULT_OPENFOAM_NN_ARTIFACT.parent.resolve(strict=False)
+        ):
+            effective_openfoam_outdir = outdir / "openfoam_authority_artifact"
+            effective_openfoam_outdir.mkdir(parents=True, exist_ok=True)
+            _log(
+                "Redirecting DOE-trained OpenFOAM artifact output to staged directory",
+                requested_outdir=openfoam_outdir,
+                effective_outdir=effective_openfoam_outdir,
+            )
         _log("Dataset summary: openfoam", summary=_summarize_npz_dataset(openfoam_data))
         _log("Training OpenFOAM surrogate", data=openfoam_data, epochs=args.openfoam_epochs)
         t_train = time.perf_counter()
-        train_openfoam_workflow(
+        openfoam_summary = train_openfoam_workflow(
             argparse.Namespace(
                 data=str(openfoam_data),
-                outdir=str(openfoam_outdir),
+                outdir=str(effective_openfoam_outdir),
                 seed=args.seed,
                 epochs=args.openfoam_epochs,
                 lr=args.openfoam_lr,
                 hidden=args.openfoam_hidden,
                 weight_decay=args.openfoam_weight_decay,
                 name=args.openfoam_name,
+                data_provenance_kind=(
+                    str(getattr(args, "openfoam_data_provenance_kind", "")).strip()
+                    or (
+                        "doe_generated"
+                        if str(openfoam_data_meta.get("source", "")).strip() == "doe_generated"
+                        else "synthetic_rehearsal"
+                    )
+                ),
+                authoritative_for_strict_f2=bool(
+                    getattr(args, "openfoam_authoritative_for_strict_f2", False)
+                ),
+                anchor_manifest=str(getattr(args, "openfoam_anchor_manifest", "")).strip(),
+                truth_source_summary=(
+                    str(getattr(args, "openfoam_truth_source_summary", "")).strip()
+                    or json.dumps(openfoam_data_meta, sort_keys=True)
+                ),
+                authority_bundle_root=(
+                    str(getattr(args, "openfoam_authority_bundle_root", "")).strip()
+                    or "outputs/openfoam_authority"
+                ),
+                source_metadata_json=json.dumps(openfoam_data_meta, sort_keys=True),
+                doe_template_path=str(getattr(args, "openfoam_template", "")).strip(),
             )
         )
         _log("Trained OpenFOAM surrogate", elapsed_s=round(time.perf_counter() - t_train, 3))
-        openfoam_model = openfoam_outdir / args.openfoam_name
+        openfoam_model = effective_openfoam_outdir / args.openfoam_name
         os.environ["LARRAK2_OPENFOAM_NN_PATH"] = str(openfoam_model)
 
         calculix_data, calculix_data_meta = _build_calculix_training_data(
@@ -1172,10 +1206,18 @@ def run_train_surrogates_workflow(args: argparse.Namespace) -> int:
             "openfoam_model": str(openfoam_model),
             "openfoam_data": str(openfoam_data),
             "openfoam_data_meta": openfoam_data_meta,
+            "openfoam_authority_bundle": (
+                dict(openfoam_summary.get("authority_bundle", {}))
+                if isinstance(openfoam_summary, dict)
+                else {}
+            ),
             "calculix_model": str(calculix_model),
             "calculix_data": str(calculix_data),
             "calculix_data_meta": calculix_data_meta,
         }
+        manifest["openfoam_strict_f2_promotable"] = bool(
+            manifest["steps"]["train_nn_surrogates"]["openfoam_authority_bundle"].get("promotable", False)  # type: ignore[index]
+        )
         _write_manifest()
         _log(
             "Step completed: train_nn_surrogates",
@@ -1191,6 +1233,7 @@ def run_train_surrogates_workflow(args: argparse.Namespace) -> int:
             "error": str(e),
             "traceback": err_tb,
         }
+        manifest["openfoam_strict_f2_promotable"] = False
         manifest["ready_for_dress_rehearsal"] = False
         _write_manifest()
         _log("Step failed: train_nn_surrogates", level="ERROR", error=str(e))
@@ -2778,4 +2821,27 @@ def run_openfoam_doe_workflow(args: argparse.Namespace) -> int:
         )
     )
     print(f"Completed DOE. Results: {jsonl_path}")
+    return 0
+
+
+def run_promote_openfoam_artifact_workflow(args: argparse.Namespace) -> int:
+    """Promote a staged OpenFOAM authority bundle to the canonical runtime path."""
+    from larrak2.surrogate.openfoam_authority import (
+        promote_openfoam_artifact,
+        resolve_latest_openfoam_authority_dir,
+    )
+
+    staged_dir = str(getattr(args, "staged_dir", "")).strip()
+    bundle_root = str(getattr(args, "bundle_root", "")).strip() or "outputs/openfoam_authority"
+    staged_path = Path(staged_dir) if staged_dir else resolve_latest_openfoam_authority_dir(bundle_root)
+
+    result = promote_openfoam_artifact(
+        staged_dir=staged_path,
+        canonical_dir=str(getattr(args, "canonical_dir", "")).strip()
+        or str(DEFAULT_OPENFOAM_NN_ARTIFACT.parent),
+        backup_root=str(getattr(args, "backup_root", "")).strip()
+        or "outputs/artifacts/surrogates/openfoam_nn/archive",
+    )
+    print("Promoted OpenFOAM artifact")
+    print(json.dumps(result, indent=2, sort_keys=True))
     return 0

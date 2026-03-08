@@ -114,6 +114,7 @@ def signed_orifice_mass_flow(
     p_a: float,
     t_a: float,
     p_b: float,
+    t_b: float,
     area: float,
     *,
     cd: float,
@@ -135,7 +136,7 @@ def signed_orifice_mass_flow(
 
     mdot, choked = compressible_orifice_mass_flow(
         p_b,
-        t_a,
+        t_b,
         p_a,
         area,
         cd=cd,
@@ -153,6 +154,8 @@ def compute_cycle_port_flows(
     rpm: float,
     p_manifold_pa: float,
     p_back_pa: float,
+    t_manifold_k: float,
+    t_back_k: float,
     intake_open_deg: float,
     intake_close_deg: float,
     exhaust_open_deg: float,
@@ -194,8 +197,9 @@ def compute_cycle_port_flows(
     for i in range(theta.size):
         mdot_int, int_choked = signed_orifice_mass_flow(
             float(p_manifold_pa),
-            float(t_cycle[i]),
+            float(t_manifold_k),
             float(p_cycle[i]),
+            float(t_cycle[i]),
             float(intake_area[i]),
             cd=float(cd_intake),
             gamma=float(gamma),
@@ -210,6 +214,7 @@ def compute_cycle_port_flows(
             float(p_cycle[i]),
             float(t_cycle[i]),
             float(p_back_pa),
+            float(t_back_k),
             float(exhaust_area[i]),
             cd=float(cd_exhaust),
             gamma=float(gamma),

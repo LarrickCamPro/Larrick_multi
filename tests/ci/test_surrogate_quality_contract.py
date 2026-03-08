@@ -8,8 +8,13 @@ from pathlib import Path
 import pytest
 
 from larrak2.surrogate.quality_contract import (
+    openfoam_quality_fail_reasons,
+    openfoam_quality_profile,
+    openfoam_strict_f2_provenance_status,
     thermo_symbolic_quality_fail_reasons,
     validate_artifact_quality,
+    validate_openfoam_quality,
+    validate_openfoam_strict_f2_provenance,
     validate_quality_report_schema,
     validate_thermo_symbolic_quality,
     write_quality_report,
@@ -91,6 +96,16 @@ def _base_report(kind: str, artifact_file: str) -> dict:
             "test_nrmse_max": 0.25,
             "min_r2": 0.4,
         }
+    if kind == "openfoam":
+        report["quality_profile"] = openfoam_quality_profile()
+        report["data_provenance"] = {
+            "kind": "synthetic_rehearsal",
+            "authoritative_for_strict_f2": False,
+            "anchor_manifest_path": "",
+            "anchor_manifest_version": "",
+            "anchor_count": 0,
+            "truth_source_summary": {"source_path": "data.npz"},
+        }
     return report
 
 
@@ -154,6 +169,41 @@ def test_validate_artifact_quality_blocks_failed_report(tmp_path: Path) -> None:
             validation_mode="strict",
             required_artifacts=[artifact.name],
         )
+
+
+def test_openfoam_strict_f2_provenance_rejects_synthetic_report() -> None:
+    report = _base_report("openfoam", "openfoam_breathing.pt")
+    status = openfoam_strict_f2_provenance_status(report)
+    assert status["strict_f2_eligible"] is False
+    assert status["benchmark_authority"] == "synthetic_non_authoritative"
+    assert status["gate_failure_reason"] == "synthetic_artifact_not_allowed_in_strict_f2"
+    with pytest.raises(ValueError, match="synthetic_artifact_not_allowed_in_strict_f2"):
+        validate_openfoam_strict_f2_provenance(report, validation_mode="strict")
+
+
+def test_openfoam_strict_f2_provenance_accepts_authoritative_doe_report() -> None:
+    report = _base_report("openfoam", "openfoam_breathing.pt")
+    report["data_provenance"] = {
+        "kind": "doe_generated",
+        "authoritative_for_strict_f2": True,
+        "anchor_manifest_path": "data/thermo/anchor_manifest_v1.json",
+        "anchor_manifest_version": "thermo_anchor_v1",
+        "anchor_count": 3,
+        "truth_source_summary": {"source_path": "outputs/openfoam_doe/results_train.jsonl"},
+    }
+    status = validate_openfoam_strict_f2_provenance(report, validation_mode="strict")
+    assert status["strict_f2_eligible"] is True
+    assert status["benchmark_authority"] == "truth_like_authoritative"
+    assert status["gate_failure_reason"] == ""
+
+
+def test_openfoam_quality_gate_rejects_per_target_threshold_violation() -> None:
+    report = _base_report("openfoam", "openfoam_breathing.pt")
+    report["metrics"]["val"]["per_target"][0]["nrmse"] = 0.8
+    reasons = openfoam_quality_fail_reasons(report)
+    assert reasons
+    with pytest.raises(ValueError):
+        validate_openfoam_quality(report, validation_mode="strict")
 
 
 def test_validate_artifact_quality_checks_hash_linkage(tmp_path: Path) -> None:

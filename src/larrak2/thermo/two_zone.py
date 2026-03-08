@@ -13,6 +13,11 @@ from ..core.artifact_paths import DEFAULT_OPENFOAM_NN_ARTIFACT, assert_not_legac
 from ..core.constants import RATIO_SLOPE_LIMIT_FID0, RATIO_SLOPE_LIMIT_FID1
 from ..core.encoding import ThermoParams
 from ..core.types import BreathingConfig, EvalContext
+from ..surrogate.quality_contract import (
+    load_quality_report,
+    openfoam_default_data_provenance,
+    openfoam_strict_f2_provenance_status,
+)
 from .chemistry_profile import fuel_profile_for_name, load_thermo_chemistry_profile
 from .combustion import burn_increment, wrapped_double_wiebe_burn_fraction
 from .constants import (
@@ -21,6 +26,7 @@ from .constants import (
 )
 from .ignition_stage import IgnitionStageResult, evaluate_ignition_stage
 from .mixture_preparation import MixturePreparationResult, evaluate_mixture_preparation
+from .port_flow import rotary_port_area_schedule
 from .scavenging import evaluate_rotary_scavenging
 from .timing_profile import stable_combustion_thresholds
 from .validation import (
@@ -172,6 +178,43 @@ def _resolve_openfoam_surrogate_path(ctx: EvalContext) -> Path:
     return p
 
 
+def _openfoam_artifact_summary(model_path: Path) -> dict[str, Any]:
+    quality_report_path = model_path.with_name("quality_report.json")
+    summary: dict[str, Any] = {
+        "model_path": str(model_path),
+        "quality_report_path": str(quality_report_path),
+        "quality_report_exists": bool(quality_report_path.exists()),
+        "data_provenance": openfoam_default_data_provenance(),
+        "strict_f2_eligible": False,
+        "benchmark_authority": "non_authoritative",
+        "gate_failure_reason": "missing_openfoam_quality_report",
+    }
+    if not quality_report_path.exists():
+        return summary
+
+    try:
+        report = load_quality_report(quality_report_path)
+    except Exception as exc:
+        summary["quality_report_error"] = f"{type(exc).__name__}: {exc}"
+        summary["gate_failure_reason"] = "invalid_openfoam_quality_report"
+        return summary
+
+    provenance_status = openfoam_strict_f2_provenance_status(report)
+    summary.update(
+        {
+            "artifact_file": str(report.get("artifact_file", "")),
+            "dataset_manifest": dict(report.get("dataset_manifest", {}) or {}),
+            "data_provenance": dict(provenance_status.get("data_provenance", {}) or {}),
+            "strict_f2_eligible": bool(provenance_status.get("strict_f2_eligible", False)),
+            "benchmark_authority": str(
+                provenance_status.get("benchmark_authority", "non_authoritative")
+            ),
+            "gate_failure_reason": str(provenance_status.get("gate_failure_reason", "")),
+        }
+    )
+    return summary
+
+
 def _predict_openfoam_breathing(
     *,
     params: ThermoParams,
@@ -185,24 +228,7 @@ def _predict_openfoam_breathing(
         model_path,
         validation_mode=str(getattr(ctx, "surrogate_validation_mode", "strict")),
     )
-    pred = surrogate.predict_one(
-        {
-            "rpm": float(ctx.rpm),
-            "torque": float(ctx.torque),
-            "lambda_af": float(params.lambda_af),
-            "bore_mm": float(breathing.bore_mm),
-            "stroke_mm": float(breathing.stroke_mm),
-            "intake_port_area_m2": float(breathing.intake_port_area_m2),
-            "exhaust_port_area_m2": float(breathing.exhaust_port_area_m2),
-            "p_manifold_Pa": float(breathing.p_manifold_Pa),
-            "p_back_Pa": float(breathing.p_back_Pa),
-            "overlap_deg": float(breathing.overlap_deg),
-            "intake_open_deg": float(breathing.intake_open_deg),
-            "intake_close_deg": float(breathing.intake_close_deg),
-            "exhaust_open_deg": float(breathing.exhaust_open_deg),
-            "exhaust_close_deg": float(breathing.exhaust_close_deg),
-        }
-    )
+    pred = surrogate.predict_one(_openfoam_feature_payload(params=params, ctx=ctx, breathing=breathing))
     return {k: float(v) for k, v in pred.items()}
 
 
@@ -237,6 +263,159 @@ def _breathing_payload(breathing: BreathingConfig) -> dict[str, float]:
     }
 
 
+def _openfoam_feature_payload(
+    *,
+    params: ThermoParams,
+    ctx: EvalContext,
+    breathing: BreathingConfig,
+) -> dict[str, float]:
+    valve_mode = str(getattr(breathing, "valve_timing_mode", "candidate"))
+    if valve_mode == "candidate":
+        intake_open = float(params.intake_open_offset_from_bdc)
+        intake_close = float(params.intake_open_offset_from_bdc + params.intake_duration_deg)
+        exhaust_open = float(params.exhaust_open_offset_from_expansion_tdc)
+        exhaust_close = float(
+            params.exhaust_open_offset_from_expansion_tdc + params.exhaust_duration_deg
+        )
+    else:
+        intake_open = float(breathing.intake_open_deg)
+        intake_close = float(breathing.intake_close_deg)
+        exhaust_open = float(breathing.exhaust_open_deg)
+        exhaust_close = float(breathing.exhaust_close_deg)
+
+    return {
+        "rpm": float(ctx.rpm),
+        "torque": float(ctx.torque),
+        "lambda_af": float(params.lambda_af),
+        "bore_mm": float(breathing.bore_mm),
+        "stroke_mm": float(breathing.stroke_mm),
+        "intake_port_area_m2": float(breathing.intake_port_area_m2),
+        "exhaust_port_area_m2": float(breathing.exhaust_port_area_m2),
+        "p_manifold_Pa": float(breathing.p_manifold_Pa),
+        "p_back_Pa": float(breathing.p_back_Pa),
+        "overlap_deg": float(breathing.overlap_deg),
+        "intake_open_deg": float(intake_open),
+        "intake_close_deg": float(intake_close),
+        "exhaust_open_deg": float(exhaust_open),
+        "exhaust_close_deg": float(exhaust_close),
+    }
+
+
+def _build_scavenging_pressure_seed(
+    *,
+    theta_deg: np.ndarray,
+    volume: np.ndarray,
+    breathing: BreathingConfig,
+    gamma_u: float,
+) -> np.ndarray:
+    theta = np.asarray(theta_deg, dtype=np.float64).reshape(-1)
+    V = np.asarray(volume, dtype=np.float64).reshape(-1)
+    closed_cylinder = np.maximum(
+        float(breathing.p_manifold_Pa) * (V.max() / np.maximum(V, 1e-12)) ** float(gamma_u),
+        1.0,
+    )
+
+    intake_area = rotary_port_area_schedule(
+        theta,
+        open_deg=float(breathing.intake_open_deg),
+        close_deg=float(breathing.intake_close_deg),
+        max_area_m2=float(breathing.intake_port_area_m2),
+    )
+    exhaust_area = rotary_port_area_schedule(
+        theta,
+        open_deg=float(breathing.exhaust_open_deg),
+        close_deg=float(breathing.exhaust_close_deg),
+        max_area_m2=float(breathing.exhaust_port_area_m2),
+    )
+    intake_weight = np.clip(
+        intake_area / max(float(breathing.intake_port_area_m2), 1e-12), 0.0, 1.0
+    )
+    exhaust_weight = np.clip(
+        exhaust_area / max(float(breathing.exhaust_port_area_m2), 1e-12), 0.0, 1.0
+    )
+    port_weight = np.clip(intake_weight + exhaust_weight, 0.0, 1.0)
+
+    intake_target = np.full_like(theta, float(breathing.p_manifold_Pa) * 0.94, dtype=np.float64)
+    exhaust_target = np.full_like(
+        theta,
+        max(float(breathing.p_back_Pa) * 1.06, float(breathing.p_manifold_Pa)),
+        dtype=np.float64,
+    )
+    boundary_target = closed_cylinder.copy()
+    denom = intake_weight + exhaust_weight
+    active = denom > 1e-12
+    boundary_target[active] = (
+        intake_weight[active] * intake_target[active]
+        + exhaust_weight[active] * exhaust_target[active]
+    ) / denom[active]
+
+    seed = (1.0 - port_weight) * closed_cylinder + port_weight * boundary_target
+    pure_intake = (intake_weight > 1e-6) & (exhaust_weight <= 1e-6)
+    pure_exhaust = (exhaust_weight > 1e-6) & (intake_weight <= 1e-6)
+    seed[pure_intake] = np.minimum(seed[pure_intake], intake_target[pure_intake])
+    seed[pure_exhaust] = np.maximum(seed[pure_exhaust], exhaust_target[pure_exhaust])
+    return np.maximum(seed, 1.0)
+
+
+def _openfoam_provenance_failure_payload(
+    *,
+    ctx: EvalContext,
+    params: ThermoParams,
+    breathing: BreathingConfig,
+    derived_timing: DerivedValveTiming,
+    manifest: dict[str, Any],
+    openfoam_artifact: dict[str, Any],
+) -> dict[str, Any]:
+    thresholds = dict(manifest.get("thresholds", {}) or {})
+    return {
+        "failure_stage": "thermo_openfoam_provenance",
+        "gate_failure_reason": str(openfoam_artifact.get("gate_failure_reason", "")),
+        "operating_point": {
+            "rpm": float(ctx.rpm),
+            "torque": float(ctx.torque),
+            "fidelity": int(ctx.fidelity),
+            "constraint_phase": str(ctx.constraint_phase),
+        },
+        "thermo_params": {
+            "compression_duration": float(params.compression_duration),
+            "expansion_duration": float(params.expansion_duration),
+            "heat_release_center": float(params.heat_release_center),
+            "heat_release_width": float(params.heat_release_width),
+            "lambda_af": float(params.lambda_af),
+            "intake_open_offset_from_bdc": float(params.intake_open_offset_from_bdc),
+            "intake_duration_deg": float(params.intake_duration_deg),
+            "exhaust_open_offset_from_expansion_tdc": float(
+                params.exhaust_open_offset_from_expansion_tdc
+            ),
+            "exhaust_duration_deg": float(params.exhaust_duration_deg),
+            "spark_timing_deg_from_compression_tdc": float(
+                params.spark_timing_deg_from_compression_tdc
+            ),
+        },
+        "breathing": _breathing_payload(breathing),
+        "openfoam_feature_inputs": _openfoam_feature_payload(
+            params=params,
+            ctx=ctx,
+            breathing=breathing,
+        ),
+        "openfoam_artifact": dict(openfoam_artifact or {}),
+        "valve_timing": derived_timing.as_dict(),
+        "anchor_manifest": {
+            "path": (
+                str(Path(str(ctx.thermo_anchor_manifest_path)).expanduser())
+                if str(ctx.thermo_anchor_manifest_path or "").strip()
+                else str(DEFAULT_THERMO_ANCHOR_MANIFEST_PATH)
+            ),
+            "version": str(manifest.get("version", "")),
+            "anchor_count": int(len(manifest.get("anchors", []) or [])),
+            "validated_envelope": dict(manifest.get("validated_envelope", {}) or {}),
+            "thresholds": thresholds,
+        },
+        "benchmark_authority": str(openfoam_artifact.get("benchmark_authority", "")),
+        "strict_f2_eligible": bool(openfoam_artifact.get("strict_f2_eligible", False)),
+    }
+
+
 def _validation_failure_payload(
     *,
     ctx: EvalContext,
@@ -259,6 +438,7 @@ def _validation_failure_payload(
     residual_used: float,
     scav_eff_used: float,
     hybrid_correction_active: bool,
+    openfoam_artifact: dict[str, Any] | None = None,
     mixture: MixturePreparationResult | None = None,
     ignition: IgnitionStageResult | None = None,
 ) -> dict[str, Any]:
@@ -322,6 +502,12 @@ def _validation_failure_payload(
             ),
         },
         "breathing": _breathing_payload(breathing),
+        "openfoam_feature_inputs": _openfoam_feature_payload(
+            params=params,
+            ctx=ctx,
+            breathing=breathing,
+        ),
+        "openfoam_artifact": dict(openfoam_artifact or {}),
         "valve_timing": derived_timing.as_dict(),
         "anchor_manifest": anchor_payload,
         "validation": {
@@ -414,10 +600,20 @@ def evaluate_two_zone_thermo(
         profile_path=chemistry_profile.path,
     )
 
-    p_guess = np.maximum(
-        float(effective_breathing.p_manifold_Pa)
-        * (V.max() / np.maximum(V, 1e-12)) ** constants.gamma_u,
-        1.0,
+    p_guess = (
+        _build_scavenging_pressure_seed(
+            theta_deg=theta,
+            volume=V,
+            breathing=effective_breathing,
+            gamma_u=float(constants.gamma_u),
+        )
+        if int(ctx.fidelity) >= 2
+        and str(getattr(effective_breathing, "valve_timing_mode", "candidate")) == "candidate"
+        else np.maximum(
+            float(effective_breathing.p_manifold_Pa)
+            * (V.max() / np.maximum(V, 1e-12)) ** constants.gamma_u,
+            1.0,
+        )
     )
     t_guess = np.full_like(theta, float(constants.t_intake_k), dtype=np.float64)
 
@@ -434,6 +630,8 @@ def evaluate_two_zone_thermo(
         rpm=float(ctx.rpm),
         p_manifold_pa=float(effective_breathing.p_manifold_Pa),
         p_back_pa=float(effective_breathing.p_back_Pa),
+        t_manifold_k=float(constants.t_intake_k),
+        t_back_k=float(constants.t_residual_k),
         intake_open_deg=float(effective_breathing.intake_open_deg),
         intake_close_deg=float(effective_breathing.intake_close_deg),
         exhaust_open_deg=float(effective_breathing.exhaust_open_deg),
@@ -479,9 +677,27 @@ def evaluate_two_zone_thermo(
     benchmark_messages: list[str] = []
     openfoam_nn_used = False
     pred: dict[str, float] | None = None
+    openfoam_artifact = {}
 
     hybrid_correction_active = False
     if int(ctx.fidelity) >= 2:
+        openfoam_model_path = _resolve_openfoam_surrogate_path(ctx)
+        openfoam_artifact = _openfoam_artifact_summary(openfoam_model_path)
+        validation_mode = str(getattr(ctx, "surrogate_validation_mode", "strict")).strip().lower()
+        if validation_mode == "strict" and not bool(openfoam_artifact.get("strict_f2_eligible", False)):
+            payload = _openfoam_provenance_failure_payload(
+                ctx=ctx,
+                params=params,
+                breathing=effective_breathing,
+                derived_timing=derived_timing,
+                manifest=manifest,
+                openfoam_artifact=openfoam_artifact,
+            )
+            raise ThermoValidationError(
+                "OpenFOAM strict F2 provenance gate failed: "
+                f"{str(openfoam_artifact.get('gate_failure_reason', 'invalid_openfoam_artifact'))}",
+                payload=payload,
+            )
         pred = _predict_openfoam_breathing(params=params, ctx=ctx, breathing=effective_breathing)
         openfoam_nn_used = True
         nn_disagreement = compute_nn_disagreement(
@@ -498,6 +714,10 @@ def evaluate_two_zone_thermo(
             thresholds=manifest.get("thresholds", {}),
             in_envelope=in_env,
         )
+        if not bool(openfoam_artifact.get("strict_f2_eligible", False)):
+            benchmark_messages.append(
+                "openfoam surrogate artifact is non-authoritative for strict F2 benchmarking"
+            )
 
         if in_env:
             hybrid_correction_active = True
@@ -537,6 +757,8 @@ def evaluate_two_zone_thermo(
         rpm=float(ctx.rpm),
         p_manifold_pa=float(effective_breathing.p_manifold_Pa),
         p_back_pa=float(effective_breathing.p_back_Pa),
+        t_manifold_k=float(constants.t_intake_k),
+        t_back_k=float(constants.t_residual_k),
         intake_open_deg=float(effective_breathing.intake_open_deg),
         intake_close_deg=float(effective_breathing.intake_close_deg),
         exhaust_open_deg=float(effective_breathing.exhaust_open_deg),
@@ -556,6 +778,8 @@ def evaluate_two_zone_thermo(
         rpm=float(ctx.rpm),
         p_manifold_pa=float(effective_breathing.p_manifold_Pa),
         p_back_pa=float(effective_breathing.p_back_Pa) * 1.05,
+        t_manifold_k=float(constants.t_intake_k),
+        t_back_k=float(constants.t_residual_k),
         intake_open_deg=float(effective_breathing.intake_open_deg),
         intake_close_deg=float(effective_breathing.intake_close_deg),
         exhaust_open_deg=float(effective_breathing.exhaust_open_deg),
@@ -803,12 +1027,16 @@ def evaluate_two_zone_thermo(
         benchmark_status=benchmark_status,
         benchmark_ok=benchmark_ok,
         in_validated_envelope_flag=in_env,
-        trend_checks=trend_checks,
-        nn_disagreement=nn_disagreement,
-        messages=benchmark_messages,
-    )
+            trend_checks=trend_checks,
+            nn_disagreement=nn_disagreement,
+            messages=benchmark_messages,
+        )
 
     if not validation_report.passed(mass_tol=1e-4, energy_tol=3e-2, branch_tol=2e-2):
+        if str(openfoam_artifact.get("benchmark_authority", "")).strip() == "synthetic_non_authoritative":
+            benchmark_messages = list(benchmark_messages) + [
+                "openfoam surrogate artifact is backed by synthetic rehearsal data"
+            ]
         payload = _validation_failure_payload(
             ctx=ctx,
             params=params,
@@ -830,6 +1058,7 @@ def evaluate_two_zone_thermo(
             residual_used=float(residual_used),
             scav_eff_used=float(scav_eff_used),
             hybrid_correction_active=bool(hybrid_correction_active),
+            openfoam_artifact=openfoam_artifact,
             mixture=mixture,
             ignition=ignition,
         )
@@ -913,6 +1142,21 @@ def evaluate_two_zone_thermo(
             "trapped_o2_mass": float(trapped_o2),
             "burn_frac_o2": float(burn_cap),
             "valve_timing": derived_timing.as_dict(),
+            "openfoam_feature_inputs": _openfoam_feature_payload(
+                params=params,
+                ctx=ctx,
+                breathing=effective_breathing,
+            ),
+            "openfoam_artifact": dict(openfoam_artifact or {}),
+            "openfoam_benchmark_authority": str(
+                openfoam_artifact.get("benchmark_authority", "not_applicable")
+            ),
+            "openfoam_strict_f2_eligible": bool(
+                openfoam_artifact.get("strict_f2_eligible", int(ctx.fidelity) < 2)
+            ),
+            "openfoam_gate_failure_reason": str(
+                openfoam_artifact.get("gate_failure_reason", "")
+            ),
             "stable_combustion_thresholds": dict(stable_thresholds),
             "chemistry_thresholds": {
                 "delivered_vapor_fraction_min": float(

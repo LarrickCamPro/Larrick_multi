@@ -62,6 +62,8 @@ def test_train_surrogates_smoke():
                 str(calculix_outdir),
                 "--openfoam-data",
                 str(openfoam_data),
+                "--openfoam-authority-bundle-root",
+                str(Path(tmpdir) / "openfoam_authority"),
                 "--calculix-data",
                 str(calculix_data),
                 "--openfoam-epochs",

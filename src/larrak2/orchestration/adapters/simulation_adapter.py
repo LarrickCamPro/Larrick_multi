@@ -72,10 +72,15 @@ class PhysicsSimulationAdapter:
             "p_manifold_Pa": float(p_manifold),
             "p_back_Pa": float(p_back),
             "overlap_deg": float(candidate.get("overlap_deg", 0.0)),
-            "intake_open_deg": float(candidate.get("intake_open_deg", 0.0)),
-            "intake_close_deg": float(candidate.get("intake_close_deg", 0.0)),
-            "exhaust_open_deg": float(candidate.get("exhaust_open_deg", 0.0)),
-            "exhaust_close_deg": float(candidate.get("exhaust_close_deg", 0.0)),
+            "intake_open_deg": float(decoded.thermo.intake_open_offset_from_bdc),
+            "intake_close_deg": float(
+                decoded.thermo.intake_open_offset_from_bdc + decoded.thermo.intake_duration_deg
+            ),
+            "exhaust_open_deg": float(decoded.thermo.exhaust_open_offset_from_expansion_tdc),
+            "exhaust_close_deg": float(
+                decoded.thermo.exhaust_open_offset_from_expansion_tdc
+                + decoded.thermo.exhaust_duration_deg
+            ),
         }
 
     def _calculix_params(self, candidate: dict[str, Any], context: EvalContext) -> dict[str, float]:

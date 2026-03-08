@@ -19,6 +19,8 @@ from typing import Any, Literal
 import numpy as np
 
 from larrak2.surrogate.quality_contract import (
+    openfoam_default_data_provenance,
+    openfoam_quality_profile,
     sha256_file,
     validate_artifact_quality,
     write_quality_report,
@@ -405,16 +407,63 @@ def save_artifact(artifact: OpenFoamSurrogateArtifact, path: str | Path) -> None
             "dataset_sha256": "",
         },
         "metrics": {
-            "train": {"mse": 0.0},
-            "val": {"mse": 0.0},
-            "test": {"mse": 0.0},
+            "train": {
+                "rmse": 0.0,
+                "mae": 0.0,
+                "r2": 1.0,
+                "per_target": [
+                    {
+                        "name": str(name),
+                        "rmse": 0.0,
+                        "mae": 0.0,
+                        "r2": 1.0,
+                        "nrmse": 0.0,
+                        "target_scale": 1.0,
+                    }
+                    for name in artifact.target_keys
+                ],
+            },
+            "val": {
+                "rmse": 0.0,
+                "mae": 0.0,
+                "r2": 1.0,
+                "per_target": [
+                    {
+                        "name": str(name),
+                        "rmse": 0.0,
+                        "mae": 0.0,
+                        "r2": 1.0,
+                        "nrmse": 0.0,
+                        "target_scale": 1.0,
+                    }
+                    for name in artifact.target_keys
+                ],
+            },
+            "test": {
+                "rmse": 0.0,
+                "mae": 0.0,
+                "r2": 1.0,
+                "per_target": [
+                    {
+                        "name": str(name),
+                        "rmse": 0.0,
+                        "mae": 0.0,
+                        "r2": 1.0,
+                        "nrmse": 0.0,
+                        "target_scale": 1.0,
+                    }
+                    for name in artifact.target_keys
+                ],
+            },
             "slice_metrics": [],
         },
+        "quality_profile": openfoam_quality_profile(),
         "ood_thresholds": {},
         "uncertainty_calibration": {"method": "none"},
         "required_artifacts": [target.name],
         "pass": True,
         "fail_reasons": [],
+        "data_provenance": openfoam_default_data_provenance(),
     }
     write_quality_report(target.parent / "quality_report.json", report)
 

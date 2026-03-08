@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Validation gates for the real OpenFOAM DOE + surrogate pipeline.
+"""Validation gates for the staged real OpenFOAM DOE + promotion pipeline.
 
 This script is intentionally explicit and conservative. It runs:
 1) A small DOE sanity batch (default 10) to confirm the OpenFOAM case produces
    the required log markers and that outputs are finite.
-2) A surrogate training sanity run (default uses the DOE JSONL output).
-3) A single `fidelity=2` evaluation smoke (requires the trained artifact path).
+2) A staged surrogate training run backed by DOE data.
+3) Promotion to the canonical runtime path.
+4) A single `fidelity=2` evaluation smoke using the promoted artifact.
 
 Notes:
 - This is not run in CI; it is meant for local bring-up with Docker OpenFOAM.
@@ -27,14 +28,16 @@ def main() -> int:
     p.add_argument("--doe-outdir", type=str, default="outputs/openfoam_doe")
     p.add_argument("--runs-root", type=str, default="runs/openfoam_doe")
     p.add_argument(
-        "--template", type=str, default="openfoam_templates/opposed_piston_rotary_valve_case"
+        "--template",
+        type=str,
+        default="openfoam_templates/opposed_piston_rotary_valve_sliding_case",
     )
     p.add_argument("--solver", type=str, default="rhoPimpleFoam")
     p.add_argument("--train-epochs", type=int, default=200)
-    p.add_argument(
-        "--artifact-outdir", type=str, default="outputs/artifacts/surrogates/openfoam_nn"
-    )
+    p.add_argument("--authority-root", type=str, default="outputs/openfoam_authority/manual")
+    p.add_argument("--artifact-outdir", type=str, default="outputs/openfoam_authority/manual/artifact")
     p.add_argument("--artifact-name", type=str, default="openfoam_breathing.pt")
+    p.add_argument("--anchor-manifest", type=str, default="data/thermo/anchor_manifest_v1.json")
     args = p.parse_args()
 
     root = Path(__file__).resolve().parents[1]
@@ -50,7 +53,9 @@ def main() -> int:
     subprocess.run(
         [
             "python",
-            "scripts/run_openfoam_doe.py",
+            "-m",
+            "larrak2.cli.run",
+            "openfoam-doe",
             "--template",
             args.template,
             "--solver",
@@ -81,7 +86,9 @@ def main() -> int:
     subprocess.run(
         [
             "python",
-            "scripts/train_openfoam_surrogate.py",
+            "-m",
+            "larrak2.cli.train",
+            "openfoam",
             "--data",
             args.doe_jsonl,
             "--outdir",
@@ -90,12 +97,41 @@ def main() -> int:
             args.artifact_name,
             "--epochs",
             str(args.train_epochs),
+            "--data-provenance-kind",
+            "doe_generated",
+            "--authoritative-for-strict-f2",
+            "--anchor-manifest",
+            args.anchor_manifest,
+            "--authority-bundle-root",
+            args.authority_root,
+            "--source-metadata-json",
+            '{"source":"doe_generated","n_total_cases":10,"n_success_cases":10}',
+            "--doe-template-path",
+            args.template,
         ],
         cwd=root,
         check=True,
     )
 
-    artifact_path = str(Path(args.artifact_outdir) / args.artifact_name)
+    staged_dirs = sorted((root / args.authority_root).glob("*"))
+    if not staged_dirs:
+        raise RuntimeError("No staged OpenFOAM authority bundle was emitted")
+    staged_dir = str(staged_dirs[-1])
+
+    subprocess.run(
+        [
+            "python",
+            "-m",
+            "larrak2.cli.run",
+            "promote-openfoam-artifact",
+            "--staged-dir",
+            staged_dir,
+        ],
+        cwd=root,
+        check=True,
+    )
+
+    artifact_path = "outputs/artifacts/surrogates/openfoam_nn/openfoam_breathing.pt"
     os.environ["LARRAK2_OPENFOAM_NN_PATH"] = artifact_path
 
     # 3) fidelity=2 evaluation smoke

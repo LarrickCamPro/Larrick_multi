@@ -23,6 +23,7 @@ from larrak2.cli.run_workflows import (
     run_orchestrate_workflow,
     run_pareto_grid_workflow,
     run_pareto_staged_workflow,
+    run_promote_openfoam_artifact_workflow,
     run_train_stack_surrogate_workflow,
     run_train_surrogates_workflow,
     run_train_thermo_symbolic_workflow,
@@ -187,6 +188,20 @@ def main() -> int:
     od.add_argument("--writeInterval", type=int, default=100)
     od.add_argument("--metricWriteInterval", type=int, default=1)
 
+    # --- Promote OpenFOAM Artifact ---
+    po = subparsers.add_parser(
+        "promote-openfoam-artifact",
+        help="Promote a staged real OpenFOAM artifact bundle to the canonical runtime path",
+    )
+    po.add_argument("--staged-dir", type=str, default="")
+    po.add_argument("--bundle-root", type=str, default="outputs/openfoam_authority")
+    po.add_argument("--canonical-dir", type=str, default=str(DEFAULT_OPENFOAM_NN_DIR))
+    po.add_argument(
+        "--backup-root",
+        type=str,
+        default="outputs/artifacts/surrogates/openfoam_nn/archive",
+    )
+
     # --- Train Surrogates ---
     ts = subparsers.add_parser(
         "train-surrogates",
@@ -211,6 +226,16 @@ def main() -> int:
     ts.add_argument("--openfoam-lr", type=float, default=1e-3)
     ts.add_argument("--openfoam-hidden", type=str, default="64,64")
     ts.add_argument("--openfoam-weight-decay", type=float, default=0.0)
+    ts.add_argument(
+        "--openfoam-data-provenance-kind",
+        type=str,
+        default="",
+        choices=["", "synthetic_rehearsal", "doe_generated", "truth_records"],
+    )
+    ts.add_argument("--openfoam-authoritative-for-strict-f2", action="store_true")
+    ts.add_argument("--openfoam-anchor-manifest", type=str, default="")
+    ts.add_argument("--openfoam-truth-source-summary", type=str, default="")
+    ts.add_argument("--openfoam-authority-bundle-root", type=str, default="outputs/openfoam_authority")
     ts.add_argument("--calculix-data", type=str, default="")
     ts.add_argument(
         "--calculix-template",
@@ -949,6 +974,7 @@ def main() -> int:
         "train-stack-surrogate": run_train_stack_surrogate_workflow,
         "train-thermo-symbolic": run_train_thermo_symbolic_workflow,
         "openfoam-doe": run_openfoam_doe_workflow,
+        "promote-openfoam-artifact": run_promote_openfoam_artifact_workflow,
         "dress-rehearsal": run_dress_rehearsal_workflow,
         "explore-exploit": run_explore_exploit_workflow,
         "orchestrate": run_orchestrate_workflow,

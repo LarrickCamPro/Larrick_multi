@@ -43,6 +43,19 @@ def main():
     add_common_args(p_of)
     add_nn_args(p_of)
     p_of.add_argument("--name", default="openfoam_breathing.pt")
+    p_of.add_argument(
+        "--data-provenance-kind",
+        type=str,
+        default="synthetic_rehearsal",
+        choices=["synthetic_rehearsal", "doe_generated", "truth_records"],
+    )
+    p_of.add_argument("--authoritative-for-strict-f2", action="store_true")
+    p_of.add_argument("--anchor-manifest", default="")
+    p_of.add_argument("--truth-source-summary", default="")
+    p_of.add_argument("--authority-bundle-root", default="outputs/openfoam_authority")
+    p_of.add_argument("--authority-run-id", default="")
+    p_of.add_argument("--source-metadata-json", default="")
+    p_of.add_argument("--doe-template-path", default="")
     p_of.set_defaults(outdir=str(DEFAULT_OPENFOAM_NN_DIR))
 
     # 1b. CalculiX NN

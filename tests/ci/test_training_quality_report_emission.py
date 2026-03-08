@@ -7,9 +7,11 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from larrak2.surrogate.calculix_nn import DEFAULT_FEATURE_KEYS as CCX_FEATURES
 from larrak2.surrogate.calculix_nn import DEFAULT_TARGET_KEYS as CCX_TARGETS
+from larrak2.core.artifact_paths import DEFAULT_OPENFOAM_NN_DIR
 from larrak2.surrogate.openfoam_nn import DEFAULT_FEATURE_KEYS as OF_FEATURES
 from larrak2.surrogate.openfoam_nn import DEFAULT_TARGET_KEYS as OF_TARGETS
 from larrak2.training.workflows import (
@@ -37,6 +39,10 @@ def test_train_openfoam_emits_quality_report(tmp_path: Path) -> None:
         hidden="16,16",
         weight_decay=0.0,
         name="openfoam_breathing.pt",
+        authority_bundle_root=str(tmp_path / "openfoam_authority"),
+        authority_run_id="test_bundle",
+        source_metadata_json='{"source":"provided"}',
+        doe_template_path="",
     )
     train_openfoam_workflow(args)
 
@@ -45,6 +51,58 @@ def test_train_openfoam_emits_quality_report(tmp_path: Path) -> None:
     assert report["metrics"]["train"]
     assert report["metrics"]["val"]
     assert report["metrics"]["test"]
+    assert report["quality_profile"]["profile"] == "openfoam_authority_v1"
+    assert report["data_provenance"]["kind"] == "synthetic_rehearsal"
+    assert report["data_provenance"]["authoritative_for_strict_f2"] is False
+    staged_dir = tmp_path / "openfoam_authority" / "test_bundle"
+    assert (staged_dir / "openfoam_breathing.pt").exists()
+    assert (staged_dir / "quality_report.json").exists()
+    assert (staged_dir / "dataset_manifest.json").exists()
+    assert (staged_dir / "split_manifest.json").exists()
+    assert (staged_dir / "authority_validation_report.json").exists()
+
+
+def test_train_openfoam_rejects_doe_output_to_canonical_runtime_dir(tmp_path: Path) -> None:
+    n = 16
+    X = np.random.default_rng(0).normal(size=(n, len(OF_FEATURES))).astype(np.float64)
+    Y = np.random.default_rng(1).normal(size=(n, len(OF_TARGETS))).astype(np.float64)
+    data_path = tmp_path / "openfoam_data.npz"
+    np.savez(data_path, X=X, Y=Y)
+    anchor_manifest = tmp_path / "anchor_manifest.json"
+    anchor_manifest.write_text(
+        json.dumps(
+            {
+                "version": "thermo_anchor_v1",
+                "provenance": {
+                    "source_type": "truth_runs",
+                    "input_files": ["outputs/orchestration/truth_records.jsonl"],
+                },
+                "anchors": [{"rpm": 2000.0, "torque": 80.0}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    args = argparse.Namespace(
+        data=str(data_path),
+        outdir=str(DEFAULT_OPENFOAM_NN_DIR),
+        seed=7,
+        epochs=5,
+        lr=1e-3,
+        hidden="16,16",
+        weight_decay=0.0,
+        name="openfoam_breathing.pt",
+        data_provenance_kind="doe_generated",
+        authoritative_for_strict_f2=True,
+        anchor_manifest=str(anchor_manifest),
+        truth_source_summary="",
+        authority_bundle_root=str(tmp_path / "openfoam_authority"),
+        authority_run_id="test_bundle",
+        source_metadata_json='{"source":"doe_generated","n_total_cases":16,"n_success_cases":12}',
+        doe_template_path=str(tmp_path),
+    )
+    with pytest.raises(ValueError, match="Refusing to write DOE/truth-backed OpenFOAM training output directly"):
+        train_openfoam_workflow(args)
 
 
 def test_train_calculix_emits_quality_report(tmp_path: Path) -> None:
