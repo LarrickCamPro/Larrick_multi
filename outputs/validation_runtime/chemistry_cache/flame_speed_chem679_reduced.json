@@ -1,0 +1,28 @@
+{
+  "chemistry_cache_metadata": {
+    "cache_version": 1,
+    "case_id": "chemistry_flame_speed_chem679_benchmark",
+    "dataset_id": "chem_flame_speed_iso_octane_reduced_chem679",
+    "fuel_family": "gasoline",
+    "generated_at_utc": "2026-03-11T23:22:06.968981+00:00",
+    "metric_ids": [
+      "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane"
+    ]
+  },
+  "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane": 0.029977003865201912,
+  "mechanism_provenance": {
+    "backend": "native_cantera",
+    "cantera_mechanism_file": "outputs/validation_runtime/mechanisms/chem679_reduced.yaml",
+    "fuel_name": "IC8H18",
+    "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem679.inp.txt"
+  },
+  "metric_mechanism_provenance": {
+    "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane": {
+      "backend": "native_cantera",
+      "cantera_mechanism_file": "outputs/validation_runtime/mechanisms/chem679_reduced.yaml",
+      "fuel_name": "IC8H18",
+      "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem679.inp.txt",
+      "mechanism_format": "chemkin"
+    }
+  }
+}

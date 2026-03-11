@@ -1,0 +1,10 @@
+{
+  "liquid_penetration_max_mm_sprayG": 30.0,
+  "vapor_spreading_angle_deg_sprayG": 90.0,
+  "droplet_smd_um_sprayG_z15mm": 11.0,
+  "gas_axial_velocity_m_s_sprayG_z15mm_t1ms": 1.3531,
+  "trapped_mass": 0.00039,
+  "residual_fraction": 0.14,
+  "trapped_o2_mass": 7.5e-05,
+  "metric_source": "validation_spray_g_iso_octane_fixture_v1"
+}

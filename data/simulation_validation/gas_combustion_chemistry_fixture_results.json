@@ -1,0 +1,15 @@
+{
+  "ignition_delay_796K_15bar_phi0p66": 109.0,
+  "ignition_delay_878K_16p1bar_phi0p66": 36.0,
+  "pilot_CO2_molefrac_xd1_flameD": 0.071727,
+  "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane": 0.503414,
+  "mechanism_provenance": {
+    "backend": "fixture",
+    "mechanism_file": "mechanisms/iso_octane/llnl_2022.yaml",
+    "mechanism_id": "llnl_2022",
+    "mechanism_source_input": "Docs/Detailed gasoline surrogate/ChemDetailed.inp.txt",
+    "mechanism_source_thermo": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+    "mechanism_source_transport": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+    "fuel_name": "iso-octane"
+  }
+}

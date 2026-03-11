@@ -1,0 +1,10 @@
+{
+  "gas_temperature_K_iso_octane_reacting": 1810.0,
+  "CO2_molefrac_iso_octane_reacting": 0.064,
+  "OH_molefrac_iso_octane_reacting": 0.0038,
+  "bulk_velocity_m_s_iso_octane_reacting": 44.0,
+  "trapped_mass": 0.00041,
+  "residual_fraction": 0.1,
+  "trapped_o2_mass": 7.9e-05,
+  "metric_source": "validation_reacting_iso_octane_fixture_v1"
+}

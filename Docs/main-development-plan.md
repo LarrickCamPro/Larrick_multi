@@ -158,6 +158,10 @@ Exit criteria:
 1. Run controlled OpenFOAM/CalculiX truth campaigns for targeted regions.
 2. Retrain surrogates with uncertainty tracking and versioned manifests.
 3. Tie orchestration decisions to confidence + budget policies.
+4. For the engine-cycle truth path, preserve rotary-valve geometry and
+   non-sinusoidal piston kinematics as first-class training inputs rather than
+   collapsing them into timing-only placeholders. See
+   `Docs/openfoam-cantera-rotary-module-audit.md`.
 
 Exit criteria:
 

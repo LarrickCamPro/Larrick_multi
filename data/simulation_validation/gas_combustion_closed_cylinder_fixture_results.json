@@ -1,0 +1,13 @@
+{
+  "peak_pressure_bar": 42.11,
+  "CA10_deg": -4.33,
+  "CA50_deg": 11.15,
+  "CA90_deg": 23.26,
+  "heat_release_kJ": 0.96544,
+  "IMEP_bar": 5.43,
+  "closed_cylinder_provenance": {
+    "backend": "fixture",
+    "fixture_results_path": "data/simulation_validation/gas_combustion_closed_cylinder_fixture_results.json",
+    "reference_case": "wang_zhao_2022_SI-CAI_1500rpm_IMEP5p43"
+  }
+}

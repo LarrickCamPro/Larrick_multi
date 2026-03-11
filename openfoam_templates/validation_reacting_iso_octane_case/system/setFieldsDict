@@ -1,0 +1,29 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      setFieldsDict;
+}
+
+defaultFieldValues
+(
+    volScalarFieldValue p 244438.78238578938
+    volScalarFieldValue T 300.0
+    volScalarFieldValue residualTracer 0
+    volVectorFieldValue U (0 0 0)
+);
+
+regions
+(
+    boxToCell
+    {
+        box (-0.04 -0.04 0.02) (0.04 0.04 0.16);
+        fieldValues
+        (
+            volScalarFieldValue p 177451.34079869284
+            volScalarFieldValue T 929.6966384389646
+            volScalarFieldValue residualTracer 1
+        );
+    }
+);

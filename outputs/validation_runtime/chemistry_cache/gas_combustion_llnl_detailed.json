@@ -1,0 +1,26 @@
+{
+  "chemistry_cache_metadata": {
+    "cache_version": 1,
+    "case_id": "chemistry_gas_combustion",
+    "dataset_id": "chem_uconn_rcm_iso_octane_davidson",
+    "fuel_family": "gasoline",
+    "generated_at_utc": "2026-03-11T04:06:58.545988+00:00",
+    "metric_ids": [
+      "ignition_delay_796K_15bar_phi0p66",
+      "ignition_delay_878K_16p1bar_phi0p66",
+      "pilot_CO2_molefrac_xd1_flameD",
+      "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane"
+    ]
+  },
+  "ignition_delay_796K_15bar_phi0p66": 101.30801249350453,
+  "ignition_delay_878K_16p1bar_phi0p66": 27.844745009029754,
+  "mechanism_provenance": {
+    "backend": "native_cantera",
+    "cantera_mechanism_file": "mechanisms/iso_octane/llnl_2022.yaml",
+    "fuel_name": "IC8H18",
+    "mechanism_file": "Docs/Detailed gasoline surrogate/ChemDetailed.inp.txt",
+    "mechanism_format": "chemkin",
+    "offline_results_path": "outputs/validation_runtime/chemistry_cache/gas_combustion_llnl_detailed.json"
+  },
+  "pilot_CO2_molefrac_xd1_flameD": 0.071727
+}

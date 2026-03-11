@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 from larrak2.core.artifact_paths import (
     DEFAULT_CALCULIX_NN_DIR,
@@ -19,6 +20,66 @@ from larrak2.training.workflows import (
     train_residual_workflow,
     train_scavenge_gbr_workflow,
 )
+
+
+def _add_validation_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--validation-regime",
+        default="",
+        choices=[
+            "",
+            "chemistry",
+            "spray",
+            "reacting_flow",
+            "reacting-flow",
+            "closed_cylinder",
+            "closed-cylinder",
+            "full_handoff",
+            "full-handoff",
+            "suite",
+        ],
+        help="Optional simulation-validation preflight to run before training.",
+    )
+    parser.add_argument(
+        "--validation-config",
+        default="",
+        help="Path to the simulation-validation config JSON for the preflight gate.",
+    )
+    parser.add_argument(
+        "--validation-outdir",
+        default="",
+        help="Optional output directory for validation artifacts.",
+    )
+
+
+def _maybe_run_validation_preflight(args: argparse.Namespace) -> None:
+    regime = str(getattr(args, "validation_regime", "")).strip()
+    config = str(getattr(args, "validation_config", "")).strip()
+    outdir_raw = str(getattr(args, "validation_outdir", "")).strip()
+
+    if not regime and not config:
+        return
+    if not regime or not config:
+        raise ValueError(
+            "Training validation preflight requires both --validation-regime and "
+            "--validation-config."
+        )
+
+    from larrak2.cli.validate_simulation import run_validation_preflight
+
+    outdir = outdir_raw or str(
+        Path("outputs") / "validation" / "pretrain" / str(getattr(args, "model_type", "unknown"))
+    )
+    print(
+        "Running simulation-validation preflight: "
+        f"regime={regime} config={config} outdir={outdir}"
+    )
+    code = run_validation_preflight(regime, config_path=config, outdir=outdir)
+    if code != 0:
+        raise RuntimeError(
+            f"Training blocked by simulation validation preflight ({regime}). "
+            f"See artifacts in {outdir}."
+        )
 
 
 def main():
@@ -56,6 +117,7 @@ def main():
     p_of.add_argument("--authority-run-id", default="")
     p_of.add_argument("--source-metadata-json", default="")
     p_of.add_argument("--doe-template-path", default="")
+    _add_validation_args(p_of)
     p_of.set_defaults(outdir=str(DEFAULT_OPENFOAM_NN_DIR))
 
     # 1b. CalculiX NN
@@ -63,30 +125,36 @@ def main():
     add_common_args(p_ccx)
     add_nn_args(p_ccx)
     p_ccx.add_argument("--name", default="calculix_stress.pt")
+    _add_validation_args(p_ccx)
     p_ccx.set_defaults(outdir=str(DEFAULT_CALCULIX_NN_DIR))
 
     # 2. Gear NN
     p_gear_nn = subparsers.add_parser("gear-nn", help="Gear Loss Neural Network")
     add_common_args(p_gear_nn)
     add_nn_args(p_gear_nn)
+    _add_validation_args(p_gear_nn)
     p_gear_nn.set_defaults(outdir=str(DEFAULT_GEAR_LOSS_NN_DIR))
 
     # 3. Gear GBR
     p_gear_gbr = subparsers.add_parser("gear-gbr", help="Gear GBR Ensemble")
     add_common_args(p_gear_gbr)
+    _add_validation_args(p_gear_gbr)
     p_gear_gbr.set_defaults(outdir=str(DEFAULT_SURROGATE_V1_DIR))
 
     # 4. Scavenge GBR
     p_scav = subparsers.add_parser("scavenge", help="Scavenge GBR Ensemble")
     add_common_args(p_scav)
+    _add_validation_args(p_scav)
     p_scav.set_defaults(outdir=str(DEFAULT_SURROGATE_V1_DIR))
 
     # 5. Residual
     p_resid = subparsers.add_parser("residual", help="Residual Surrogate (Efficiency/Loss)")
     add_common_args(p_resid)
+    _add_validation_args(p_resid)
     p_resid.set_defaults(outdir=str(DEFAULT_SURROGATE_V1_DIR))
 
     args = parser.parse_args()
+    _maybe_run_validation_preflight(args)
 
     # Dispatch
     if args.model_type == "openfoam":
