@@ -59,4 +59,4 @@ jobs:
     if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_heavy) || vars.LARRAK_ENABLE_SELF_HOSTED_OPTIMIZATION == 'true' }}
     runs-on: [self-hosted, larrak-placeholder, optimization]
     steps:
-      - run: echo "Optimization self-hosted runner stub. Replace with local hardware execution when available."
+      - run: python src/larrak2/cli/run.py orchestrate --outdir outputs/orchestrate --rpm 2200 --torque 120
