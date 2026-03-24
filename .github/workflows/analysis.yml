@@ -49,4 +49,4 @@ jobs:
     if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_heavy) || vars.LARRAK_ENABLE_SELF_HOSTED_ANALYSIS == 'true' }}
     runs-on: [self-hosted, larrak-placeholder, analysis]
     steps:
-      - run: echo "Analysis self-hosted runner stub. Replace with local hardware execution when available."
+      - run: python src/larrak2/cli/run.py pareto-grid --outdir outputs/pareto --rpm-min 1000 --rpm-max 2000 --torque-min 50 --torque-max 100 --pop 2 --gen 2
