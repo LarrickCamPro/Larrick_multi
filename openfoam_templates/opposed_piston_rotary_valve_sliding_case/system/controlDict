@@ -1,0 +1,47 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      controlDict;
+}
+
+application     larrakEngineFoam;
+startFrom       startTime;
+startTime       0;
+stopAt          endTime;
+endTime         {{endTime}};
+deltaT          {{deltaT}};
+writeControl    timeStep;
+writeInterval   {{writeInterval}};
+purgeWrite      0;
+writeFormat     ascii;
+writePrecision  6;
+writeCompression off;
+timeFormat      general;
+timePrecision   6;
+runTimeModifiable true;
+
+functions
+{
+    writeCellVolumes
+    {
+        type            writeCellVolumes;
+        libs            ("libfieldFunctionObjects.so");
+        writeControl    writeTime;
+    }
+
+    residualTracerTransport
+    {
+        type            scalarTransport;
+        libs            ("libsolverFunctionObjects.so");
+        field           residualTracer;
+        phi             phi;
+        rho             rho;
+        diffusivity     none;
+        nCorr           1;
+        bounded01       true;
+        resetOnStartUp  false;
+        writeControl    writeTime;
+    }
+}

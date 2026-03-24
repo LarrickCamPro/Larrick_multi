@@ -1,0 +1,96 @@
+{
+  "_comment": "REGIME 2: SPRAY \u2014 Fill measured values from ECN Spray G (or similar injector characterisation) papers",
+  "dataset": {
+    "dataset_id": "spray_ecn_sprayG_workshop3_summary_gasvel",
+    "source_type": "measured",
+    "fuel_family": "gasoline",
+    "provenance": {
+      "source": "Engine Combustion Network (ECN) 3rd Workshop proceedings summary + ECN Spray G primary datasets (gas velocity file)",
+      "pdf_url": "https://ecn.sandia.gov/wp-content/uploads/2014/12/ECN3proceedingsSummary.pdf ; https://ecn.sandia.gov/G/data/velocity/bratgGasVelocity_z15mm_x0.dat",
+      "doi": "N/A (workshop proceedings + ECN hosted dataset files)"
+    },
+    "operating_bounds": {
+      "ambient_temperature_K": [
+        300,
+        700
+      ],
+      "ambient_pressure_bar": [
+        1.0,
+        10.0
+      ],
+      "injection_pressure_bar": [
+        50,
+        300
+      ],
+      "notes": "Proceedings summary does not restate full ECN Spray G G1/G2/G3 boundary conditions; update bounds from ECN target-condition pages when adding full BC fidelity."
+    },
+    "metrics": [
+      {
+        "metric_id": "liquid_penetration_max_mm_sprayG",
+        "quantity": "liquid_penetration",
+        "units": "mm",
+        "comparison_mode": "absolute",
+        "tolerance_band": 5.0,
+        "source_type": "measured",
+        "required": true,
+        "notes": "Value taken from ECN workshop proceedings summary text."
+      },
+      {
+        "metric_id": "vapor_spreading_angle_deg_sprayG",
+        "quantity": "vapor_spreading_angle",
+        "units": "deg",
+        "comparison_mode": "absolute",
+        "tolerance_band": 10.0,
+        "source_type": "measured",
+        "required": false
+      },
+      {
+        "metric_id": "droplet_smd_um_sprayG_z15mm",
+        "quantity": "droplet_smd",
+        "units": "um",
+        "comparison_mode": "relative",
+        "tolerance_band": 2.0,
+        "source_type": "measured",
+        "required": true,
+        "notes": "Midpoint of reported range 10\u201312 \u00b5m from ECN workshop proceedings."
+      },
+      {
+        "metric_id": "gas_axial_velocity_m_s_sprayG_z15mm_t1ms",
+        "quantity": "gas_velocity",
+        "units": "m/s",
+        "comparison_mode": "relative",
+        "tolerance_band": 0.5,
+        "source_type": "measured",
+        "required": true,
+        "notes": "Extracted from ECN .dat time series at t=1000 \u00b5s (1 ms)."
+      }
+    ],
+    "description": "ECN Spray G key metrics (max liquid penetration, droplet SMD range) summarized in ECN 3rd workshop proceedings; centerline gas velocity time series from ECN primary dataset file.",
+    "fuel": "iso-octane (iC8H18)"
+  },
+  "case_spec": {
+    "case_id": "spray_ecn_g_v1",
+    "regime": "spray",
+    "operating_point": {
+      "ambient_gas_temperature_K": 450,
+      "ambient_pressure_bar": 5.0,
+      "injection_pressure_bar": 200.0,
+      "nozzle_diameter_um": 165,
+      "fuel_temperature_K": 363,
+      "injection_duration_ms": 0.68
+    },
+    "solver_config": {
+      "spray_model": "Lagrangian parcels",
+      "breakup_model": "KH-RT",
+      "evaporation_model": "Frossling",
+      "drag_model": "Schiller-Naumann",
+      "notes": "Placeholder physics choices; replace with your solver's actual sub-models."
+    }
+  },
+  "simulation_data": {
+    "liquid_penetration_max_mm_sprayG_measured": 30.0,
+    "vapor_spreading_angle_deg_sprayG_measured": 90.0,
+    "droplet_smd_um_sprayG_z15mm_measured": 11.0,
+    "gas_axial_velocity_m_s_sprayG_z15mm_t1ms_measured": 1.3531
+  }
+}

@@ -36,6 +36,34 @@ solvers
         relTol          0;
     }
 
+    Yi
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-8;
+        relTol          0.1;
+    }
+
+    YiFinal
+    {
+        $Yi;
+        relTol          0;
+    }
+
+    h
+    {
+        solver          PBiCGStab;
+        preconditioner  DILU;
+        tolerance       1e-8;
+        relTol          0.1;
+    }
+
+    hFinal
+    {
+        $h;
+        relTol          0;
+    }
+
     e
     {
         solver          PBiCGStab;

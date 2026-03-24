@@ -29,19 +29,17 @@ data/cem/*
 !data/thermo/literature_constants_v1.json
 !data/simulation_validation/
 data/simulation_validation/*
-!data/simulation_validation/gas_combustion_suite_config.json
-!data/simulation_validation/gas_combustion_chemistry_fixture_results.json
-!data/simulation_validation/gas_combustion_closed_cylinder_fixture_results.json
+!data/simulation_validation/*.json
 models/
 openfoam_templates/
 !openfoam_templates/
 openfoam_templates/*
+!openfoam_templates/opposed_piston_rotary_valve_sliding_case/
+!openfoam_templates/opposed_piston_rotary_valve_sliding_case/**
 !openfoam_templates/validation_spray_g_iso_octane_case/
-!openfoam_templates/validation_spray_g_iso_octane_case/README.md
-!openfoam_templates/validation_spray_g_iso_octane_case/openfoam_metrics.json
+!openfoam_templates/validation_spray_g_iso_octane_case/**
 !openfoam_templates/validation_reacting_iso_octane_case/
-!openfoam_templates/validation_reacting_iso_octane_case/README.md
-!openfoam_templates/validation_reacting_iso_octane_case/openfoam_metrics.json
+!openfoam_templates/validation_reacting_iso_octane_case/**
 
 # IDE
 .vscode/
@@ -60,4 +58,11 @@ build/
 .env
 /Docs/
 /mechanisms/
+!/mechanisms/
+!/mechanisms/openfoam/
+/mechanisms/openfoam/*
+!/mechanisms/openfoam/v2512/
+/mechanisms/openfoam/v2512/*
+!/mechanisms/openfoam/v2512/chem323_reduced/
+!/mechanisms/openfoam/v2512/chem323_reduced/**
 /Legacy_Monolithic

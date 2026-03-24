@@ -2662,14 +2662,14 @@ def run_orchestrate_workflow(args: argparse.Namespace) -> int:
         if openfoam_backend == "docker":
             openfoam_runner = OpenFoamPipeline(
                 template_dir=template_dir,
-                solver_cmd=str(getattr(args, "openfoam_solver", "rhoPimpleFoam")),
+                solver_cmd=str(getattr(args, "openfoam_solver", "larrakEngineFoam")),
                 docker_image=openfoam_docker_image,
             )
             docker_ready = bool(getattr(openfoam_runner, "docker", None).check_availability())
         else:
             openfoam_runner = OpenFoamRunner(
                 template_dir=template_dir,
-                solver_cmd=str(getattr(args, "openfoam_solver", "rhoPimpleFoam")),
+                solver_cmd=str(getattr(args, "openfoam_solver", "larrakEngineFoam")),
                 backend=openfoam_backend,
                 docker_image=openfoam_docker_image,
             )
@@ -2759,6 +2759,48 @@ def run_openfoam_doe_workflow(args: argparse.Namespace) -> int:
         ck = json.loads(checkpoint_path.read_text())
         done = int(ck.get("done", 0))
 
+    if template_dir.name == "opposed_piston_rotary_valve_sliding_case" and done == 0 and args.n > 0:
+        smoke_intake_port_area_m2 = float(
+            0.5 * (float(args.intake_port_area_min) + float(args.intake_port_area_max))
+        )
+        smoke_exhaust_port_area_m2 = float(
+            0.5 * (float(args.exhaust_port_area_min) + float(args.exhaust_port_area_max))
+        )
+        smoke_p_back = float(0.5 * (float(args.p_back_min) + float(args.p_back_max)))
+        smoke_p_man_lo = max(float(args.p_manifold_min), smoke_p_back)
+        smoke_p_manifold = float(0.5 * (smoke_p_man_lo + float(args.p_manifold_max)))
+        smoke_params = {
+            "rpm": float(0.5 * (float(args.rpm_min) + float(args.rpm_max))),
+            "torque": float(0.5 * (float(args.torque_min) + float(args.torque_max))),
+            "lambda_af": float(0.5 * (float(args.lambda_min) + float(args.lambda_max))),
+            "bore_mm": float(args.bore_mm),
+            "stroke_mm": float(args.stroke_mm),
+            "intake_port_area_m2": smoke_intake_port_area_m2,
+            "exhaust_port_area_m2": smoke_exhaust_port_area_m2,
+            "p_manifold_Pa": smoke_p_manifold,
+            "p_back_Pa": smoke_p_back,
+            "T_intake_K": 300.0,
+            "T_residual_K": 900.0,
+            "engine_start_angle_deg": -180.0,
+            "engine_end_angle_deg": 180.0,
+            "residual_fraction_seed": 0.08,
+            "solver_name": args.solver,
+            "endTime": float(args.endTime),
+            "deltaT": float(args.deltaT),
+            "writeInterval": int(args.writeInterval),
+            "metricWriteInterval": int(args.metricWriteInterval),
+        }
+        pipeline.engine_smoke_gate(
+            Path(args.outdir) / "engine_smoke_gate",
+            params=smoke_params,
+            geometry_args={
+                "bore_mm": float(args.bore_mm),
+                "stroke_mm": float(args.stroke_mm),
+                "intake_port_area_m2": smoke_intake_port_area_m2,
+                "exhaust_port_area_m2": smoke_exhaust_port_area_m2,
+            },
+        )
+
     for i in range(done, args.n):
         rpm = float(rng.uniform(args.rpm_min, args.rpm_max))
         torque = float(rng.uniform(args.torque_min, args.torque_max))
@@ -2800,11 +2842,16 @@ def run_openfoam_doe_workflow(args: argparse.Namespace) -> int:
             "exhaust_port_area_m2": exhaust_port_area_m2,
             "p_manifold_Pa": p_manifold_Pa,
             "p_back_Pa": p_back_Pa,
+            "T_intake_K": 300.0,
+            "T_residual_K": 900.0,
             "overlap_deg": overlap_deg,
             "intake_open_deg": intake_open_deg,
             "intake_close_deg": intake_close_deg,
             "exhaust_open_deg": exhaust_open_deg,
             "exhaust_close_deg": exhaust_close_deg,
+            "engine_start_angle_deg": -180.0,
+            "engine_end_angle_deg": 180.0,
+            "residual_fraction_seed": 0.08,
             "solver_name": args.solver,
             "endTime": float(args.endTime),
             "deltaT": float(args.deltaT),

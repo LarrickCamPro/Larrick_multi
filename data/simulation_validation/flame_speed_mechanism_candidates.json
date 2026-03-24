@@ -1,0 +1,69 @@
+{
+  "comparison_id": "gasoline_flame_speed_candidates_v1",
+  "description": "Reference the detailed LLNL gasoline surrogate mechanism and benchmark reduced candidates for the laminar flame-speed leg.",
+  "case_set": "quick",
+  "reference_candidate_id": "llnl_detailed_gasoline_surrogate",
+  "shared_conditions": {
+    "temperature_K": 353.0,
+    "pressure_bar": 3.33,
+    "equivalence_ratio": 1.0,
+    "oxidizer": {
+      "O2": 0.2033,
+      "N2": 0.7859
+    }
+  },
+  "candidates": [
+    {
+      "candidate_id": "llnl_detailed_gasoline_surrogate",
+      "description": "Detailed LLNL gasoline surrogate mechanism used as the flame-speed reference.",
+      "mechanism_file": "Docs/Detailed gasoline surrogate/ChemDetailed.inp.txt",
+      "mechanism_format": "chemkin",
+      "thermo_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+      "transport_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+      "generated_yaml_path": "mechanisms/iso_octane/llnl_2022.yaml",
+      "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+      "fuel": "IC8H18",
+      "fuel_matched": true,
+      "benchmark_only": false,
+      "diagnostic_artifact_path": "outputs/diagnostics/llnl_flame_speed_quick/llnl_flame_speed_diagnostic.json",
+      "notes": "Reuses the existing LLNL diagnostic artifact by default because mechanism load alone takes several minutes."
+    },
+    {
+      "candidate_id": "chem679_reduced_gasoline_surrogate",
+      "description": "Fuel-matched LLNL/UConn reduced gasoline surrogate chemistry file (679-species reduced mechanism I).",
+      "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem679.inp.txt",
+      "mechanism_format": "chemkin",
+      "thermo_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+      "transport_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+      "generated_yaml_path": "outputs/validation_runtime/mechanisms/chem679_reduced.yaml",
+      "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+      "fuel": "IC8H18",
+      "fuel_matched": true,
+      "benchmark_only": false,
+      "notes": "This reduced mechanism reuses the shared thermo and transport files from the detailed LLNL gasoline-surrogate bundle, as expected by the LLNL distribution."
+    },
+    {
+      "candidate_id": "chem323_reduced_gasoline_surrogate",
+      "description": "Fuel-matched LLNL/UConn reduced gasoline surrogate chemistry file (323-species reduced mechanism II).",
+      "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem323.inp.txt",
+      "mechanism_format": "chemkin",
+      "thermo_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+      "transport_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+      "generated_yaml_path": "outputs/validation_runtime/mechanisms/chem323_reduced.yaml",
+      "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+      "fuel": "IC8H18",
+      "fuel_matched": true,
+      "benchmark_only": false,
+      "notes": "This is the more aggressively reduced LLNL gasoline surrogate chemistry file and reuses the shared thermo and transport files from the detailed bundle."
+    },
+    {
+      "candidate_id": "ndodecane_reitz_cantera_example",
+      "description": "Cantera-bundled reduced n-dodecane mechanism used as a tractability benchmark until a reduced iso-octane or gasoline-surrogate mechanism is added.",
+      "mechanism_file": "nDodecane_Reitz.yaml",
+      "fuel": "c12h26",
+      "fuel_matched": false,
+      "benchmark_only": true,
+      "notes": "This candidate is not fuel-matched to the iso-octane reference and the bundled Cantera YAML lacks gas-phase transport data for c12h26, so use it only as a tractability benchmark, not as final validation sign-off."
+    }
+  ]
+}

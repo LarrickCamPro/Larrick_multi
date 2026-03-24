@@ -1,0 +1,17 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      sprayValidationDict;
+}
+
+validationSamples
+{
+    sampleRoot          postProcessing/sprayValidation;
+    sampledTime         0.001;
+    liquidPenetration   liquidPenetration_mm.dat;
+    vaporAngle          vaporSpreadingAngle_deg.dat;
+    dropletSMD          dropletSMD_z15mm_um.dat;
+    gasAxialVelocity    gasAxialVelocity_z15mm_t1ms.dat;
+}

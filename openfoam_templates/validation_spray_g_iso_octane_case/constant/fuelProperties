@@ -1,0 +1,16 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      fuelProperties;
+}
+
+fuel
+{
+    name            isoOctane;
+    molecularWeight 114.23;
+    liquidDensity   690;
+    viscosity       5.4e-4;
+    surfaceTension  0.018;
+}

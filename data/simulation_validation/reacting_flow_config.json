@@ -1,0 +1,94 @@
+{
+  "_comment": "REGIME 3: REACTING FLOW \u2014 Fill measured values from TNF Workshop or similar turbulent flame datasets",
+  "dataset": {
+    "dataset_id": "reactingflow_tnf_sandia_pilotedjet_flameD_doc21",
+    "source_type": "measured",
+    "fuel_family": "gasoline",
+    "provenance": {
+      "source": "Turbulent Nonpremixed Flames (TNF) Workshop \u2014 Sandia Piloted CH4/Air Flames C/D/E/F documentation (Doc21)",
+      "pdf_url": "https://tnfworkshop.org/wp-content/uploads/2019/02/SandiaPilotDoc21.pdf",
+      "doi": "N/A (workshop dataset documentation; original experimental papers not linked in template extraction)"
+    },
+    "operating_bounds": {
+      "reynolds_number": [
+        22400,
+        22400
+      ],
+      "jet_bulk_velocity_m_s": [
+        49.6,
+        49.6
+      ],
+      "pilot_temperature_K": [
+        1880,
+        1880
+      ],
+      "notes": "Flame D nominal conditions per SandiaPilotDoc21. Species values are pilot-stream mass fractions converted to mole fractions."
+    },
+    "metrics": [
+      {
+        "metric_id": "pilot_temperature_K_flameD_xd1",
+        "quantity": "temperature",
+        "units": "K",
+        "comparison_mode": "absolute",
+        "tolerance_band": 50.0,
+        "source_type": "measured",
+        "required": true,
+        "notes": "Converted from reported mass fractions using molecular weights."
+      },
+      {
+        "metric_id": "pilot_OH_molefrac_flameD_xd1",
+        "quantity": "species",
+        "species": "OH",
+        "units": "mol_frac",
+        "comparison_mode": "relative",
+        "tolerance_band": 0.001,
+        "source_type": "measured",
+        "required": true,
+        "notes": "Converted from reported mass fractions using molecular weights."
+      },
+      {
+        "metric_id": "pilot_CO2_molefrac_flameD_xd1",
+        "quantity": "species",
+        "species": "CO2",
+        "units": "mol_frac",
+        "comparison_mode": "relative",
+        "tolerance_band": 0.01,
+        "source_type": "measured",
+        "required": true,
+        "notes": "Converted from reported mass fractions using molecular weights."
+      },
+      {
+        "metric_id": "jet_bulk_velocity_m_s_flameD",
+        "quantity": "velocity",
+        "units": "m/s",
+        "comparison_mode": "absolute",
+        "tolerance_band": 2.0,
+        "source_type": "measured",
+        "required": true
+      }
+    ],
+    "description": "Boundary-condition/species composition values for Sandia piloted CH4/air Flame D from TNF Workshop documentation (Doc21). Provides pilot stream temperature and composition, and jet bulk velocity.",
+    "fuel": "CH4/air jet with piloted hot products (Flame D)"
+  },
+  "case_spec": {
+    "case_id": "reacting_flow_tnf_d_v1",
+    "regime": "reacting_flow",
+    "operating_point": {
+      "reynolds_number": 22400,
+      "jet_bulk_velocity_m_s": 49.6,
+      "pilot_temperature_K": 1880
+    },
+    "solver_config": {
+      "turbulence_model": "RANS k-epsilon",
+      "combustion_model": "FPV (flamelet/progress-variable)",
+      "radiation_model": "optically thin",
+      "notes": "Placeholder; set to your reacting-flow solver configuration."
+    }
+  },
+  "simulation_data": {
+    "pilot_temperature_K_flameD_xd1_measured": 1880.0,
+    "pilot_OH_molefrac_flameD_xd1_measured": 0.003712,
+    "pilot_CO2_molefrac_flameD_xd1_measured": 0.071727,
+    "jet_bulk_velocity_m_s_flameD_measured": 49.6
+  }
+}

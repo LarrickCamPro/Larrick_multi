@@ -6,11 +6,11 @@ FoamFile
     object      controlDict;
 }
 
-application     rhoPimpleFoam;
+application     reactingFoam;
 startFrom       startTime;
 startTime       0;
 stopAt          endTime;
-endTime         0.0003;
+endTime         0.0001;
 deltaT          0.0001;
 writeControl    timeStep;
 writeInterval   1;
@@ -21,20 +21,3 @@ writeCompression off;
 timeFormat      general;
 timePrecision   6;
 runTimeModifiable true;
-
-functions
-{
-    residualTracerTransport
-    {
-        type            scalarTransport;
-        libs            ("libsolverFunctionObjects.so");
-        field           residualTracer;
-        phi             phi;
-        rho             rho;
-        diffusivity     none;
-        nCorr           1;
-        bounded01       true;
-        resetOnStartUp  false;
-        writeControl    writeTime;
-    }
-}

@@ -24,6 +24,7 @@ from larrak2.core.evaluator import evaluate_candidate
 from larrak2.core.types import BreathingConfig, EvalContext
 from larrak2.orchestration.adapters.simulation_adapter import (
     candidate_calculix_params,
+    candidate_openfoam_handoff_bundle,
     candidate_openfoam_geometry_args,
     candidate_openfoam_params,
 )
@@ -302,7 +303,18 @@ def _run_openfoam_case(
     eval_result = evaluate_candidate(np.asarray(case["x"], dtype=np.float64), context)
     params = candidate_openfoam_params(candidate, context, eval_diag=eval_result.diag)
     geometry_args = candidate_openfoam_geometry_args(candidate, context)
-    result = pipeline.execute(run_dir=run_dir, params=params, geometry_args=geometry_args)
+    handoff_bundle = candidate_openfoam_handoff_bundle(
+        candidate,
+        context,
+        openfoam_params=params,
+        eval_diag=eval_result.diag,
+    )
+    result = pipeline.execute(
+        run_dir=run_dir,
+        params=params,
+        geometry_args=geometry_args,
+        handoff_bundle=handoff_bundle,
+    )
     openfoam_payload = {
         "scavenging_efficiency": float(result.get("scavenging_efficiency", float("nan"))),
         "trapped_mass": float(result.get("trapped_mass", float("nan"))),
@@ -426,6 +438,30 @@ def build_truth_anchor_bundle(
         docker_timeout_s=int(docker_timeout_s),
         docker_image=docker_image,
     )
+    if template_dir.name == DEFAULT_OPENFOAM_TEMPLATE.name and cases:
+        smoke_case = dict(cases[0])
+        smoke_context = _f0_context(
+            profile,
+            rpm=float(smoke_case["rpm"]),
+            torque=float(smoke_case["torque"]),
+            seed=int(cfg.get("truth_seed", 0)),
+        )
+        smoke_candidate = {"id": str(smoke_case["id"]), "x": np.asarray(smoke_case["x"], dtype=np.float64)}
+        smoke_eval = evaluate_candidate(np.asarray(smoke_case["x"], dtype=np.float64), smoke_context)
+        smoke_params = candidate_openfoam_params(smoke_candidate, smoke_context, eval_diag=smoke_eval.diag)
+        smoke_geometry = candidate_openfoam_geometry_args(smoke_candidate, smoke_context)
+        smoke_handoff = candidate_openfoam_handoff_bundle(
+            smoke_candidate,
+            smoke_context,
+            openfoam_params=smoke_params,
+            eval_diag=smoke_eval.diag,
+        )
+        pipeline.engine_smoke_gate(
+            outdir / "engine_smoke_gate",
+            params=smoke_params,
+            geometry_args=smoke_geometry,
+            handoff_bundle=smoke_handoff,
+        )
     successes = 0
     for i, case in enumerate(cases):
         case = dict(case)
@@ -538,6 +574,43 @@ def build_openfoam_training_dataset(
         for i in range(n_local)
     ]
     plan = core_points + sampled_edges + perturb_points
+    if template_dir.name == DEFAULT_OPENFOAM_TEMPLATE.name and plan:
+        rpm, torque, _category = plan[0]
+        smoke_x = _build_candidate_pool(
+            rpm=rpm,
+            rng=np.random.default_rng(int(cfg.get("dataset_seed", 42))),
+            principles_profile=principles_profile,
+            n_quasi=1,
+            n_principles=0,
+            n_local=0,
+        )[0]
+        smoke_candidate = {"id": "engine_smoke_gate", "x": np.asarray(smoke_x, dtype=np.float64)}
+        smoke_context = _f0_context(
+            profile,
+            rpm=rpm,
+            torque=torque,
+            seed=int(cfg.get("dataset_seed", 42)),
+        )
+        smoke_eval = evaluate_candidate(np.asarray(smoke_x, dtype=np.float64), smoke_context)
+        smoke_params = candidate_openfoam_params(smoke_candidate, smoke_context, eval_diag=smoke_eval.diag)
+        smoke_params["endTime"] = float(runtime.get("endTime", smoke_params.get("endTime", 3.0e-4)))
+        smoke_params["deltaT"] = float(runtime.get("deltaT", smoke_params.get("deltaT", 1.0e-4)))
+        smoke_params["writeInterval"] = int(runtime.get("writeInterval", smoke_params.get("writeInterval", 1)))
+        smoke_params["metricWriteInterval"] = int(
+            runtime.get("metricWriteInterval", smoke_params.get("metricWriteInterval", 1))
+        )
+        smoke_handoff = candidate_openfoam_handoff_bundle(
+            smoke_candidate,
+            smoke_context,
+            openfoam_params=smoke_params,
+            eval_diag=smoke_eval.diag,
+        )
+        pipeline.engine_smoke_gate(
+            outdir / "engine_smoke_gate",
+            params=smoke_params,
+            geometry_args=candidate_openfoam_geometry_args(smoke_candidate, smoke_context),
+            handoff_bundle=smoke_handoff,
+        )
     success_count = 0
     fail_fast_after = int(cfg.get("fail_fast_after", 12))
     fail_fast_min_success = int(cfg.get("fail_fast_min_success", 8))
@@ -581,10 +654,17 @@ def build_openfoam_training_dataset(
         params["metricWriteInterval"] = int(
             runtime.get("metricWriteInterval", params.get("metricWriteInterval", 1))
         )
+        handoff_bundle = candidate_openfoam_handoff_bundle(
+            candidate,
+            context,
+            openfoam_params=params,
+            eval_diag=eval_result.diag,
+        )
         result = pipeline.execute(
             run_dir=runs_root / str(candidate["id"]),
             params=params,
             geometry_args=candidate_openfoam_geometry_args(candidate, context),
+            handoff_bundle=handoff_bundle,
         )
         record = {
             **params,
@@ -925,7 +1005,7 @@ def run_overnight_f2_nn_campaign(
         profile=profile,
         outdir=outdir / "truth_anchors",
         template_dir=openfoam_template,
-        solver_cmd=str(getattr(args, "openfoam_solver", "rhoPimpleFoam")),
+        solver_cmd=str(getattr(args, "openfoam_solver", "larrakEngineFoam")),
         docker_timeout_s=int(getattr(args, "openfoam_docker_timeout_s", 1800)),
         docker_image=str(getattr(args, "openfoam_docker_image", "")).strip() or None,
         log_fn=log_fn,
@@ -936,7 +1016,7 @@ def run_overnight_f2_nn_campaign(
         profile=profile,
         outdir=outdir / "openfoam_doe",
         template_dir=openfoam_template,
-        solver_cmd=str(getattr(args, "openfoam_solver", "rhoPimpleFoam")),
+        solver_cmd=str(getattr(args, "openfoam_solver", "larrakEngineFoam")),
         docker_timeout_s=int(getattr(args, "openfoam_docker_timeout_s", 1800)),
         docker_image=str(getattr(args, "openfoam_docker_image", "")).strip() or None,
         log_fn=log_fn,

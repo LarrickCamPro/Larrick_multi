@@ -1,0 +1,104 @@
+{
+  "_comment": "Flame-speed-only chemistry config using the reduced Chem323 gasoline surrogate mechanism.",
+  "dataset": {
+    "dataset_id": "chem_flame_speed_iso_octane_reduced_chem323",
+    "source_type": "measured",
+    "fuel_family": "gasoline",
+    "provenance": {
+      "source": "UConn Laminar Flame Speed Database compilation for iso-octane",
+      "mechanism_source": "LLNL/UConn reduced gasoline surrogate chemistry (Chem323) with shared thermo and transport files",
+      "target_audit_status": "pending_source_entry_confirmation"
+    },
+    "operating_bounds": {
+      "pressure_bar": [
+        3.33,
+        3.33
+      ],
+      "temperature_K": [
+        353.0,
+        353.0
+      ],
+      "equivalence_ratio": [
+        1.0,
+        1.0
+      ]
+    },
+    "metrics": [
+      {
+        "metric_id": "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane",
+        "quantity": "laminar_flame_speed",
+        "units": "m/s",
+        "comparison_mode": "absolute",
+        "tolerance_band": 0.05,
+        "source_type": "measured",
+        "required": true,
+        "notes": "Dedicated reduced-mechanism flame-speed benchmark path using Chem323. This config is diagnostic-only and does not establish validation authority."
+      }
+    ]
+  },
+  "case_spec": {
+    "case_id": "chemistry_flame_speed_chem323_benchmark",
+    "regime": "chemistry",
+    "operating_point": {
+      "pressure_bar": 3.33,
+      "temperature_K": 353.0,
+      "equivalence_ratio": 1.0
+    },
+    "solver_config": {
+      "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem323.inp.txt",
+      "simulation_adapter": {
+        "kind": "chemistry",
+        "backend": "native_cantera",
+        "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem323.inp.txt",
+        "mechanism_format": "chemkin",
+        "thermo_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+        "transport_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+        "generated_yaml_path": "outputs/validation_runtime/mechanisms/chem323_reduced.yaml",
+        "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+        "permissive": true,
+        "offline_results_path": "outputs/validation_runtime/chemistry_cache/flame_speed_chem323_reduced.json",
+        "fuel_name": "IC8H18",
+        "oxidizer": {
+          "O2": 0.2033,
+          "N2": 0.7859
+        },
+        "metrics": {
+          "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane": {
+            "method": "flame_speed",
+            "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem323.inp.txt",
+            "mechanism_format": "chemkin",
+            "thermo_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+            "transport_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+            "generated_yaml_path": "outputs/validation_runtime/mechanisms/chem323_reduced.yaml",
+            "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+            "unburned_temperature_K": 353.0,
+            "pressure_bar": 3.33,
+            "equivalence_ratio": 1.0,
+            "transport_model": "mixture-averaged",
+            "solve_profile": "diagnostic_fixed_grid",
+            "cache_authority": "diagnostic",
+            "width_m": 0.01,
+            "grid_points": 5,
+            "auto": false,
+            "refine_grid": false,
+            "refine_ratio": 50.0,
+            "refine_slope": 0.9,
+            "refine_curve": 0.9,
+            "refine_prune": 0.6,
+            "solution_profile_path": "outputs/validation_runtime/chemistry_cache/flame_speed_chem323_reduced.yaml",
+            "continuation_from": [
+              "outputs/validation_runtime/chemistry_cache/flame_speed_chem323_reduced.yaml"
+            ],
+            "staged_energy": [
+              false,
+              true
+            ]
+          }
+        }
+      }
+    }
+  },
+  "simulation_data": {
+    "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane_measured": 0.503414
+  }
+}

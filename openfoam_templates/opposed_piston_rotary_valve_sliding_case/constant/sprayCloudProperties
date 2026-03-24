@@ -1,0 +1,160 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      sprayCloudProperties;
+}
+
+solution
+{
+    active                      true;
+    coupled                     true;
+    transient                   yes;
+    cellValueSourceCorrection   on;
+    maxCo                       0.3;
+
+    sourceTerms
+    {
+        schemes
+        {
+            rho         explicit 1;
+            U           explicit 1;
+            Yi          explicit 1;
+            h           explicit 1;
+            radiation   explicit 1;
+        }
+    }
+
+    interpolationSchemes
+    {
+        rho         cell;
+        U           cellPoint;
+        thermo:mu   cell;
+        T           cell;
+        Cp          cell;
+        kappa       cell;
+        p           cell;
+    }
+
+    integrationSchemes
+    {
+        U           Euler;
+        T           analytical;
+    }
+}
+
+constantProperties
+{
+    T0              363;
+    rho0            690;
+    Cp0             2250;
+    constantVolume  false;
+}
+
+subModels
+{
+    particleForces
+    {
+        sphereDrag;
+    }
+
+    injectionModels
+    {
+        inertSeed
+        {
+            type                coneNozzleInjection;
+            SOI                 0;
+            massTotal           0;
+            parcelBasisType     mass;
+            injectionMethod     disc;
+            flowType            flowRateAndDischarge;
+            outerDiameter       1.65e-4;
+            innerDiameter       0;
+            duration            0;
+            position            (0 0 0);
+            direction           (0 0 1);
+            parcelsPerSecond    1;
+            flowRateProfile table
+            (
+                (0           0.0)
+                (1           0.0)
+            );
+
+            Cd              constant 0.9;
+
+            thetaInner      constant 0.0;
+            thetaOuter      constant 0.0;
+
+            sizeDistribution
+            {
+                type        RosinRammler;
+
+                RosinRammlerDistribution
+                {
+                    minValue        1e-06;
+                    maxValue        1.5e-4;
+                    lambda          1.5e-4;
+                    n               3;
+                }
+            }
+        }
+    }
+
+    dispersionModel none;
+
+    patchInteractionModel standardWallInteraction;
+
+    heatTransferModel RanzMarshall;
+
+    compositionModel singlePhaseMixture;
+
+    phaseChangeModel liquidEvaporationBoil;
+
+    surfaceFilmModel none;
+
+    atomizationModel none;
+
+    breakupModel    ReitzDiwakar;
+
+    stochasticCollisionModel none;
+
+    radiation       off;
+
+    standardWallInteractionCoeffs
+    {
+        type            rebound;
+    }
+
+    RanzMarshallCoeffs
+    {
+        BirdCorrection  true;
+    }
+
+    singlePhaseMixtureCoeffs
+    {
+        phases
+        (
+            liquid
+            {
+                IC8H18              1;
+            }
+        );
+    }
+
+    liquidEvaporationBoilCoeffs
+    {
+        enthalpyTransfer enthalpyDifference;
+
+        activeLiquids    ( IC8H18 );
+    }
+
+    ReitzDiwakarCoeffs
+    {
+        solveOscillationEq yes;
+        Cbag            6;
+        Cb              0.785;
+        Cstrip          0.5;
+        Cs              10;
+    }
+}

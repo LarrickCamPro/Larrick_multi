@@ -1,0 +1,49 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      CO2;
+}
+
+dimensions      [0 0 0 0 0 0 0];
+
+internalField   uniform {{handoff_species_CO2}};
+
+boundaryField
+{
+    inlet
+    {
+        type            fixedValue;
+        value           uniform {{handoff_species_CO2}};
+    }
+    outlet
+    {
+        type            zeroGradient;
+    }
+    walls
+    {
+        type            zeroGradient;
+    }
+    cylinder
+    {
+        type            zeroGradient;
+    }
+    intakeValve
+    {
+        type            zeroGradient;
+    }
+    exhaustValveLeft
+    {
+        type            zeroGradient;
+    }
+    exhaustValveRight
+    {
+        type            zeroGradient;
+    }
+    "AMI_.*"
+    {
+        type            cyclicAMI;
+    }
+}

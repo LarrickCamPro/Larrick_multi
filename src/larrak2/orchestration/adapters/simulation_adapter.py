@@ -96,11 +96,16 @@ def candidate_openfoam_params(
         ),
         "p_manifold_Pa": float(p_manifold),
         "p_back_Pa": float(p_back),
+        "T_intake_K": float(candidate.get("T_intake_K", 300.0)),
+        "T_residual_K": float(candidate.get("T_residual_K", 900.0)),
         "overlap_deg": float(valve_timing.get("overlap_deg", candidate.get("overlap_deg", 0.0))),
         "intake_open_deg": intake_open,
         "intake_close_deg": intake_close,
         "exhaust_open_deg": exhaust_open,
         "exhaust_close_deg": exhaust_close,
+        "engine_start_angle_deg": float(candidate.get("engine_start_angle_deg", -180.0)),
+        "engine_end_angle_deg": float(candidate.get("engine_end_angle_deg", 180.0)),
+        "residual_fraction_seed": float(candidate.get("residual_fraction_seed", 0.08)),
         "endTime": float(candidate.get("openfoam_endTime", 3.0e-4)),
         "deltaT": float(candidate.get("openfoam_deltaT", 1.0e-4)),
         "writeInterval": int(candidate.get("openfoam_writeInterval", 1)),
@@ -126,6 +131,67 @@ def candidate_openfoam_geometry_args(
                 candidate.get("exhaust_port_area_m2", 4.0e-4),
             )
         ),
+    }
+
+
+def _sequence_scalar(value: Any, default: float) -> float:
+    if isinstance(value, np.ndarray):
+        arr = value.reshape(-1)
+        if arr.size:
+            return float(arr[0])
+    if isinstance(value, (list, tuple)) and value:
+        return float(value[0])
+    if value is None:
+        return float(default)
+    return float(value)
+
+
+def candidate_openfoam_handoff_bundle(
+    candidate: dict[str, Any],
+    context: EvalContext,
+    *,
+    openfoam_params: dict[str, Any],
+    eval_diag: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    thermo_diag = ((eval_diag or {}).get("thermo", {}) or {}) if isinstance(eval_diag, dict) else {}
+    lam = float(openfoam_params.get("lambda_af", 1.0))
+    residual_fraction = float(
+        thermo_diag.get("residual_fraction", candidate.get("residual_fraction_seed", 0.08))
+    )
+    air_moles = 59.5238095238 * max(lam, 0.3)
+    fresh_o2 = 0.21 * air_moles
+    fresh_n2 = 0.79 * air_moles
+    residual_co2 = residual_fraction * 0.08 * max(air_moles, 1.0)
+    total = 1.0 + fresh_o2 + fresh_n2 + residual_co2
+    temperature = _sequence_scalar(
+        thermo_diag.get("T_u"),
+        float(openfoam_params.get("T_intake_K", 300.0)),
+    )
+    return {
+        "bundle_id": f"engine_seed_{_safe_path_token(candidate.get('id', candidate.get('global_index', 'cand')))}",
+        "mechanism_id": "chem323_reduced_v2512",
+        "fuel_name": "iso-octane",
+        "pressure_Pa": float(openfoam_params.get("p_manifold_Pa", 101325.0)),
+        "temperature_K": float(temperature),
+        "species_mole_fractions": {
+            "IC8H18": 1.0 / total,
+            "O2": fresh_o2 / total,
+            "N2": fresh_n2 / total,
+            "CO2": residual_co2 / total,
+        },
+        "mixture_homogeneity_index": float(max(0.0, min(1.0, 1.0 - residual_fraction))),
+        "velocity_m_s": 0.0,
+        "cycle_coordinate_deg": float(openfoam_params.get("engine_start_angle_deg", -180.0)),
+        "total_mass_kg": float(thermo_diag.get("m_air_trapped", 4.0e-4)),
+        "total_energy_J": float(
+            thermo_diag.get(
+                "Q_rel",
+                max(float(thermo_diag.get("m_air_trapped", 4.0e-4)), 1.0e-12)
+                * max(float(temperature), 1.0)
+                * 900.0,
+            )
+        ),
+        "residual_fraction": residual_fraction,
     }
 
 
@@ -229,10 +295,17 @@ class PhysicsSimulationAdapter:
                     candidate, context, eval_diag=eval_result.diag
                 )
                 try:
+                    handoff_bundle = candidate_openfoam_handoff_bundle(
+                        candidate,
+                        context,
+                        openfoam_params=openfoam_params,
+                        eval_diag=eval_result.diag,
+                    )
                     of_metrics = self.openfoam_runner.execute(
                         run_dir=run_dir,
                         params=openfoam_params,
                         geometry_args=self._openfoam_geometry_args(candidate, context),
+                        handoff_bundle=handoff_bundle,
                     )
                 except TypeError:
                     of_metrics = self.openfoam_runner.execute(

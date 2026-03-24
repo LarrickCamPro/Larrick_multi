@@ -1,0 +1,32 @@
+{
+  "files": {
+    "reactions": "mechanisms/openfoam/v2512/chem323_reduced/reactions",
+    "thermo.compressibleGas": "mechanisms/openfoam/v2512/chem323_reduced/thermo.compressibleGas",
+    "transportProperties": "mechanisms/openfoam/v2512/chem323_reduced/transportProperties"
+  },
+  "fuel_species": "IC8H18",
+  "generated_file_hashes": {
+    "mechanisms/openfoam/v2512/chem323_reduced/reactions": "46f6897369e35ac859276c853302a2339f09d3e7ca751a109ce685e05809cc40",
+    "mechanisms/openfoam/v2512/chem323_reduced/thermo.compressibleGas": "091ffbf12abcc42f561a03d92c16a53e4d97f1949ddad5b7862d9a2056ae74d6",
+    "mechanisms/openfoam/v2512/chem323_reduced/transportProperties": "0f261dcb21423dd815393a2a42136bf8d7768297f809fc6eaaaf11775188d59b",
+    "outputs/validation_runtime/mechanisms/chem323_reduced.yaml": "f300a3add7c3c15662bc578dee9e5bf355667c9921ba1a0bf318c5367390f695"
+  },
+  "generated_yaml_path": "outputs/validation_runtime/mechanisms/chem323_reduced.yaml",
+  "openfoam_version": "2512",
+  "package_hash": "c36a01e147b5ba4cc379000e4582f46113d500751d40def6d762470ada0733be",
+  "package_id": "chem323_reduced_v2512",
+  "package_schema_version": 1,
+  "reaction_count": 2469,
+  "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+  "source_file_hashes": {
+    "Docs/Detailed gasoline surrogate/Reduced/Chem323.inp.txt": "5d59f8b926b04d0d7d0f35dac983cd1a992e4d51c610d374776eb8520e8684d2",
+    "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt": "8ca731f7b2768aa31a5cee0075205d3c54e477f03641e4015c6dd5a89020522a",
+    "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt": "5af79e31c8b993ae9b0825cd930184de38a541fc9a14f8a02b55935a90b272e7"
+  },
+  "source_raw_files": [
+    "Docs/Detailed gasoline surrogate/Reduced/Chem323.inp.txt",
+    "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+    "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt"
+  ],
+  "species_count": 312
+}

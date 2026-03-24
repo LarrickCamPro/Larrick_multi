@@ -1,0 +1,29 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      setFieldsDict;
+}
+
+defaultFieldValues
+(
+    volScalarFieldValue p {{handoff_pressure_Pa}}
+    volScalarFieldValue T {{handoff_temperature_K}}
+    volScalarFieldValue residualTracer 0
+    volVectorFieldValue U (0 0 {{handoff_velocity_m_s}})
+);
+
+regions
+(
+    boxToCell
+    {
+        box (-0.04 -0.04 0.02) (0.04 0.04 0.16);
+        fieldValues
+        (
+            volScalarFieldValue p {{handoff_residual_pressure_Pa}}
+            volScalarFieldValue T {{handoff_residual_temperature_K}}
+            volScalarFieldValue residualTracer {{handoff_residual_tracer}}
+        );
+    }
+);

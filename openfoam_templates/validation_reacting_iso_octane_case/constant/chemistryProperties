@@ -1,0 +1,78 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      chemistryProperties;
+}
+
+chemistryType
+{
+    solver          ode;
+    method          TDAC;
+}
+
+chemistry       on;
+
+importantSpecies
+{
+    CO2             ;
+    OH              ;
+    O2              ;
+    IC8H18          ;
+}
+
+initialChemicalTimeStep 1e-07;
+
+odeCoeffs
+{
+    solver          seulex;
+    absTol          1e-12;
+    relTol          1e-07;
+}
+
+reduction
+{
+    active          on;
+    log             off;
+    tolerance       0.0001;
+    method          DAC;
+    initialSet
+    {
+        CO2         ;
+        OH          ;
+        O2          ;
+    }
+    automaticSIS    off;
+    fuelSpecies
+    {
+        IC8H18      1;
+    }
+}
+
+tabulation
+{
+    active          on;
+    log             off;
+    printProportion off;
+    printNumRetrieve off;
+    tolerance       0.003;
+    method          ISAT;
+    scaleFactor
+    {
+        otherSpecies    1;
+        Temperature     10000;
+        Pressure        1e+15;
+        deltaT          1;
+    }
+    maxNLeafs       5000;
+    chPMaxLifeTime  1000;
+    maxGrowth       100;
+    checkEntireTreeInterval 500;
+    maxDepthFactor  2;
+    minBalanceThreshold 30;
+    MRURetrieve     false;
+    maxMRUSize      0;
+    growPoints      true;
+    maxNumNewDim    10;
+}

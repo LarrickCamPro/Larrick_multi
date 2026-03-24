@@ -1,0 +1,44 @@
+FoamFile
+{
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      N2;
+}
+
+dimensions      [0 0 0 0 0 0 0];
+
+internalField   uniform 0.766;
+
+boundaryField
+{
+    inlet
+    {
+        type            fixedValue;
+        value           uniform 0.766;
+    }
+    outlet
+    {
+        type            zeroGradient;
+    }
+    walls
+    {
+        type            zeroGradient;
+    }
+    cylinder
+    {
+        type            zeroGradient;
+    }
+    intakeValve
+    {
+        type            zeroGradient;
+    }
+    exhaustValveLeft
+    {
+        type            zeroGradient;
+    }
+    exhaustValveRight
+    {
+        type            zeroGradient;
+    }
+}

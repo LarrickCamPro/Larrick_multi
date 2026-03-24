@@ -1,0 +1,21 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       volScalarField;
+    object      p;
+}
+
+dimensions      [1 -1 -2 0 0 0 0];
+internalField   uniform {{handoff_pressure_Pa}};
+boundaryField
+{
+    inlet { type fixedValue; value uniform {{p_manifold_Pa}}; }
+    outlet { type fixedValue; value uniform {{p_back_Pa}}; }
+    walls { type zeroGradient; }
+    cylinder { type zeroGradient; }
+    intakeValve { type zeroGradient; }
+    exhaustValveLeft { type zeroGradient; }
+    exhaustValveRight { type zeroGradient; }
+    "AMI_.*" { type cyclicAMI; }
+}

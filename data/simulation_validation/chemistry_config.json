@@ -1,0 +1,132 @@
+{
+  "_comment": "REGIME 1: CHEMISTRY \u2014 Fill measured values from shock-tube / RCM / JSR / flame-speed papers",
+  "dataset": {
+    "dataset_id": "chem_uconn_rcm_iso_octane_davidson",
+    "source_type": "measured",
+    "fuel_family": "gasoline",
+    "provenance": {
+      "source": "UConn Combustion Diagnostics Lab Experimental Database (RCM) + UConn Laminar Flame Speed Database compilation + TNF Sandia Piloted Flame documentation",
+      "pdf_url": "https://combdiaglab.engr.uconn.edu/expdb/hydrocarbons/iso-octane (RCM ignition delay table); https://combdiaglab.engr.uconn.edu/database/laminar-flame-speed-database/transportation-relevant-hydrocarbons/ (flame speed compilation download); https://tnfworkshop.org/wp-content/uploads/2019/02/SandiaPilotDoc21.pdf (pilot composition)",
+      "doi": "N/A (database/compilation sources; original paper DOI not embedded in template extraction)",
+      "flame_speed_authority_status": "deferred_from_hard_gating",
+      "flame_speed_authority_decision": "data/simulation_validation/flame_speed_authority_decision.json"
+    },
+    "operating_bounds": {
+      "pressure_bar": [
+        13.2,
+        16.1
+      ],
+      "temperature_K": [
+        764,
+        878
+      ],
+      "equivalence_ratio": [
+        0.66,
+        0.66
+      ],
+      "notes": "Ignition delay points are from UConn RCM iC8 Davidson et al. mixture (1.08% iC8, 20.33% O2, 78.59% N2). Phi computed from mixture O2:fuel ratio (~0.664)."
+    },
+    "metrics": [
+      {
+        "metric_id": "ignition_delay_796K_15bar_phi0p66",
+        "quantity": "ignition_delay",
+        "units": "ms",
+        "comparison_mode": "absolute",
+        "tolerance_band": 15.0,
+        "source_type": "measured",
+        "required": true
+      },
+      {
+        "metric_id": "ignition_delay_878K_16p1bar_phi0p66",
+        "quantity": "ignition_delay",
+        "units": "ms",
+        "comparison_mode": "absolute",
+        "tolerance_band": 10.0,
+        "source_type": "measured",
+        "required": true
+      },
+      {
+        "metric_id": "pilot_CO2_molefrac_xd1_flameD",
+        "quantity": "species_mole_fraction",
+        "species": "CO2",
+        "units": "mol_frac",
+        "comparison_mode": "relative",
+        "tolerance_band": 0.01,
+        "source_type": "measured",
+        "required": false,
+        "notes": "Converted from reported mass fractions using molecular weights."
+      },
+      {
+        "metric_id": "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane",
+        "quantity": "laminar_flame_speed",
+        "units": "m/s",
+        "comparison_mode": "absolute",
+        "tolerance_band": 0.05,
+        "source_type": "measured",
+        "required": false,
+        "notes": "Value taken from UConn flame-speed compilation spreadsheet. Deferred from the first strict offline-cache proof path because the detailed LLNL flame-speed solve is not yet tractable."
+      }
+    ],
+    "description": "Iso-octane ignition delay (RCM) from UConn Combustion Diagnostics Lab experimental database (Davidson et al. dataset), plus laminar flame speed compilation and pilot-species composition from TNF Sandia flame documentation.",
+    "fuel": "iso-octane (iC8H18)"
+  },
+  "case_spec": {
+    "case_id": "chemistry_gasoline_v1",
+    "regime": "chemistry",
+    "operating_point": {
+      "pressure_bar": 15.0,
+      "temperature_K": 796,
+      "equivalence_ratio": 0.66
+    },
+    "solver_config": {
+      "mechanism_file": "Docs/Detailed gasoline surrogate/ChemDetailed.inp.txt",
+      "transport_model": "mixture-averaged",
+      "reactor_type": "constant_volume_adiabatic",
+      "ignition_delay_definition": "max(dP/dt) (RCM style)",
+      "notes": "LLNL detailed gasoline surrogate CHEMKIN bundle in Docs/Detailed gasoline surrogate/. The runtime chemistry adapter converts it to mechanisms/iso_octane/llnl_2022.yaml and can persist offline chemistry results for reuse.",
+      "simulation_adapter": {
+        "kind": "chemistry",
+        "backend": "auto",
+        "mechanism_file": "Docs/Detailed gasoline surrogate/ChemDetailed.inp.txt",
+        "mechanism_format": "chemkin",
+        "thermo_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+        "transport_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+        "generated_yaml_path": "mechanisms/iso_octane/llnl_2022.yaml",
+        "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+        "permissive": true,
+        "offline_results_path": "outputs/validation_runtime/chemistry_cache/gas_combustion_llnl_detailed.json",
+        "fuel_name": "IC8H18",
+        "oxidizer": {
+          "O2": 0.2033,
+          "N2": 0.7859
+        },
+        "metrics": {
+          "ignition_delay_796K_15bar_phi0p66": {
+            "method": "ignition_delay",
+            "temperature_K": 796.0,
+            "pressure_bar": 15.0,
+            "equivalence_ratio": 0.66,
+            "end_time_s": 0.25
+          },
+          "ignition_delay_878K_16p1bar_phi0p66": {
+            "method": "ignition_delay",
+            "temperature_K": 878.0,
+            "pressure_bar": 16.1,
+            "equivalence_ratio": 0.66,
+            "end_time_s": 0.12
+          },
+          "pilot_CO2_molefrac_xd1_flameD": {
+            "method": "fixed_value",
+            "value": 0.071727
+          }
+        }
+      }
+    }
+  },
+  "simulation_data": {
+    "ignition_delay_796K_15bar_phi0p66_measured": 109.0,
+    "ignition_delay_878K_16p1bar_phi0p66_measured": 36.0,
+    "pilot_CO2_molefrac_xd1_flameD_measured": 0.071727,
+    "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane_measured": 0.503414
+  }
+}
