@@ -63,7 +63,9 @@ jobs:
     if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_heavy) || vars.LARRAK_ENABLE_SELF_HOSTED_SIMULATION == 'true' }}
     runs-on: [self-hosted, larrak-placeholder, simulation]
     steps:
-      - run: echo "Simulation self-hosted runner stub. Replace with local hardware execution when available."
+      - run: |
+          python src/larrak2/cli/validate_simulation.py suite --config data/simulation_validation/gas_combustion_suite_config.json
+          echo "{}" > simulation_dataset_bundle.json
       - name: Upload simulation dataset bundle
         if: always()
         uses: actions/upload-artifact@v4
