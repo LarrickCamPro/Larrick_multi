@@ -1,0 +1,17 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      reactingValidationDict;
+}
+
+validationSamples
+{
+    sampleRoot          postProcessing/reactingValidation;
+    sampledTime         0.0003;
+    temperature         temperature_K.dat;
+    co2                 CO2_molefrac.dat;
+    oh                  OH_molefrac.dat;
+    bulkVelocity        bulkVelocity_m_s.dat;
+}

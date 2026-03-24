@@ -1,0 +1,132 @@
+{
+  "_comment": "Reference-quality flame-speed chemistry config using the reduced Chem679 gasoline surrogate mechanism.",
+  "dataset": {
+    "dataset_id": "chem_flame_speed_iso_octane_reference_chem679",
+    "source_type": "measured",
+    "fuel_family": "gasoline",
+    "provenance": {
+      "source": "UConn Laminar Flame Speed Database compilation for iso-octane",
+      "mechanism_source": "LLNL/UConn reduced gasoline surrogate chemistry (Chem679) with shared thermo and transport files",
+      "target_audit_status": "source_condition_mismatch_detected",
+      "gating_status": "authority_rejected_pending_source_fix",
+      "authority_decision": "data/simulation_validation/flame_speed_authority_decision.json"
+    },
+    "operating_bounds": {
+      "pressure_bar": [
+        3.33,
+        3.33
+      ],
+      "temperature_K": [
+        353.0,
+        353.0
+      ],
+      "equivalence_ratio": [
+        1.0,
+        1.0
+      ]
+    },
+    "metrics": [
+      {
+        "metric_id": "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane",
+        "quantity": "laminar_flame_speed",
+        "units": "m/s",
+        "comparison_mode": "absolute",
+        "tolerance_band": 0.05,
+        "source_type": "measured",
+        "required": true,
+        "notes": "Reference-quality flame-speed candidate path using Chem679 with adaptive refinement and warm-start continuation."
+      }
+    ]
+  },
+  "case_spec": {
+    "case_id": "chemistry_flame_speed_chem679_reference",
+    "regime": "chemistry",
+    "operating_point": {
+      "pressure_bar": 3.33,
+      "temperature_K": 353.0,
+      "equivalence_ratio": 1.0
+    },
+    "solver_config": {
+      "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem679.inp.txt",
+      "simulation_adapter": {
+        "kind": "chemistry",
+        "backend": "native_cantera",
+        "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem679.inp.txt",
+        "mechanism_format": "chemkin",
+        "thermo_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+        "transport_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+        "generated_yaml_path": "outputs/validation_runtime/mechanisms/chem679_reference.yaml",
+        "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+        "permissive": true,
+        "offline_results_path": "outputs/validation_runtime/chemistry_cache/flame_speed_chem679_reference.json",
+        "required_metric_cache_authority": {
+          "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane": "validation_reference"
+        },
+        "fuel_name": "IC8H18",
+        "oxidizer": {
+          "O2": 0.2033,
+          "N2": 0.7859
+        },
+        "metrics": {
+          "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane": {
+            "method": "flame_speed",
+            "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem679.inp.txt",
+            "mechanism_format": "chemkin",
+            "thermo_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+            "transport_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+            "generated_yaml_path": "outputs/validation_runtime/mechanisms/chem679_reference.yaml",
+            "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+            "unburned_temperature_K": 353.0,
+            "pressure_bar": 3.33,
+            "equivalence_ratio": 1.0,
+            "transport_model": "mixture-averaged",
+            "solve_profile": "validation_reference",
+            "cache_authority": "validation_reference",
+            "width_m": 0.03,
+            "grid_points": 12,
+            "auto": false,
+            "loglevel": 1,
+            "refine_grid": true,
+            "refine_ratio": 8.0,
+            "refine_slope": 0.08,
+            "refine_curve": 0.12,
+            "refine_prune": 0.02,
+            "max_grid_points": 240,
+            "solution_profile_path": "outputs/validation_runtime/chemistry_cache/flame_speed_chem679_reference.yaml",
+            "progress_path": "outputs/validation_runtime/chemistry_progress/flame_speed_chem679_reference_progress.json",
+            "progress_log_path": "outputs/validation_runtime/chemistry_progress/flame_speed_chem679_reference.log",
+            "diagnostic_artifact_path": "outputs/validation_runtime/chemistry_progress/flame_speed_chem679_reference_diagnostic.json",
+            "continuation_from": [
+              "outputs/validation_runtime/chemistry_cache/flame_speed_chem679_reference.yaml",
+              "outputs/validation_runtime/chemistry_cache/flame_speed_chem679_reduced.yaml"
+            ],
+            "continuation_stages": [
+              {
+                "stage_id": "phi1_Tu353K_P1bar",
+                "pressure_bar": 1.0,
+                "solution_profile_path": "outputs/validation_runtime/chemistry_cache/flame_speed_chem679_reference_P1bar.yaml"
+              },
+              {
+                "stage_id": "phi1_Tu353K_P2bar",
+                "pressure_bar": 2.0,
+                "solution_profile_path": "outputs/validation_runtime/chemistry_cache/flame_speed_chem679_reference_P2bar.yaml"
+              },
+              {
+                "stage_id": "phi1_Tu353K_P3p33bar",
+                "pressure_bar": 3.33,
+                "solution_profile_path": "outputs/validation_runtime/chemistry_cache/flame_speed_chem679_reference.yaml"
+              }
+            ],
+            "staged_energy": [
+              false,
+              true
+            ]
+          }
+        }
+      }
+    }
+  },
+  "simulation_data": {
+    "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane_measured": 0.503414
+  }
+}

@@ -1,0 +1,16 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      injectorProperties;
+}
+
+injector
+{
+    nozzleDiameter_m          1.65e-4;
+    includedAngle_deg         80;
+    injectionPressure_bar     {{injection_pressure_bar}};
+    ambientPressure_bar       {{ambient_pressure_bar}};
+    ambientTemperature_K      {{ambient_gas_temperature_K}};
+}

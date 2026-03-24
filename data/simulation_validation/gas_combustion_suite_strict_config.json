@@ -1,0 +1,567 @@
+{
+  "suite_id": "gas_combustion_v1_strict",
+  "description": "Strict five-regime gas combustion truth suite for the DOE core corridor using authoritative chemistry, spray, reacting-flow, closed-cylinder, and full-handoff validation legs.",
+  "regime_order": [
+    "chemistry",
+    "spray",
+    "reacting_flow",
+    "closed_cylinder",
+    "full_handoff"
+  ],
+  "prerequisites": {
+    "chemistry": [],
+    "spray": [],
+    "reacting_flow": [
+      "chemistry"
+    ],
+    "closed_cylinder": [],
+    "full_handoff": [
+      "spray",
+      "reacting_flow",
+      "closed_cylinder"
+    ]
+  },
+  "strict_validation": {
+    "enabled": true,
+    "regimes": {
+      "chemistry": {
+        "reject_backends": [
+          "fixture_fallback"
+        ]
+      },
+      "spray": {
+        "required_metric_authority": "live_case_fields",
+        "reject_metric_authorities": [
+          "sidecar_metrics"
+        ],
+        "reject_metric_sources": [
+          "openfoam_metrics.json"
+        ],
+        "required_provenance_values": {
+          "chemistry_reader": "foamChemistryReader",
+          "openfoam_chemistry_package_id": "chem323_reduced_v2512",
+          "openfoam_chemistry_package_hash": "c36a01e147b5ba4cc379000e4582f46113d500751d40def6d762470ada0733be",
+          "openfoam_version": "2512",
+          "case_execution": "solver_executed",
+          "fresh_run_verified": true
+        }
+      },
+      "reacting_flow": {
+        "required_metric_authority": "live_case_fields",
+        "reject_metric_authorities": [
+          "sidecar_metrics"
+        ],
+        "reject_metric_sources": [
+          "openfoam_metrics.json"
+        ],
+        "required_provenance_values": {
+          "chemistry_reader": "foamChemistryReader",
+          "openfoam_chemistry_package_id": "chem323_reduced_v2512",
+          "openfoam_chemistry_package_hash": "c36a01e147b5ba4cc379000e4582f46113d500751d40def6d762470ada0733be",
+          "openfoam_version": "2512",
+          "case_execution": "solver_executed",
+          "fresh_run_verified": true
+        }
+      }
+    }
+  },
+  "regimes": {
+    "chemistry": {
+      "dataset": {
+        "dataset_id": "chem_uconn_rcm_iso_octane_davidson",
+        "source_type": "measured",
+        "fuel_family": "gasoline",
+        "provenance": {
+          "source": "UConn RCM and laminar flame speed compilation for iso-octane",
+          "mechanism_family": "iso-octane",
+          "flame_speed_authority_status": "deferred_from_hard_gating",
+          "flame_speed_authority_decision": "data/simulation_validation/flame_speed_authority_decision.json"
+        },
+        "operating_bounds": {
+          "pressure_bar": [
+            13.2,
+            16.1
+          ],
+          "temperature_K": [
+            764.0,
+            878.0
+          ],
+          "equivalence_ratio": [
+            0.66,
+            1.0
+          ]
+        },
+        "metrics": [
+          {
+            "metric_id": "ignition_delay_796K_15bar_phi0p66",
+            "units": "ms",
+            "comparison_mode": "absolute",
+            "tolerance_band": 15.0,
+            "source_type": "measured",
+            "required": true
+          },
+          {
+            "metric_id": "ignition_delay_878K_16p1bar_phi0p66",
+            "units": "ms",
+            "comparison_mode": "absolute",
+            "tolerance_band": 10.0,
+            "source_type": "measured",
+            "required": true
+          },
+          {
+            "metric_id": "pilot_CO2_molefrac_xd1_flameD",
+            "units": "mol_frac",
+            "comparison_mode": "relative",
+            "tolerance_band": 0.01,
+            "source_type": "measured",
+            "required": false
+          },
+          {
+            "metric_id": "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane",
+            "units": "m/s",
+            "comparison_mode": "absolute",
+            "tolerance_band": 0.05,
+            "source_type": "measured",
+            "required": false
+          }
+        ]
+      },
+      "case_spec": {
+        "case_id": "chemistry_gas_combustion",
+        "regime": "chemistry",
+        "operating_point": {
+          "pressure_bar": 15.0,
+          "temperature_K": 796.0,
+          "equivalence_ratio": 0.66
+        },
+        "solver_config": {
+          "mechanism_file": "Docs/Detailed gasoline surrogate/ChemDetailed.inp.txt",
+          "mechanism_source_input": "Docs/Detailed gasoline surrogate/ChemDetailed.inp.txt",
+          "mechanism_source_thermo": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+          "mechanism_source_transport": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+          "simulation_adapter": {
+            "kind": "chemistry",
+            "backend": "auto",
+            "mechanism_file": "Docs/Detailed gasoline surrogate/ChemDetailed.inp.txt",
+            "mechanism_format": "chemkin",
+            "thermo_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+            "transport_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+            "generated_yaml_path": "mechanisms/iso_octane/llnl_2022.yaml",
+            "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+            "permissive": true,
+            "offline_results_path": "outputs/validation_runtime/chemistry_cache/gas_combustion_llnl_detailed.json",
+            "offline_results_only": true,
+            "fuel_name": "IC8H18",
+            "oxidizer": {
+              "O2": 0.2033,
+              "N2": 0.7859
+            },
+            "metrics": {
+              "ignition_delay_796K_15bar_phi0p66": {
+                "method": "ignition_delay",
+                "temperature_K": 796.0,
+                "pressure_bar": 15.0,
+                "equivalence_ratio": 0.66,
+                "end_time_s": 0.25
+              },
+              "ignition_delay_878K_16p1bar_phi0p66": {
+                "method": "ignition_delay",
+                "temperature_K": 878.0,
+                "pressure_bar": 16.1,
+                "equivalence_ratio": 0.66,
+                "end_time_s": 0.12
+              },
+              "pilot_CO2_molefrac_xd1_flameD": {
+                "method": "fixed_value",
+                "value": 0.071727
+              }
+            }
+          }
+        }
+      },
+      "simulation_data": {
+        "ignition_delay_796K_15bar_phi0p66_measured": 109.0,
+        "ignition_delay_878K_16p1bar_phi0p66_measured": 36.0,
+        "pilot_CO2_molefrac_xd1_flameD_measured": 0.071727,
+        "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane_measured": 0.503414
+      }
+    },
+    "spray": {
+      "dataset": {
+        "dataset_id": "spray_ecn_sprayG_workshop3_summary_gasvel",
+        "source_type": "measured",
+        "fuel_family": "gasoline",
+        "provenance": {
+          "source": "ECN Spray G development case for iso-octane",
+          "dataset_family": "spray_g"
+        },
+        "metrics": [
+          {
+            "metric_id": "liquid_penetration_max_mm_sprayG",
+            "units": "mm",
+            "comparison_mode": "absolute",
+            "tolerance_band": 5.0,
+            "source_type": "measured",
+            "required": true
+          },
+          {
+            "metric_id": "vapor_spreading_angle_deg_sprayG",
+            "units": "deg",
+            "comparison_mode": "absolute",
+            "tolerance_band": 10.0,
+            "source_type": "measured",
+            "required": false
+          },
+          {
+            "metric_id": "droplet_smd_um_sprayG_z15mm",
+            "units": "um",
+            "comparison_mode": "relative",
+            "tolerance_band": 2.0,
+            "source_type": "measured",
+            "required": true
+          },
+          {
+            "metric_id": "gas_axial_velocity_m_s_sprayG_z15mm_t1ms",
+            "units": "m/s",
+            "comparison_mode": "relative",
+            "tolerance_band": 0.5,
+            "source_type": "measured",
+            "required": true
+          }
+        ]
+      },
+      "case_spec": {
+        "case_id": "spray_gas_combustion",
+        "regime": "spray",
+        "operating_point": {
+          "ambient_gas_temperature_K": 450.0,
+          "ambient_pressure_bar": 5.0,
+          "injection_pressure_bar": 200.0
+        },
+        "solver_config": {
+          "simulation_adapter": {
+            "kind": "spray",
+            "backend": "openfoam_case",
+            "template_dir": "openfoam_templates/validation_spray_g_iso_octane_case",
+            "docker_image": "microfluidica/openfoam:2512",
+            "openfoam_chemistry_package_dir": "mechanisms/openfoam/v2512/chem323_reduced",
+            "openfoam_chemistry_package": {
+              "package_id": "chem323_reduced_v2512",
+              "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem323.inp.txt",
+              "thermo_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+              "transport_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+              "generated_yaml_path": "outputs/validation_runtime/mechanisms/chem323_reduced.yaml",
+              "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+              "permissive": true,
+              "output_dir": "mechanisms/openfoam/v2512/chem323_reduced",
+              "openfoam_version": "2512",
+              "fuel_species": "IC8H18"
+            },
+            "solver_cmd": "sprayFoam",
+            "workflow": "live_validation_case",
+            "force_run": true,
+            "purge_numeric_time_dirs": true,
+            "preprocess_steps": [],
+            "postprocess_steps": [
+              "generate_validation_samples",
+              "write_cell_volumes"
+            ],
+            "strict_live_metrics": true,
+            "extractor": {
+              "name": "spray_g_v1",
+              "sample_root": "postProcessing/sprayValidation",
+              "sampled_time_dir": "",
+              "generator_config_path": "system/liveValidationSamples.json"
+            }
+          }
+        }
+      },
+      "simulation_data": {
+        "liquid_penetration_max_mm_sprayG_measured": 30.0,
+        "vapor_spreading_angle_deg_sprayG_measured": 90.0,
+        "droplet_smd_um_sprayG_z15mm_measured": 11.0,
+        "gas_axial_velocity_m_s_sprayG_z15mm_t1ms_measured": 1.3531
+      }
+    },
+    "reacting_flow": {
+      "dataset": {
+        "dataset_id": "reactingflow_iso_octane_reduced_state_dev_v1",
+        "source_type": "synthetic",
+        "fuel_family": "gasoline",
+        "provenance": {
+          "source": "Development reduced-state reacting-flow fixture for gasoline/iso-octane",
+          "status": "development_fixture"
+        },
+        "measured_anchor_ids": [
+          "chem_uconn_rcm_iso_octane_davidson",
+          "spray_ecn_sprayG_workshop3_summary_gasvel"
+        ],
+        "governing_basis": "Reduced-state reacting-flow target anchored to measured chemistry and spray validation datasets pending measured gasoline reacting-flow archive.",
+        "metrics": [
+          {
+            "metric_id": "gas_temperature_K_iso_octane_reacting",
+            "units": "K",
+            "comparison_mode": "absolute",
+            "tolerance_band": 60.0,
+            "source_type": "synthetic",
+            "required": true
+          },
+          {
+            "metric_id": "CO2_molefrac_iso_octane_reacting",
+            "units": "mol_frac",
+            "comparison_mode": "relative",
+            "tolerance_band": 0.05,
+            "source_type": "synthetic",
+            "required": true
+          },
+          {
+            "metric_id": "OH_molefrac_iso_octane_reacting",
+            "units": "mol_frac",
+            "comparison_mode": "relative",
+            "tolerance_band": 0.1,
+            "source_type": "synthetic",
+            "required": true
+          },
+          {
+            "metric_id": "bulk_velocity_m_s_iso_octane_reacting",
+            "units": "m/s",
+            "comparison_mode": "absolute",
+            "tolerance_band": 4.0,
+            "source_type": "synthetic",
+            "required": true
+          }
+        ]
+      },
+      "case_spec": {
+        "case_id": "reacting_flow_gas_combustion",
+        "regime": "reacting_flow",
+        "operating_point": {
+          "pressure_bar": 15.0,
+          "temperature_K": 980.0
+        },
+        "solver_config": {
+          "simulation_adapter": {
+            "kind": "reacting_flow",
+            "backend": "openfoam_case",
+            "template_dir": "openfoam_templates/validation_reacting_iso_octane_case",
+            "docker_image": "microfluidica/openfoam:2512",
+            "openfoam_chemistry_package_dir": "mechanisms/openfoam/v2512/chem323_reduced",
+            "openfoam_chemistry_package": {
+              "package_id": "chem323_reduced_v2512",
+              "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem323.inp.txt",
+              "thermo_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+              "transport_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+              "generated_yaml_path": "outputs/validation_runtime/mechanisms/chem323_reduced.yaml",
+              "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+              "permissive": true,
+              "output_dir": "mechanisms/openfoam/v2512/chem323_reduced",
+              "openfoam_version": "2512",
+              "fuel_species": "IC8H18"
+            },
+            "solver_cmd": "reactingFoam",
+            "workflow": "live_validation_case",
+            "force_run": true,
+            "purge_numeric_time_dirs": true,
+            "preprocess_steps": [],
+            "postprocess_steps": [
+              "generate_validation_samples",
+              "write_cell_volumes"
+            ],
+            "strict_live_metrics": true,
+            "extractor": {
+              "name": "reacting_iso_octane_v1",
+              "sample_root": "postProcessing/reactingValidation",
+              "sampled_time_dir": "",
+              "generator_config_path": "system/liveValidationSamples.json"
+            }
+          }
+        }
+      },
+      "simulation_data": {
+        "gas_temperature_K_iso_octane_reacting_measured": 1810.0,
+        "CO2_molefrac_iso_octane_reacting_measured": 0.064,
+        "OH_molefrac_iso_octane_reacting_measured": 0.0038,
+        "bulk_velocity_m_s_iso_octane_reacting_measured": 44.0
+      }
+    },
+    "closed_cylinder": {
+      "dataset": {
+        "dataset_id": "wang_zhao_2022_SI-CAI_1500rpm_IMEP5p43",
+        "source_type": "measured",
+        "fuel_family": "gasoline",
+        "provenance": {
+          "source": "Wang and Zhao 2022 gasoline SI-CAI closed-cylinder point",
+          "doi": "10.3390/en15124478"
+        },
+        "operating_bounds": {
+          "engine_speed_rpm": [
+            1500.0,
+            1500.0
+          ],
+          "intake_pressure_bar": [
+            0.95,
+            0.95
+          ],
+          "intake_temperature_K": [
+            320.0,
+            320.0
+          ]
+        },
+        "metrics": [
+          {
+            "metric_id": "peak_pressure_bar",
+            "units": "bar",
+            "comparison_mode": "absolute",
+            "tolerance_band": 11.03,
+            "source_type": "measured",
+            "required": true
+          },
+          {
+            "metric_id": "CA10_deg",
+            "units": "deg",
+            "comparison_mode": "absolute",
+            "tolerance_band": 2.58,
+            "source_type": "measured",
+            "required": true
+          },
+          {
+            "metric_id": "CA50_deg",
+            "units": "deg",
+            "comparison_mode": "absolute",
+            "tolerance_band": 4.15,
+            "source_type": "measured",
+            "required": true
+          },
+          {
+            "metric_id": "CA90_deg",
+            "units": "deg",
+            "comparison_mode": "absolute",
+            "tolerance_band": 12.34,
+            "source_type": "measured",
+            "required": true
+          },
+          {
+            "metric_id": "heat_release_kJ",
+            "units": "kJ",
+            "comparison_mode": "relative",
+            "tolerance_band": 0.2,
+            "source_type": "measured",
+            "required": true
+          },
+          {
+            "metric_id": "IMEP_bar",
+            "units": "bar",
+            "comparison_mode": "absolute",
+            "tolerance_band": 0.64,
+            "source_type": "measured",
+            "required": true
+          }
+        ]
+      },
+      "case_spec": {
+        "case_id": "closed_cylinder_gas_combustion",
+        "regime": "closed_cylinder",
+        "operating_point": {
+          "engine_speed_rpm": 1500.0,
+          "intake_pressure_bar": 0.95,
+          "intake_temperature_K": 320.0
+        },
+        "solver_config": {
+          "simulation_adapter": {
+            "kind": "closed_cylinder",
+            "backend": "fixture",
+            "fixture_results_path": "data/simulation_validation/gas_combustion_closed_cylinder_fixture_results.json"
+          }
+        }
+      },
+      "simulation_data": {
+        "peak_pressure_bar_measured": 42.11,
+        "CA10_deg_measured": -4.33,
+        "CA50_deg_measured": 11.15,
+        "CA90_deg_measured": 23.26,
+        "heat_release_kJ_measured": 0.96544,
+        "IMEP_bar_measured": 5.43
+      }
+    },
+    "full_handoff": {
+      "dataset": {
+        "dataset_id": "engine_handoff_conservation_v1",
+        "source_type": "derived_constraint",
+        "fuel_family": "gasoline",
+        "provenance": {
+          "source": "Reduced-state handoff conservation checks across chemistry, spray, and reacting-flow legs"
+        },
+        "metrics": [
+          {
+            "metric_id": "state_conservation_mass",
+            "units": "kg",
+            "comparison_mode": "absolute",
+            "tolerance_band": 1e-06,
+            "source_type": "derived_constraint",
+            "required": true
+          },
+          {
+            "metric_id": "state_conservation_energy",
+            "units": "J",
+            "comparison_mode": "absolute",
+            "tolerance_band": 0.001,
+            "source_type": "derived_constraint",
+            "required": true
+          }
+        ]
+      },
+      "case_spec": {
+        "case_id": "full_handoff_gas_combustion",
+        "regime": "full_handoff",
+        "solver_config": {
+          "simulation_adapter": {
+            "kind": "full_handoff",
+            "backend": "derived_contract",
+            "base_state": {
+              "bundle_id": "gas_combustion_core_bundle",
+              "mechanism_id": "llnl_iso_octane_2022",
+              "fuel_name": "iso-octane",
+              "pressure_Pa": 1500000.0,
+              "temperature_K": 980.0,
+              "species_mole_fractions": {
+                "IC8H18": 0.018,
+                "O2": 0.202,
+                "N2": 0.72,
+                "CO2": 0.06
+              },
+              "vapor_fraction": 0.82,
+              "mixture_homogeneity_index": 0.9,
+              "velocity_m_s": 44.0,
+              "turbulence_intensity": 0.14,
+              "cycle_coordinate_deg": 365.0,
+              "total_mass_kg": 0.00041,
+              "total_energy_J": 366.54
+            },
+            "states": [
+              {
+                "stage_marker": "chemistry_exit",
+                "cycle_coordinate_deg": 350.0
+              },
+              {
+                "stage_marker": "spray_exit",
+                "cycle_coordinate_deg": 360.0
+              },
+              {
+                "stage_marker": "reacting_flow_entry",
+                "cycle_coordinate_deg": 365.0
+              }
+            ],
+            "conservation_tolerances": {
+              "mass": 1e-06,
+              "energy": 0.001
+            }
+          }
+        }
+      },
+      "simulation_data": {
+        "state_conservation_mass_measured": 0.0,
+        "state_conservation_energy_measured": 0.0
+      }
+    }
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "_comment": "REGIME 4: CLOSED CYLINDER \u2014 Fill measured values from engine pressure-trace / optical / dyno data",
+  "dataset": {
+    "dataset_id": "wang_zhao_2022_SI-CAI_1500rpm_IMEP5p43",
+    "source_type": "measured",
+    "fuel_family": "gasoline",
+    "provenance": {
+      "source": "Wang, X.; Zhao, H. \"Modelling Study of Cycle-To-Cycle Variations (CCV) in Spark Ignition (SI)-Controlled Auto-Ignition (CAI) Hybrid Combustion Engine by Using Reynolds-Averaged Navier\u2013Stokes (RANS) and Large Eddy Simulation (LES)\" Energies 2022, 15, 4478.",
+      "pdf_url": "https://mdpi-res.com/d_attachment/energies/energies-15-04478/article_deploy/energies-15-04478.pdf?version=1655713123",
+      "doi": "10.3390/en15124478"
+    },
+    "operating_bounds": {
+      "engine_speed_rpm": [
+        1500,
+        1500
+      ],
+      "intake_pressure_bar": [
+        0.95,
+        0.95
+      ],
+      "intake_temperature_K": [
+        320,
+        320
+      ],
+      "notes": "Single-cylinder gasoline SI\u2013CAI hybrid combustion point. Mean IMEP=5.43 bar (100 cycles). Stoichiometric equivalence ratio=1. Spark timing = -49 \u00b0CA (BTDC). Residual gas fraction after IVC reported as 25% (calculated). Intake P/T values taken from Table 3 (simulation boundary conditions matching experiment as reported)."
+    },
+    "metrics": [
+      {
+        "metric_id": "peak_pressure_bar",
+        "quantity": "peak_pressure",
+        "units": "bar",
+        "comparison_mode": "absolute",
+        "tolerance_band": 11.03,
+        "source_type": "measured",
+        "required": false,
+        "notes": "Experimental mean peak pressure PP = 42.11 bar; \u03c3 = 11.03 bar over 100 cycles (Figure 4)."
+      },
+      {
+        "metric_id": "CA10_deg",
+        "quantity": "combustion_phasing",
+        "units": "deg",
+        "comparison_mode": "absolute",
+        "tolerance_band": 2.58,
+        "source_type": "measured",
+        "required": false,
+        "notes": "CA10 defined by 10% fuel mass fraction burned (cumulative heat release). Experimental mean = -4.33 \u00b0CA; \u03c3 = 2.58 \u00b0CA (Figure 6)."
+      },
+      {
+        "metric_id": "CA50_deg",
+        "quantity": "combustion_phasing",
+        "units": "deg",
+        "comparison_mode": "absolute",
+        "tolerance_band": 4.15,
+        "source_type": "measured",
+        "required": false,
+        "notes": "CA50 defined by 50% fuel mass fraction burned. Experimental mean = 11.15 \u00b0CA; \u03c3 = 4.15 \u00b0CA (Figure 6)."
+      },
+      {
+        "metric_id": "CA90_deg",
+        "quantity": "combustion_phasing",
+        "units": "deg",
+        "comparison_mode": "absolute",
+        "tolerance_band": 12.34,
+        "source_type": "measured",
+        "required": false,
+        "notes": "CA90 defined by 90% fuel mass fraction burned. Experimental mean = 23.26 \u00b0CA; \u03c3 = 12.34 \u00b0CA (Figure 6)."
+      },
+      {
+        "metric_id": "heat_release_kJ",
+        "quantity": "heat_release",
+        "units": "kJ",
+        "comparison_mode": "relative",
+        "tolerance_band": 0.2,
+        "source_type": "measured",
+        "required": false,
+        "notes": "No cumulative apparent heat release integral is tabulated in the paper. Value stored here is *chemical heat input per cycle* = fueling_rate * LHV. Fueling rate = 22.4 mg/cycle (Table 2). LHV assumed 43.1 MJ/kg for gasoline (external reference); computed Qin \u2248 0.965 kJ/cycle. Treat as consistency check only (not aHR)."
+      },
+      {
+        "metric_id": "IMEP_bar",
+        "quantity": "IMEP",
+        "units": "bar",
+        "comparison_mode": "absolute",
+        "tolerance_band": 0.64,
+        "source_type": "measured",
+        "required": false,
+        "notes": "Experimental mean IMEP = 5.43 bar; \u03c3 = 0.64 bar over 100 cycles (Figure 3)."
+      }
+    ],
+    "description": "Closed-cylinder validation target extracted from Wang & Zhao (Energies 2022, 15, 4478) for a single-cylinder gasoline SI\u2013CAI hybrid combustion operating point (1500 rpm, IMEP 5.43 bar). Provides mean and cycle-to-cycle variability for peak pressure and CA10/50/90 based on 100-cycle pressure data.",
+    "fuel": "Gasoline (93 RON), port fuel injection (paper test fuel)."
+  },
+  "case_spec": {
+    "case_id": "wang_zhao_2022_SI-CAI_1500rpm_IMEP5p43",
+    "regime": "closed_cylinder",
+    "operating_point": {
+      "engine_speed_rpm": 1500,
+      "intake_pressure_bar": 0.95,
+      "intake_temperature_K": 320
+    },
+    "geometry_revision": "single_cyl_bore86_stroke86_disp0p5L_CR10p66",
+    "motion_profile_revision": "crank_slider_ideal_v1",
+    "solver_config": {
+      "heat_release_method": "apparent_heat_release_first_law",
+      "gamma_model": "variable",
+      "notes": "Experimental CA10/50/90 are based on cumulative heat release (per paper). Peak pressure and IMEP are derived directly from measured cylinder pressure. Heat_release_kJ_measured is stored as chemical heat input proxy (see dataset.metrics notes)."
+    }
+  },
+  "simulation_data": {
+    "peak_pressure_bar_measured": 42.11,
+    "CA10_deg_measured": -4.33,
+    "CA50_deg_measured": 11.15,
+    "CA90_deg_measured": 23.26,
+    "heat_release_kJ_measured": 0.96544,
+    "IMEP_bar_measured": 5.43
+  }
+}

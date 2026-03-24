@@ -1,0 +1,56 @@
+{
+  "audit_id": "iso_octane_uconn_flame_speed_target_audit_v1",
+  "status": "source_condition_mismatch_detected",
+  "source_workbook": {
+    "label": "UConn High-pressure flame speed workbook",
+    "url": "https://combdiaglab.engr.uconn.edu/wp-content/uploads/sites/2667/2018/12/High-pressure-flame-speed.xlsx",
+    "local_download_path": "/tmp/High-pressure-flame-speed.xlsx",
+    "sheet_name": "iso-octane"
+  },
+  "configured_target": {
+    "metric_id": "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane",
+    "value_m_s": 0.503414,
+    "conditions": {
+      "equivalence_ratio": 1.0,
+      "pressure_bar": 3.33,
+      "unburned_temperature_K": 353.0
+    }
+  },
+  "workbook_condition_headers": [
+    "Tu=353 K, P=1 atm",
+    "Tu=353 K, P=2 atm",
+    "Tu=353 K, P=3 atm"
+  ],
+  "phi1_column_statistics": [
+    {
+      "condition_label": "Tu=353 K, P=1 atm",
+      "column": "K",
+      "units_in_sheet": "cm/s",
+      "n_values": 956,
+      "mean_cm_s": 50.519216,
+      "mean_m_s": 0.50519216
+    },
+    {
+      "condition_label": "Tu=353 K, P=2 atm",
+      "column": "AI",
+      "units_in_sheet": "cm/s",
+      "n_values": 716,
+      "mean_cm_s": 50.002983,
+      "mean_m_s": 0.50002983
+    },
+    {
+      "condition_label": "Tu=353 K, P=3 atm",
+      "column": "BG",
+      "units_in_sheet": "cm/s",
+      "n_values": 523,
+      "mean_cm_s": 48.231106,
+      "mean_m_s": 0.48231106
+    }
+  ],
+  "audit_findings": [
+    "The downloaded UConn workbook organizes the relevant iso-octane block as 1 atm, 2 atm, and 3 atm, not 3.33 bar.",
+    "The configured value 0.503414 m/s does not match the Tu=353 K, phi=1.0, P=3 atm sheet mean.",
+    "The configured value is numerically closer to the 1 atm and 2 atm column means than to the 3 atm column mean."
+  ],
+  "recommended_action": "Do not promote flame speed into hard gating until the intended source-statistic convention and pressure label are resolved."
+}

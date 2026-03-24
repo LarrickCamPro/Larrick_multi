@@ -1,0 +1,75 @@
+{
+  "_comment": "REGIME 5: FULL HANDOFF \u2014 Derived constraint data (conservation laws). No PDF extraction needed for this regime \u2014 tolerances are physics-based.",
+  "dataset": {
+    "dataset_id": "engine_handoff_conservation_v1",
+    "source_type": "derived_constraint",
+    "fuel_family": "gasoline",
+    "provenance": {
+      "source": "Conservation laws across solver-phase transitions",
+      "governing_equation": "mass, energy, species conservation at handoff boundaries"
+    },
+    "metrics": [
+      {
+        "metric_id": "state_conservation_mass",
+        "units": "kg",
+        "comparison_mode": "absolute",
+        "tolerance_band": 1e-06,
+        "source_type": "derived_constraint",
+        "required": true,
+        "description": "Mass conservation error across all phase transitions"
+      },
+      {
+        "metric_id": "state_conservation_energy",
+        "units": "J",
+        "comparison_mode": "absolute",
+        "tolerance_band": 0.001,
+        "source_type": "derived_constraint",
+        "required": true,
+        "description": "Energy conservation error across all phase transitions"
+      }
+    ],
+    "description": "Full handoff coupling configuration derived from conservation constraints; no experimental measurements.",
+    "fuel": "N/A (configuration only)",
+    "operating_bounds": {
+      "notes": "Derived configuration; operating bounds inherited from upstream datasets."
+    }
+  },
+  "case_spec": {
+    "case_id": "full_handoff_gasoline_v1",
+    "regime": "full_handoff",
+    "solver_config": {
+      "cfd_solver": "OpenFOAM",
+      "chemistry_solver": "Cantera",
+      "coupling_strategy": "operator_split (Strang) with conserved state transfer"
+    }
+  },
+  "simulation_data": {
+    "_comment": "These are populated by the solver at runtime \u2014 the measured values are zero (conservation target)",
+    "state_conservation_mass_measured": 0.0,
+    "state_conservation_energy_measured": 0.0,
+    "handoff_states": [
+      {
+        "from_phase": "scavenging",
+        "to_phase": "compression",
+        "conservation_error": 0.0,
+        "conservation_tolerance": 1e-06
+      },
+      {
+        "from_phase": "compression",
+        "to_phase": "combustion",
+        "conservation_error": 0.0,
+        "conservation_tolerance": 1e-06
+      },
+      {
+        "from_phase": "combustion",
+        "to_phase": "expansion",
+        "conservation_error": 0.0,
+        "conservation_tolerance": 1e-06
+      }
+    ],
+    "full_handoff_provenance": {
+      "solver": "OpenFOAM + Cantera coupled",
+      "coupling_method": "operator_split (Strang) with conserved state transfer"
+    }
+  }
+}

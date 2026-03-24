@@ -1,0 +1,40 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      dynamicMeshDict;
+}
+
+dynamicFvMesh       dynamicMotionSolverFvMesh;
+
+motionSolverLibs    ("libfvMotionSolvers.so");
+
+motionSolver        multiSolidBodyMotionSolver;
+
+multiSolidBodyMotionSolverCoeffs
+{
+    intakeValveZone
+    {
+        solidBodyMotionFunction rotatingMotion;
+        origin                  {{intake_valve_origin}};
+        axis                    (0 0 1);
+        omega                   {{intake_valve_omega_rad_s}};
+    }
+
+    exhaustValveLeftZone
+    {
+        solidBodyMotionFunction rotatingMotion;
+        origin                  {{exhaust_left_origin}};
+        axis                    (0 0 1);
+        omega                   {{exhaust_left_omega_rad_s}};
+    }
+
+    exhaustValveRightZone
+    {
+        solidBodyMotionFunction rotatingMotion;
+        origin                  {{exhaust_right_origin}};
+        axis                    (0 0 1);
+        omega                   {{exhaust_right_omega_rad_s}};
+    }
+}

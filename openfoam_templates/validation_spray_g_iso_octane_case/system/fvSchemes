@@ -20,6 +20,7 @@ divSchemes
 {
     default         none;
     div(phi,U)      Gauss linearUpwind grad(U);
+    div(phi,Yi_h)   Gauss upwind;
     div(phi,e)      Gauss upwind;
     div(phi,(p|rho)) Gauss upwind;
     div(phi,p)      Gauss upwind;

@@ -1,0 +1,45 @@
+{
+  "comparison_id": "gasoline_flame_speed_reduced_benchmark_v1",
+  "description": "Reduced-only flame-speed benchmark comparison for the LLNL gasoline surrogate chemistry reductions.",
+  "case_set": "benchmark",
+  "reference_candidate_id": "chem679_reduced_gasoline_surrogate",
+  "shared_conditions": {
+    "temperature_K": 353.0,
+    "pressure_bar": 3.33,
+    "equivalence_ratio": 1.0,
+    "oxidizer": {
+      "O2": 0.2033,
+      "N2": 0.7859
+    }
+  },
+  "candidates": [
+    {
+      "candidate_id": "chem679_reduced_gasoline_surrogate",
+      "description": "Fuel-matched LLNL/UConn reduced gasoline surrogate chemistry file (679-species reduced mechanism I).",
+      "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem679.inp.txt",
+      "mechanism_format": "chemkin",
+      "thermo_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+      "transport_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+      "generated_yaml_path": "outputs/validation_runtime/mechanisms/chem679_reduced.yaml",
+      "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+      "fuel": "IC8H18",
+      "fuel_matched": true,
+      "benchmark_only": false,
+      "notes": "Reduced benchmark candidate using the shared detailed thermo and transport files."
+    },
+    {
+      "candidate_id": "chem323_reduced_gasoline_surrogate",
+      "description": "Fuel-matched LLNL/UConn reduced gasoline surrogate chemistry file (323-species reduced mechanism II).",
+      "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem323.inp.txt",
+      "mechanism_format": "chemkin",
+      "thermo_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+      "transport_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+      "generated_yaml_path": "outputs/validation_runtime/mechanisms/chem323_reduced.yaml",
+      "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+      "fuel": "IC8H18",
+      "fuel_matched": true,
+      "benchmark_only": false,
+      "notes": "More aggressively reduced benchmark candidate using the same shared thermo and transport files."
+    }
+  ]
+}

@@ -90,7 +90,7 @@ def main() -> int:
     p_of.add_argument("--exhaust-close-min", type=float, default=-20.0)
     p_of.add_argument("--exhaust-close-max", type=float, default=60.0)
     # Solver
-    p_of.add_argument("--solver-name", type=str, default="rhoPimpleFoam")
+    p_of.add_argument("--solver-name", type=str, default="larrakEngineFoam")
     p_of.add_argument("--endTime", type=float, default=0.01)
     p_of.add_argument("--deltaT", type=float, default=1e-4)
     p_of.add_argument("--writeInterval", type=int, default=100)

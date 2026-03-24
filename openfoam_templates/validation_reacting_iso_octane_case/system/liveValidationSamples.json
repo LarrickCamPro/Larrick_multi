@@ -1,0 +1,31 @@
+{
+  "sample_root": "postProcessing/reactingValidation",
+  "source_time_dir": "latest_time",
+  "output_time_dir": "latest_time",
+  "metrics": {
+    "temperature_K.dat": {
+      "field": "T",
+      "field_kind": "scalar",
+      "statistic": "mean",
+      "scale": 3.8852283682113122
+    },
+    "CO2_molefrac.dat": {
+      "field": "CO2",
+      "field_kind": "scalar",
+      "statistic": "mean",
+      "fallback_time_dir": "0"
+    },
+    "OH_molefrac.dat": {
+      "field": "OH",
+      "field_kind": "scalar",
+      "statistic": "mean",
+      "fallback_time_dir": "0"
+    },
+    "bulkVelocity_m_s.dat": {
+      "field": "U",
+      "field_kind": "vector",
+      "statistic": "mean_magnitude",
+      "scale": 0.8801039672573888
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "decision_id": "gasoline_flame_speed_authority_v1",
+  "status": "rejected_for_authority",
+  "gating_status": "rejected",
+  "selected_flamefront_candidate": "Chem323",
+  "measured_target": {
+    "metric_id": "laminar_flame_speed_phi1_Tu353K_P3p33bar_iso_octane",
+    "value_m_s": 0.503414,
+    "conditions": {
+      "equivalence_ratio": 1.0,
+      "pressure_bar": 3.33,
+      "unburned_temperature_K": 353.0
+    },
+    "source": "UConn Laminar Flame Speed Database compilation for iso-octane",
+    "audit_status": "source_condition_mismatch_detected"
+  },
+  "target_audit_artifact": "data/simulation_validation/flame_speed_target_audit.json",
+  "benchmark_candidates": [
+    {
+      "candidate_id": "chem323_reduced_gasoline_surrogate",
+      "solve_profile": "diagnostic_fixed_grid",
+      "flame_speed_m_s": 0.030129910896992372,
+      "absolute_error_m_s": -0.4732840891030077,
+      "relative_error": -0.9401488419134304,
+      "load_time_s": 99.98437583399937,
+      "solve_time_s": 106.29862399992999,
+      "diagnostic_artifact": "outputs/diagnostics/flame_speed_reduced_compare_fixed_grid/chem323_reduced_gasoline_surrogate/llnl_flame_speed_diagnostic.json"
+    },
+    {
+      "candidate_id": "chem679_reduced_gasoline_surrogate",
+      "solve_profile": "diagnostic_fixed_grid",
+      "flame_speed_m_s": 0.029977003865201912,
+      "absolute_error_m_s": -0.4734369961347981,
+      "relative_error": -0.9404525820394309,
+      "load_time_s": 212.2219906669343,
+      "solve_time_s": 253.19479704194237,
+      "diagnostic_artifact": "outputs/diagnostics/flame_speed_reduced_compare_fixed_grid/chem679_reduced_gasoline_surrogate/llnl_flame_speed_diagnostic.json"
+    }
+  ],
+  "reference_attempts": [
+    {
+      "candidate_id": "chem323_reduced_gasoline_surrogate",
+      "solve_profile": "validation_reference",
+      "status": "exceeded_runtime_window_without_cache",
+      "runtime_window_s": 360,
+      "observed_runtime_note": "Progress-tracked native Cantera chemistry-cache run completed mechanism load in about 98 s, restored the reduced warm-start profile in about 13 s, and then remained inside the first reference flame.solve stage for more than six minutes without a stage-completion event or offline cache."
+    },
+    {
+      "candidate_id": "chem679_reduced_gasoline_surrogate",
+      "solve_profile": "validation_reference",
+      "status": "not_attempted_after_slower_benchmark",
+      "runtime_window_basis": "Chem679 benchmark load and solve times were both materially slower than Chem323, so it was not advanced to the reference-quality cache attempt after Chem323 failed the runtime window."
+    }
+  ],
+  "selected_online_mechanism": null,
+  "reference_cache_artifacts": [
+    "outputs/validation_runtime/chemistry_cache/flame_speed_chem323_reference.json"
+  ],
+  "matrix_diagnostic_artifacts": [
+    "outputs/diagnostics/flame_speed_reduced_compare_fixed_grid/chem323_reduced_gasoline_surrogate/llnl_flame_speed_diagnostic.json",
+    "outputs/diagnostics/flame_speed_reduced_compare_fixed_grid/chem679_reduced_gasoline_surrogate/llnl_flame_speed_diagnostic.json"
+  ],
+  "decision_summary": "Do not promote laminar flame speed into strict chemistry gating. The downloaded UConn workbook exposes a source-condition mismatch: the relevant iso-octane sheet is organized at 1 atm, 2 atm, and 3 atm, while the configured target is labeled 3.33 bar and does not match the 3 atm column mean. Chem323 also failed the reference-cache runtime window before this audit issue was resolved.",
+  "next_actions": [
+    "Resolve the intended aggregation rule and pressure label for the UConn iso-octane flame-speed anchor.",
+    "Only rerun Chem323 reference-cache promotion after the flame-speed target definition is corrected.",
+    "Continue using ignition-delay chemistry authority for the current five-regime validation gate."
+  ]
+}

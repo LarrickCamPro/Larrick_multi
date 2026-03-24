@@ -1,0 +1,93 @@
+name: CI Telemetry
+
+# Fires after any of the six primary workflow runs complete on protected branches.
+# Fetches job-level timing from the GitHub API and writes a Markdown summary.
+# Requires actions:read only — no repo write access.
+
+on:
+  workflow_run:
+    workflows:
+      - "Main Compatibility"
+      - "Simulation CI"
+      - "Training CI"
+      - "Optimization CI"
+      - "Analysis CI"
+      - "CEM Orchestration CI"
+    types: [completed]
+    branches:
+      - main
+      - "dev/**"
+
+permissions:
+  actions: read
+
+jobs:
+  summarize:
+    name: CI Timing Summary
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch job timings and write step summary
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          set -euo pipefail
+
+          # Fetch job list for the triggering run
+          jobs_json=$(gh api \
+            "repos/${{ github.repository }}/actions/runs/${RUN_ID}/jobs" \
+            --jq '.jobs')
+
+          # Build Markdown timing table
+          {
+            echo "## CI Timing — ${WORKFLOW_NAME}"
+            echo ""
+            echo "**Branch:** \`${BRANCH}\`  **Conclusion:** ${CONCLUSION}  [View run](${RUN_URL})"
+            echo ""
+            echo "| Job | Conclusion | Duration |"
+            echo "|---|---|---|"
+            echo "${jobs_json}" | jq -r '.[] |
+              . as $job |
+              (
+                if .started_at != null and .completed_at != null then
+                  ((.completed_at | fromdateiso8601) - (.started_at | fromdateiso8601)) |
+                  "\(. / 60 | floor)m \(. % 60)s"
+                else "—" end
+              ) as $dur |
+              "| \($job.name) | \($job.conclusion // "—") | \($dur) |"
+            '
+            echo ""
+            echo "_Reported by ci-telemetry workflow at $(date -u '+%Y-%m-%dT%H:%M:%SZ')_"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Also emit a JSON record as an artifact for offline analysis
+          echo "${jobs_json}" | jq -c \
+            --arg workflow "$WORKFLOW_NAME" \
+            --arg branch "$BRANCH" \
+            --arg conclusion "$CONCLUSION" \
+            --arg run_id "$RUN_ID" \
+            --arg ts "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" \
+            '{
+              reported_at: $ts,
+              workflow: $workflow,
+              branch: $branch,
+              conclusion: $conclusion,
+              run_id: $run_id,
+              jobs: map({
+                name: .name,
+                conclusion: .conclusion,
+                started_at: .started_at,
+                completed_at: .completed_at
+              })
+            }' > ci_telemetry_record.json
+
+      - name: Upload timing record artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-telemetry-${{ github.event.workflow_run.id }}
+          path: ci_telemetry_record.json
+          retention-days: 30

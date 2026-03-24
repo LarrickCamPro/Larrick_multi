@@ -1,0 +1,25 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      engineGeometry;
+}
+
+engineMesh              fvMotionSolver;
+rpm                     {{engine_rpm}};
+initialCrankAngleDeg    {{engine_initialCrankAngleDeg}};
+cycleEndAngleDeg        {{engine_end_angle_deg}};
+minTemperatureK         {{engine_min_temperature_K}};
+maxTemperatureK         {{engine_max_temperature_K}};
+maxThermoDeltaTK        {{engine_max_thermo_delta_K}};
+minPressurePa           {{engine_min_pressure_Pa}};
+minDensityKgM3          {{engine_min_density_kg_m3}};
+runtimeChemistryMode    {{runtime_chemistry_mode}};
+runtimeChemistryStrict  {{runtime_chemistry_strict}};
+runtimeChemistryAbortOnAuthorityMiss {{runtime_chemistry_abort_on_authority_miss}};
+runtimeChemistryFallbackPolicy {{runtime_chemistry_fallback_policy}};
+runtimeChemistryInterpolation {{runtime_chemistry_interpolation}};
+runtimeChemistryMaxUntrackedMassFraction {{runtime_chemistry_max_untracked_mass_fraction}};
+runtimeChemistryTableHash {{runtime_chemistry_table_hash}};
+runtimeChemistryStageName {{runtime_chemistry_stage_name}};

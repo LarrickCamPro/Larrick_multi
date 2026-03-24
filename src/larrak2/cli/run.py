@@ -155,7 +155,7 @@ def main() -> int:
     od.add_argument("--n", type=int, default=500)
     od.add_argument("--seed", type=int, default=42)
     od.add_argument("--checkpoint-every", type=int, default=10)
-    od.add_argument("--solver", type=str, default="rhoPimpleFoam")
+    od.add_argument("--solver", type=str, default="larrakEngineFoam")
     od.add_argument("--docker-timeout-s", type=int, default=1800)
     od.add_argument("--snappy", action="store_true")
     od.add_argument("--rpm-min", type=float, default=1000.0)
@@ -219,7 +219,7 @@ def main() -> int:
     ts.add_argument("--openfoam-runs-per-condition", type=int, default=4)
     ts.add_argument("--openfoam-lambda-min", type=float, default=0.6)
     ts.add_argument("--openfoam-lambda-max", type=float, default=1.6)
-    ts.add_argument("--openfoam-solver", type=str, default="rhoPimpleFoam")
+    ts.add_argument("--openfoam-solver", type=str, default="larrakEngineFoam")
     ts.add_argument("--openfoam-docker-timeout-s", type=int, default=1800)
     ts.add_argument("--openfoam-outdir", type=str, default=str(DEFAULT_OPENFOAM_NN_DIR))
     ts.add_argument("--openfoam-name", type=str, default="openfoam_breathing.pt")
@@ -347,7 +347,7 @@ def main() -> int:
         type=str,
         default="openfoam_templates/opposed_piston_rotary_valve_sliding_case",
     )
-    oc.add_argument("--openfoam-solver", type=str, default="rhoPimpleFoam")
+    oc.add_argument("--openfoam-solver", type=str, default="larrakEngineFoam")
     oc.add_argument("--openfoam-docker-timeout-s", type=int, default=1800)
     oc.add_argument("--openfoam-docker-image", type=str, default="")
     oc.add_argument("--openfoam-name", type=str, default="openfoam_breathing.pt")
@@ -903,7 +903,7 @@ def main() -> int:
     orch.add_argument(
         "--openfoam-solver",
         type=str,
-        default="rhoPimpleFoam",
+        default="larrakEngineFoam",
         help="OpenFOAM solver command for orchestration truth dispatch",
     )
     orch.add_argument(

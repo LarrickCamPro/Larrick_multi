@@ -1,0 +1,96 @@
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      createBafflesDict;
+}
+
+internalFacesOnly true;
+
+baffles
+{
+    intakeValveAMI
+    {
+        type        faceZone;
+        zoneName    intakeValveZone;
+
+        patches
+        {
+            master
+            {
+                name            AMI_intake_master;
+                type            cyclicAMI;
+                matchTolerance  0.0001;
+                neighbourPatch  AMI_intake_slave;
+                transform       noOrdering;
+                lowWeightCorrection 0.2;
+            }
+            slave
+            {
+                name            AMI_intake_slave;
+                type            cyclicAMI;
+                matchTolerance  0.0001;
+                neighbourPatch  AMI_intake_master;
+                transform       noOrdering;
+                lowWeightCorrection 0.2;
+            }
+        }
+    }
+
+    exhaustValveLeftAMI
+    {
+        type        faceZone;
+        zoneName    exhaustValveLeftZone;
+
+        patches
+        {
+            master
+            {
+                name            AMI_exhaust_left_master;
+                type            cyclicAMI;
+                matchTolerance  0.0001;
+                neighbourPatch  AMI_exhaust_left_slave;
+                transform       noOrdering;
+                lowWeightCorrection 0.2;
+            }
+            slave
+            {
+                name            AMI_exhaust_left_slave;
+                type            cyclicAMI;
+                matchTolerance  0.0001;
+                neighbourPatch  AMI_exhaust_left_master;
+                transform       noOrdering;
+                lowWeightCorrection 0.2;
+            }
+        }
+    }
+
+    exhaustValveRightAMI
+    {
+        type        faceZone;
+        zoneName    exhaustValveRightZone;
+
+        patches
+        {
+            master
+            {
+                name            AMI_exhaust_right_master;
+                type            cyclicAMI;
+                matchTolerance  0.0001;
+                neighbourPatch  AMI_exhaust_right_slave;
+                transform       noOrdering;
+                lowWeightCorrection 0.2;
+            }
+            slave
+            {
+                name            AMI_exhaust_right_slave;
+                type            cyclicAMI;
+                matchTolerance  0.0001;
+                neighbourPatch  AMI_exhaust_right_master;
+                transform       noOrdering;
+                lowWeightCorrection 0.2;
+            }
+        }
+    }
+}

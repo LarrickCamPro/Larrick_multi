@@ -21,6 +21,34 @@
       "closed_cylinder"
     ]
   },
+  "strict_validation": {
+    "enabled": false,
+    "regimes": {
+      "chemistry": {
+        "reject_backends": [
+          "fixture_fallback"
+        ]
+      },
+      "spray": {
+        "required_metric_authority": "live_case_fields",
+        "reject_metric_authorities": [
+          "sidecar_metrics"
+        ],
+        "reject_metric_sources": [
+          "openfoam_metrics.json"
+        ]
+      },
+      "reacting_flow": {
+        "required_metric_authority": "live_case_fields",
+        "reject_metric_authorities": [
+          "sidecar_metrics"
+        ],
+        "reject_metric_sources": [
+          "openfoam_metrics.json"
+        ]
+      }
+    }
+  },
   "regimes": {
     "chemistry": {
       "dataset": {
@@ -29,7 +57,9 @@
         "fuel_family": "gasoline",
         "provenance": {
           "source": "UConn RCM and laminar flame speed compilation for iso-octane",
-          "mechanism_family": "iso-octane"
+          "mechanism_family": "iso-octane",
+          "flame_speed_authority_status": "deferred_from_hard_gating",
+          "flame_speed_authority_decision": "data/simulation_validation/flame_speed_authority_decision.json"
         },
         "operating_bounds": {
           "pressure_bar": [
@@ -197,7 +227,35 @@
             "kind": "spray",
             "backend": "openfoam_case",
             "template_dir": "openfoam_templates/validation_spray_g_iso_octane_case",
-            "solver_cmd": "sprayFoam"
+            "docker_image": "microfluidica/openfoam:2512",
+            "openfoam_chemistry_package_dir": "mechanisms/openfoam/v2512/chem323_reduced",
+            "openfoam_chemistry_package": {
+              "package_id": "chem323_reduced_v2512",
+              "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem323.inp.txt",
+              "thermo_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+              "transport_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+              "generated_yaml_path": "outputs/validation_runtime/mechanisms/chem323_reduced.yaml",
+              "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+              "permissive": true,
+              "output_dir": "mechanisms/openfoam/v2512/chem323_reduced",
+              "openfoam_version": "2512",
+              "fuel_species": "IC8H18"
+            },
+            "solver_cmd": "sprayFoam",
+            "workflow": "live_validation_case",
+            "purge_numeric_time_dirs": true,
+            "preprocess_steps": [
+              "meshing"
+            ],
+            "postprocess_steps": [
+              "write_cell_volumes"
+            ],
+            "strict_live_metrics": true,
+            "extractor": {
+              "name": "spray_g_v1",
+              "sample_root": "postProcessing/sprayValidation",
+              "sampled_time_dir": "0.001"
+            }
           }
         }
       },
@@ -269,7 +327,35 @@
             "kind": "reacting_flow",
             "backend": "openfoam_case",
             "template_dir": "openfoam_templates/validation_reacting_iso_octane_case",
-            "solver_cmd": "reactingFoam"
+            "docker_image": "microfluidica/openfoam:2512",
+            "openfoam_chemistry_package_dir": "mechanisms/openfoam/v2512/chem323_reduced",
+            "openfoam_chemistry_package": {
+              "package_id": "chem323_reduced_v2512",
+              "mechanism_file": "Docs/Detailed gasoline surrogate/Reduced/Chem323.inp.txt",
+              "thermo_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_therm.dat.txt",
+              "transport_file": "Docs/Detailed gasoline surrogate/gasoline_surrogate_transport.txt",
+              "generated_yaml_path": "outputs/validation_runtime/mechanisms/chem323_reduced.yaml",
+              "sanitizer_profile": "llnl_detailed_gasoline_surrogate",
+              "permissive": true,
+              "output_dir": "mechanisms/openfoam/v2512/chem323_reduced",
+              "openfoam_version": "2512",
+              "fuel_species": "IC8H18"
+            },
+            "solver_cmd": "reactingFoam",
+            "workflow": "live_validation_case",
+            "purge_numeric_time_dirs": true,
+            "preprocess_steps": [
+              "meshing"
+            ],
+            "postprocess_steps": [
+              "write_cell_volumes"
+            ],
+            "strict_live_metrics": true,
+            "extractor": {
+              "name": "reacting_iso_octane_v1",
+              "sample_root": "postProcessing/reactingValidation",
+              "sampled_time_dir": "0.0003"
+            }
           }
         }
       },
