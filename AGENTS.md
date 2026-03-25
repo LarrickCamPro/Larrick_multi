@@ -34,6 +34,56 @@ git checkout -b codex/<workflow>/<short-topic>
 
 Examples: `codex/simulation/fix-doe-paths`, `codex/training/add-manifest-schema`
 
+## Same-Machine Parallelism
+
+For same-machine parallel work, use one `git worktree` per active task and
+never reuse a worktree for a different task. The supported bootstrap flow is:
+
+```bash
+scripts/start_parallel_task.sh --mode worktree <workflow> <topic> [issue-number]
+```
+
+That script creates a sibling worktree on `codex/<workflow>/<topic>` from the
+owning `dev/<workflow>` branch, initializes task-local runtime state, writes
+`.task-runtime/task.json` for Codex MCP handoff, and keeps parallel local tasks
+from colliding with each other. Codex should use that task JSON together with
+`scripts/plan_github_concierge.py` and GitHub MCP tools to manage task PRs,
+promotion PRs, and audit flows.
+
+## Cloud Thread Routing
+
+For cloud or already-isolated current workspaces, treat the local checkout as a
+clean control repo on `main` and let the cloud workspace own the active
+`codex/*` task branch. On the first substantive user prompt in a new cloud
+thread, classify the request into `simulation`, `training`, `optimization`,
+`analysis`, `cem-orchestration`, or `main` before doing any edits. The
+supported bootstrap flow is a single command:
+
+```bash
+python3 scripts/route_current_thread.py --prompt "<initial-prompt>" --thread-id "$CODEX_THREAD_ID" --thread-name "<thread-name>"
+```
+
+That command uses `scripts/plan_github_concierge.py route-thread` to classify
+the prompt and then, when confidence is high, runs
+`scripts/start_parallel_task.sh --mode current` to create
+`codex/<workflow>/<thread-derived-topic>-<threadid8>` from the owning
+`dev/<workflow>` branch in the current cloud workspace. If routing confidence is
+low or the request looks cross-workflow, ask the user which workflow branch
+should own the task instead of guessing.
+
+Explicit workflow markers override the classifier. Support both:
+- token: `workflow:simulation`
+- phrase: `working on simulation development`
+
+If the bootstrap reports `PR duplicate check: mcp-required`, use GitHub MCP
+search before opening or syncing the task PR. Cloud agents should not depend on
+local `gh` auth to route or branch correctly.
+
+Cloud task PRs are the durable lifecycle record. Keep the structured PR metadata
+block current, treat `archive_eligible` as the cross-thread replacement for true
+UI archival, delete merged `codex/*` branches after merge, and report
+archive-eligible merged/blocked tasks in the weekly audit inbox.
+
 ## Promotion Rules
 
 1. Land code on the owning `dev/<workflow>` branch first (via PR from `codex/*` task branch).
