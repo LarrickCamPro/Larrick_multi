@@ -28,6 +28,22 @@ REQUIRED_CONCEPTS = [
     "contents: write" not in "",  # placeholder — checked below via separate assertion
 ]
 
+REQUIRED_WORKTREE_TERMS = [
+    "git worktree",
+    "never reuse a worktree",
+    "scripts/start_parallel_task.sh",
+    ".task-runtime/task.json",
+    "scripts/plan_github_concierge.py",
+    "scripts/route_current_thread.py",
+    "--mode worktree",
+    "route-thread",
+    "--mode current",
+    "mcp-required",
+    "workflow:",
+    "working on simulation development",
+    "archive_eligible",
+]
+
 
 @pytest.mark.parametrize("label,path", list(AGENT_FILES.items()))
 def test_agent_doc_exists_and_is_nonempty(label: str, path: Path) -> None:
@@ -49,6 +65,13 @@ def test_agent_doc_contains_codex_branch_convention(label: str, path: Path) -> N
     assert "codex/" in content, (
         f"{label} must document the codex/<workflow>/<topic> naming convention"
     )
+
+
+@pytest.mark.parametrize("label,path", list(AGENT_FILES.items()))
+def test_agent_doc_contains_same_machine_worktree_guidance(label: str, path: Path) -> None:
+    content = path.read_text(encoding="utf-8")
+    for term in REQUIRED_WORKTREE_TERMS:
+        assert term in content, f"{label} must mention '{term}' for same-machine parallel work"
 
 
 @pytest.mark.parametrize("label,path", list(AGENT_FILES.items()))

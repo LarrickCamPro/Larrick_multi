@@ -28,8 +28,8 @@ def test_reusable_fast_workflow_exists_and_is_read_only() -> None:
     assert workflow["permissions"]["contents"] == "read"
     steps = workflow["jobs"]["fast"]["steps"]
     rendered = "\n".join(str(step) for step in steps)
-    assert "ruff format --check ." in rendered
-    assert "ruff check ." in rendered
+    assert "ruff format --check ${{ inputs.ruff_paths }}" in rendered
+    assert "ruff check ${{ inputs.ruff_paths }}" in rendered
     assert "mypy" in rendered
     assert "git push" not in rendered
 
@@ -78,3 +78,13 @@ def test_ci_telemetry_workflow_exists_and_has_correct_trigger() -> None:
     workflow = _load_yaml(telemetry_path)
     assert "workflow_run" in workflow["on"], "ci-telemetry must be triggered by workflow_run"
     assert workflow["permissions"].get("actions") == "read"
+
+
+def test_branch_ownership_workflow_exists_and_is_read_only() -> None:
+    ownership_path = WORKFLOW_DIR / "ownership.yml"
+    assert ownership_path.exists(), "ownership.yml must exist"
+    workflow = _load_yaml(ownership_path)
+    assert "pull_request" in workflow["on"], "ownership.yml must validate pull requests"
+    assert workflow["permissions"]["contents"] == "read"
+    text = ownership_path.read_text(encoding="utf-8")
+    assert "check_branch_ownership.py" in text
