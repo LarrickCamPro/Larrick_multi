@@ -115,6 +115,19 @@ Self-hosted heavy lanes (`heavy-self-hosted` jobs) are scaffolded but inactive
 until hardware is attached. They are gated on `vars.LARRAK_ENABLE_SELF_HOSTED_*`
 repo variables and run only on `workflow_dispatch` with `run_heavy: true`.
 
+## Cursor Worktree Workflow
+
+- Manual domain separation: open one Cursor window per `git worktree` directory.
+- Cursor Parallel Agents create Cursor-managed worktrees and apply edits back via
+  the Cursor "Apply" action.
+- Keep branch naming as `codex/<workflow>/<short-topic>` for consistency with repo
+  conventions and CI expectations.
+- In Cursor-created worktrees, rely on CLI checks (`ruff`, `mypy`, `pytest`) for
+  validation because LSP diagnostics are not available in that environment.
+- Cursor-specific hooks/setup should delegate to portable stubs in
+  `scripts/worktree_agent/` so open-source editor/agent replacements can reuse
+  the same workflow contract across all five development branches.
+
 ## Simulation Dataset Contract
 
 Simulation outputs are shared through versioned manifest bundles
