@@ -10,6 +10,7 @@ import glob
 import hashlib
 import json
 import logging
+import time
 import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -70,6 +71,46 @@ def load_knob_schema(path: str | Path) -> dict[str, Any]:
     if "schema_id" not in raw or "knobs" not in raw:
         raise ValueError("Knob schema must define schema_id and knobs")
     return raw
+
+
+def numeric_stability_weights_from_schema(knob_schema: dict[str, Any]) -> dict[str, float] | None:
+    """Optional per-component weights for numeric_stability keys (optimization targets)."""
+    raw = knob_schema.get("numeric_stability_weights")
+    if not isinstance(raw, dict):
+        return None
+    out: dict[str, float] = {}
+    for k, v in raw.items():
+        try:
+            out[str(k)] = float(v)
+        except (TypeError, ValueError):
+            continue
+    return out or None
+
+
+def _coerce_numeric_stability(profile: dict[str, Any]) -> dict[str, int]:
+    raw = dict(profile.get("numeric_stability") or {})
+    out: dict[str, int] = {}
+    for k, v in raw.items():
+        try:
+            out[str(k)] = int(round(float(v)))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _numeric_weighted_scalar(
+    *,
+    stability: dict[str, int],
+    total_numeric_hits: float,
+    weights: dict[str, float] | None,
+) -> float:
+    if not stability:
+        return float(total_numeric_hits)
+    acc = 0.0
+    for k, cnt in stability.items():
+        w = float(weights[k]) if weights and k in weights else 1.0
+        acc += w * float(cnt)
+    return acc
 
 
 def apply_knobs_to_table_config(
@@ -202,11 +243,18 @@ def compute_objective_vector(
     mu_reject_excess: float = 1.0,
     baseline_run_dir: str | Path | None = None,
     profile_name: str | None = None,
+    numeric_stability_weights: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     """Scalar and vector objectives from extract_restart_run_artifacts output."""
     profile = dict(artifacts.get("selected_profile") or {})
     trust_rejects = float(profile.get("trust_region_reject_cells", 0.0) or 0.0)
     numeric_hits = float(profile.get("total_numeric_hits", 0.0) or 0.0)
+    stability = _coerce_numeric_stability(profile)
+    numeric_weighted = _numeric_weighted_scalar(
+        stability=stability,
+        total_numeric_hits=numeric_hits,
+        weights=numeric_stability_weights,
+    )
     gate = bool(profile.get("chem323_runtime_replacement_gate_passed", False))
     miss = dict(artifacts.get("authority_miss_payload") or {})
     reject_excess = float(miss.get("reject_excess", 0.0) or 0.0)
@@ -242,6 +290,8 @@ def compute_objective_vector(
     return {
         "trust_region_reject_cells": trust_rejects,
         "total_numeric_hits": numeric_hits,
+        "numeric_stability": stability,
+        "numeric_weighted_scalar": numeric_weighted,
         "chem323_runtime_replacement_gate_passed": 1.0 if gate else 0.0,
         "reject_excess": reject_excess,
         "reject_variable_hash": rv_hash,
@@ -255,11 +305,23 @@ def ingest_benchmark_run_directory(
     run_dir: str | Path,
     *,
     profile_name: str | None = None,
+    knob_schema_path: str | Path | None = None,
 ) -> dict[str, Any]:
     """One experiment record: outcomes + optional trusted knobs from manifest."""
     root = Path(run_dir).resolve()
     extracted = extract_restart_run_artifacts(run_dir=root, profile_name=profile_name)
-    objectives = compute_objective_vector(extracted, profile_name=profile_name)
+    weights: dict[str, float] | None = None
+    if knob_schema_path:
+        try:
+            sch = load_knob_schema(knob_schema_path)
+            weights = numeric_stability_weights_from_schema(sch)
+        except (OSError, ValueError, TypeError, KeyError):
+            weights = None
+    objectives = compute_objective_vector(
+        extracted,
+        profile_name=profile_name,
+        numeric_stability_weights=weights,
+    )
     manifest = load_tuning_manifest(root)
     knobs_trusted = manifest is not None
     knobs = dict(manifest["knobs"]) if manifest else {}
@@ -446,6 +508,26 @@ class RandomSearchStrategy:
         return out
 
 
+def _numeric_objective_from_record(objectives: dict[str, Any] | None) -> float:
+    """Scalar objective for numeric-hit minimization (GP-EI / best-so-far)."""
+    if not objectives:
+        return float("inf")
+    if "numeric_weighted_scalar" in objectives:
+        return float(objectives.get("numeric_weighted_scalar", 0.0) or 0.0)
+    return float(objectives.get("total_numeric_hits", 0.0) or 0.0)
+
+
+def _expected_improvement_min(
+    mean: np.ndarray, std: np.ndarray, y_best: float, *, xi: float
+) -> np.ndarray:
+    """EI for minimization (with exploration xi)."""
+    from scipy.stats import norm
+
+    imp = y_best - mean - xi
+    z = imp / std
+    return imp * norm.cdf(z) + std * norm.pdf(z)
+
+
 @dataclass
 class ExpectedImprovementGPSearchStrategy:
     """Sklearn GP regression + expected improvement (minimization on penalized_scalar)."""
@@ -479,7 +561,7 @@ class ExpectedImprovementGPSearchStrategy:
             if vec[0] is None:
                 continue
             X_list.append(vec[0])
-            y_list.append(float(e["objectives"]["penalized_scalar"]))
+            y_list.append(float(dict(e.get("objectives") or {}).get("penalized_scalar", 1e12)))
 
         if len(X_list) < 2:
             return RandomSearchStrategy().propose(
@@ -524,15 +606,82 @@ class ExpectedImprovementGPSearchStrategy:
         return proposals[:n]
 
 
-def _expected_improvement_min(
-    mean: np.ndarray, std: np.ndarray, y_best: float, *, xi: float
-) -> np.ndarray:
-    """EI for minimization (with exploration xi)."""
-    from scipy.stats import norm
+@dataclass
+class ExpectedImprovementGPSearchStrategyNumeric:
+    """GP + EI minimizing numeric_weighted_scalar / total_numeric_hits (not gate-dominated scalar)."""
 
-    imp = y_best - mean - xi
-    z = imp / std
-    return imp * norm.cdf(z) + std * norm.pdf(z)
+    n_candidates: int = 512
+    xi: float = 0.01
+
+    def propose(
+        self,
+        *,
+        knob_schema: dict[str, Any],
+        experiments: list[dict[str, Any]],
+        n: int,
+        rng: np.random.Generator,
+    ) -> list[dict[str, Any]]:
+        from sklearn.gaussian_process import GaussianProcessRegressor
+        from sklearn.gaussian_process.kernels import RBF, ConstantKernel, WhiteKernel
+
+        names, lows, highs = _knob_bounds_matrix(knob_schema)
+        dim = len(names)
+        if dim == 0:
+            return RandomSearchStrategy().propose(
+                knob_schema=knob_schema, experiments=experiments, n=n, rng=rng
+            )
+
+        trusted = [e for e in experiments if e.get("knobs_trusted") and e.get("knobs")]
+        X_list: list[list[float]] = []
+        y_list: list[float] = []
+        for e in trusted:
+            vec = [_coerce_for_vector(names, e["knobs"], knob_schema)]
+            if vec[0] is None:
+                continue
+            X_list.append(vec[0])
+            y_list.append(_numeric_objective_from_record(dict(e.get("objectives") or {})))
+
+        if len(X_list) < 2:
+            return RandomSearchStrategy().propose(
+                knob_schema=knob_schema, experiments=experiments, n=n, rng=rng
+            )
+
+        X = np.asarray(X_list, dtype=float)
+        y = np.asarray(y_list, dtype=float)
+        Xn = (X - lows) / (highs - lows + 1e-12)
+        kernel = ConstantKernel(1.0, (1e-3, 1e3)) * RBF(
+            length_scale=np.ones(dim), length_scale_bounds=(1e-2, 10.0)
+        )
+        kernel += WhiteKernel(1e-5, (1e-8, 1e-1))
+        gp = GaussianProcessRegressor(
+            kernel=kernel, alpha=1e-6, normalize_y=True, random_state=int(rng.integers(0, 2**31))
+        )
+        gp.fit(Xn, y)
+
+        candidates = rng.uniform(0.0, 1.0, size=(self.n_candidates, dim))
+        mean, std = gp.predict(candidates, return_std=True)
+        std = np.maximum(std, 1e-9)
+        y_best = float(np.min(y))
+        ei = _expected_improvement_min(mean, std, y_best, xi=self.xi)
+        order = np.argsort(-ei)
+        proposals: list[dict[str, Any]] = []
+        used: set[tuple[float, ...]] = set()
+        for idx in order:
+            if len(proposals) >= n:
+                break
+            raw = candidates[idx] * (highs - lows) + lows
+            knobs = _denormalize_knob_dict(names, raw.tolist(), knob_schema)
+            key = tuple(float(knobs[k]) for k in names)
+            if key in used:
+                continue
+            used.add(key)
+            proposals.append({"knobs": knobs})
+        while len(proposals) < n:
+            extra = RandomSearchStrategy().propose(
+                knob_schema=knob_schema, experiments=[], n=1, rng=rng
+            )
+            proposals.extend(extra)
+        return proposals[:n]
 
 
 def _coerce_for_vector(
@@ -600,10 +749,10 @@ class NSGAIISurrogateSearchStrategy:
             X_list.append(vec)
             obj = dict(e.get("objectives") or {})
             y1.append(float(obj.get("trust_region_reject_cells", 0.0)))
-            y2.append(float(obj.get("total_numeric_hits", 0.0)))
+            y2.append(_numeric_objective_from_record(obj))
 
         if len(X_list) < 3:
-            return ExpectedImprovementGPSearchStrategy().propose(
+            return RandomSearchStrategy().propose(
                 knob_schema=knob_schema, experiments=experiments, n=n, rng=rng
             )
 
@@ -659,8 +808,193 @@ class NSGAIISurrogateSearchStrategy:
 STRATEGY_REGISTRY: dict[str, Callable[[], TuningSearchStrategy]] = {
     "random": lambda: RandomSearchStrategy(),
     "gp_ei": lambda: ExpectedImprovementGPSearchStrategy(),
+    "gp_ei_numeric": lambda: ExpectedImprovementGPSearchStrategyNumeric(),
     "nsga2_surrogate": lambda: NSGAIISurrogateSearchStrategy(),
 }
+
+
+def best_trusted_experiment_numeric(
+    experiments: list[dict[str, Any]],
+    *,
+    profile_name: str | None = None,
+) -> dict[str, Any] | None:
+    """Trusted row with lowest (numeric objective, then trust rejects)."""
+    candidates: list[tuple[float, float, dict[str, Any]]] = []
+    want = str(profile_name).strip() if profile_name else ""
+    for e in experiments:
+        if not e.get("knobs_trusted") or not e.get("knobs"):
+            continue
+        if e.get("error") or e.get("note") == "benchmark_skipped_max_benchmarks":
+            continue
+        obj = dict(e.get("objectives") or {})
+        if not obj:
+            continue
+        pn = str(e.get("profile_name", "") or "")
+        if want and pn != want:
+            continue
+        nh = _numeric_objective_from_record(obj)
+        tr = float(obj.get("trust_region_reject_cells", 0.0) or 0.0)
+        candidates.append((nh, tr, e))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda t: (t[0], t[1]))
+    return candidates[0][2]
+
+
+def run_numeric_stability_optimization(
+    *,
+    knob_schema_path: str | Path,
+    base_table_config_path: str | Path,
+    strategy_config_path: str | Path | None,
+    experiments_jsonl_path: str | Path,
+    study_outdir: str | Path,
+    search_strategy: str,
+    max_iterations: int,
+    trials_per_iteration: int,
+    max_benchmarks: int,
+    target_numeric_hits: float,
+    target_trust_rejects: float | None,
+    refresh_table: bool,
+    run_benchmark: bool,
+    benchmark_run_dir: str | Path | None,
+    tuned_params_path: str | Path | None,
+    handoff_artifact_path: str | Path | None,
+    runtime_strategy_config: str | Path | None,
+    benchmark_profiles: list[str] | None,
+    window_angle_deg: float,
+    docker_timeout_s: int,
+    refresh_custom_solver: bool,
+    dry_run: bool,
+    profile_name: str | None,
+    rng_seed: int,
+    max_wall_seconds: float | None = None,
+    max_consecutive_benchmark_failures: int | None = None,
+) -> dict[str, Any]:
+    """Unattended loop: propose batches, run benchmarks, reload JSONL until targets or budget."""
+    study_root = Path(study_outdir)
+    study_root.mkdir(parents=True, exist_ok=True)
+    report_path = study_root / "optimization_run.json"
+    experiments_path = Path(experiments_jsonl_path)
+    t0 = time.monotonic()
+    benchmarks_used = 0
+    consecutive_failures = 0
+    iterations_log: list[dict[str, Any]] = []
+    stopping_reason = "max_iterations"
+    profile_filter = str(profile_name).strip() if profile_name else None
+
+    for iteration in range(int(max_iterations)):
+        if max_wall_seconds is not None and (time.monotonic() - t0) >= float(max_wall_seconds):
+            stopping_reason = "max_wall_seconds"
+            break
+        remaining_budget = int(max_benchmarks) - benchmarks_used
+        if remaining_budget <= 0:
+            stopping_reason = "max_benchmarks"
+            break
+        batch_cap = min(int(trials_per_iteration), remaining_budget)
+        if batch_cap <= 0:
+            stopping_reason = "max_benchmarks"
+            break
+
+        batch = run_tuning_batch(
+            knob_schema_path=knob_schema_path,
+            base_table_config_path=base_table_config_path,
+            strategy_config_path=strategy_config_path,
+            experiments_jsonl_path=experiments_jsonl_path,
+            study_outdir=study_outdir,
+            search_strategy=search_strategy,
+            n_trials=batch_cap,
+            refresh_table=refresh_table,
+            run_benchmark=run_benchmark,
+            benchmark_run_dir=benchmark_run_dir,
+            tuned_params_path=tuned_params_path,
+            handoff_artifact_path=handoff_artifact_path,
+            runtime_strategy_config=runtime_strategy_config,
+            benchmark_profiles=benchmark_profiles,
+            window_angle_deg=window_angle_deg,
+            docker_timeout_s=docker_timeout_s,
+            refresh_custom_solver=refresh_custom_solver,
+            max_benchmarks=batch_cap,
+            dry_run=dry_run,
+            profile_name=profile_name,
+            rng_seed=int(rng_seed) + iteration,
+        )
+        benchmarks_used += int(batch.get("benchmarks_run", 0))
+        failures = int(batch.get("benchmark_failure_count", 0))
+        successes = int(batch.get("benchmarks_run", 0)) - failures
+        if int(batch.get("benchmarks_run", 0)) > 0:
+            if successes > 0:
+                consecutive_failures = 0
+            else:
+                consecutive_failures += 1
+
+        experiments = load_experiments_jsonl(experiments_path) if experiments_path.exists() else []
+        best = best_trusted_experiment_numeric(experiments, profile_name=profile_filter)
+
+        iter_entry: dict[str, Any] = {
+            "iteration": iteration,
+            "utc": datetime.now(UTC).isoformat(),
+            "batch": batch,
+            "benchmarks_used_total": benchmarks_used,
+            "consecutive_benchmark_failures": consecutive_failures,
+        }
+        if best:
+            iter_entry["best_objectives"] = dict(best.get("objectives") or {})
+            iter_entry["best_knobs"] = dict(best.get("knobs") or {})
+            iter_entry["best_run_dir"] = str(best.get("run_dir", ""))
+        iterations_log.append(iter_entry)
+
+        report_payload = {
+            "schema_version": 1,
+            "stopping_reason": stopping_reason,
+            "iterations": iterations_log,
+            "target_numeric_hits": target_numeric_hits,
+            "target_trust_rejects": target_trust_rejects,
+            "max_benchmarks": max_benchmarks,
+            "max_iterations": max_iterations,
+        }
+        report_path.write_text(
+            json.dumps(report_payload, indent=2, sort_keys=True), encoding="utf-8"
+        )
+
+        if max_consecutive_benchmark_failures is not None:
+            if consecutive_failures >= int(max_consecutive_benchmark_failures):
+                stopping_reason = "benchmark_failures_exceeded"
+                break
+
+        if best:
+            obj = dict(best.get("objectives") or {})
+            nh = _numeric_objective_from_record(obj)
+            tr = float(obj.get("trust_region_reject_cells", 0.0) or 0.0)
+            if nh <= float(target_numeric_hits):
+                if target_trust_rejects is None or tr <= float(target_trust_rejects):
+                    stopping_reason = (
+                        "converged_numeric_and_trust"
+                        if target_trust_rejects is not None
+                        else "converged_numeric"
+                    )
+                    break
+
+    experiments = load_experiments_jsonl(experiments_path) if experiments_path.exists() else []
+    best_final = best_trusted_experiment_numeric(experiments, profile_name=profile_filter)
+    final_report = {
+        "schema_version": 1,
+        "stopping_reason": stopping_reason,
+        "iterations": iterations_log,
+        "benchmarks_used_total": benchmarks_used,
+        "best": None
+        if not best_final
+        else {
+            "run_dir": best_final.get("run_dir"),
+            "knobs": best_final.get("knobs"),
+            "objectives": best_final.get("objectives"),
+        },
+        "target_numeric_hits": target_numeric_hits,
+        "target_trust_rejects": target_trust_rejects,
+        "experiments_jsonl": str(experiments_path.resolve()),
+        "optimization_report_path": str(report_path.resolve()),
+    }
+    report_path.write_text(json.dumps(final_report, indent=2, sort_keys=True), encoding="utf-8")
+    return final_report
 
 
 def run_tuning_batch(
@@ -706,6 +1040,7 @@ def run_tuning_batch(
     study_root.mkdir(parents=True, exist_ok=True)
     new_records: list[dict[str, Any]] = []
     benchmarks_run = 0
+    benchmark_failure_count = 0
 
     for prop in proposals:
         knobs = dict(prop["knobs"])
@@ -820,6 +1155,7 @@ def run_tuning_batch(
             rc = _validate_simulation_main(argv)
             benchmarks_run += 1
             if rc != 0:
+                benchmark_failure_count += 1
                 new_records.append(
                     {
                         "schema_version": EXPERIMENT_STORE_SCHEMA_VERSION,
@@ -835,7 +1171,11 @@ def run_tuning_batch(
             # Copy manifest next to summary for ingest convention
             summary_root = bench_out
             write_tuning_manifest(summary_root / TUNING_MANIFEST_BASENAME, manifest)
-            rec = ingest_benchmark_run_directory(summary_root, profile_name=profile_name)
+            rec = ingest_benchmark_run_directory(
+                summary_root,
+                profile_name=profile_name,
+                knob_schema_path=knob_schema_path,
+            )
             rec["trial_id"] = trial_id
             new_records.append(rec)
         else:
@@ -857,6 +1197,7 @@ def run_tuning_batch(
         "proposals": len(proposals),
         "new_records": len(new_records),
         "benchmarks_run": benchmarks_run,
+        "benchmark_failure_count": benchmark_failure_count,
         "experiments_jsonl": str(experiments_path),
     }
 
@@ -866,19 +1207,23 @@ __all__ = [
     "EXPERIMENT_STORE_SCHEMA_VERSION",
     "apply_knobs_to_table_config",
     "append_experiments_jsonl",
+    "best_trusted_experiment_numeric",
     "build_input_artifact_hashes",
     "build_tuning_manifest",
     "compute_objective_vector",
     "ExpectedImprovementGPSearchStrategy",
+    "ExpectedImprovementGPSearchStrategyNumeric",
     "extract_knobs_from_table_config",
     "ingest_benchmark_run_directory",
     "load_experiments_jsonl",
     "load_knob_schema",
     "load_tuning_manifest",
     "maybe_log_tuning_observation",
+    "numeric_stability_weights_from_schema",
     "NSGAIISurrogateSearchStrategy",
     "RandomSearchStrategy",
     "resolve_run_directories",
+    "run_numeric_stability_optimization",
     "run_tuning_batch",
     "sha256_file",
     "STRATEGY_REGISTRY",

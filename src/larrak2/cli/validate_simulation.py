@@ -10,7 +10,7 @@ Commands:
     larrak-validate-sim engine-restart-benchmark
     larrak-validate-sim coverage-corpus-analysis
     larrak-validate-sim restart-regression-analysis
-    larrak-validate-sim tuning-characterization --mode ingest|propose|run-batch
+    larrak-validate-sim tuning-characterization --mode ingest|propose|run-batch|optimize-numeric
     larrak-validate-sim chemistry-cache
     larrak-validate-sim flame-speed-compare
     larrak-validate-sim suite
@@ -479,6 +479,7 @@ def _run_tuning_characterization_cmd(args: argparse.Namespace) -> int:
         load_experiments_jsonl,
         load_knob_schema,
         resolve_run_directories,
+        run_numeric_stability_optimization,
         run_tuning_batch,
     )
 
@@ -550,6 +551,60 @@ def _run_tuning_characterization_cmd(args: argparse.Namespace) -> int:
             rng_seed=int(args.rng_seed),
         )
         print(json.dumps(summary, indent=2, sort_keys=True))
+        return 0
+
+    if mode == "optimize-numeric":
+        if not bool(getattr(args, "run_benchmark", False)):
+            logger.error("optimize-numeric requires --run-benchmark")
+            return 2
+        if not str(getattr(args, "benchmark_run_dir", "") or "").strip():
+            logger.error("optimize-numeric requires --benchmark-run-dir")
+            return 2
+        if not str(getattr(args, "tuned_params", "") or "").strip():
+            logger.error("optimize-numeric requires --tuned-params")
+            return 2
+        if not str(getattr(args, "handoff_artifact", "") or "").strip():
+            logger.error("optimize-numeric requires --handoff-artifact")
+            return 2
+        strat_name = str(args.strategy).strip().lower()
+        if strat_name not in STRATEGY_REGISTRY:
+            logger.error("Unknown strategy %s", strat_name)
+            return 2
+        raw_trust = getattr(args, "target_trust_rejects", None)
+        target_trust = None if raw_trust is None else float(raw_trust)
+        max_wall = getattr(args, "max_wall_seconds", None)
+        max_wall_f = float(max_wall) if max_wall is not None else None
+        max_fail = getattr(args, "max_consecutive_benchmark_failures", None)
+        max_fail_i = int(max_fail) if max_fail is not None else None
+        report = run_numeric_stability_optimization(
+            knob_schema_path=args.knob_schema,
+            base_table_config_path=args.base_table_config,
+            strategy_config_path=str(args.strategy_config).strip() or None,
+            experiments_jsonl_path=args.experiments_jsonl,
+            study_outdir=args.study_outdir,
+            search_strategy=strat_name,
+            max_iterations=int(getattr(args, "max_optimization_iterations", 10)),
+            trials_per_iteration=int(getattr(args, "trials_per_iteration", 2)),
+            max_benchmarks=int(args.max_benchmarks),
+            target_numeric_hits=float(getattr(args, "target_numeric_hits", 0.0)),
+            target_trust_rejects=target_trust,
+            refresh_table=bool(args.refresh_table),
+            run_benchmark=True,
+            benchmark_run_dir=str(args.benchmark_run_dir).strip() or None,
+            tuned_params_path=str(args.tuned_params).strip() or None,
+            handoff_artifact_path=str(args.handoff_artifact).strip() or None,
+            runtime_strategy_config=str(args.runtime_strategy_config).strip() or None,
+            benchmark_profiles=list(args.benchmark_profiles or []) or None,
+            window_angle_deg=float(args.window_angle_deg),
+            docker_timeout_s=int(args.docker_timeout_s),
+            refresh_custom_solver=bool(args.refresh_custom_solver),
+            dry_run=bool(args.dry_run),
+            profile_name=str(args.profile_name).strip() or None,
+            rng_seed=int(args.rng_seed),
+            max_wall_seconds=max_wall_f,
+            max_consecutive_benchmark_failures=max_fail_i,
+        )
+        print(json.dumps(report, indent=2, sort_keys=True))
         return 0
 
     logger.error("Unknown tuning-characterization mode %s", mode)
@@ -864,11 +919,11 @@ def main(argv: list[str] | None = None) -> int:
 
     tuning_sub = subparsers.add_parser(
         "tuning-characterization",
-        help="Ingest benchmark runs into experiment JSONL, propose knob vectors (GP-EI/NSGA2), or run a batch study",
+        help="Ingest experiments, propose knobs, run-batch, or optimize numeric hits in a closed loop",
     )
     tuning_sub.add_argument(
         "--mode",
-        choices=["ingest", "propose", "run-batch"],
+        choices=["ingest", "propose", "run-batch", "optimize-numeric"],
         dest="tc_mode",
         required=True,
     )
@@ -914,8 +969,8 @@ def main(argv: list[str] | None = None) -> int:
     tuning_sub.add_argument(
         "--strategy",
         default="gp_ei",
-        choices=["random", "gp_ei", "nsga2_surrogate"],
-        help="Search strategy for propose/run-batch",
+        choices=["random", "gp_ei", "gp_ei_numeric", "nsga2_surrogate"],
+        help="Search strategy for propose/run-batch/optimize-numeric",
     )
     tuning_sub.add_argument("--rng-seed", type=int, default=0, dest="rng_seed")
     tuning_sub.add_argument(
@@ -959,6 +1014,48 @@ def main(argv: list[str] | None = None) -> int:
         "--refresh-custom-solver", action="store_true", dest="refresh_custom_solver"
     )
     tuning_sub.add_argument("--max-benchmarks", type=int, default=8, dest="max_benchmarks")
+    tuning_sub.add_argument(
+        "--max-optimization-iterations",
+        type=int,
+        default=10,
+        dest="max_optimization_iterations",
+        help="optimize-numeric: outer loop iterations (each runs up to trials-per-iteration benchmarks)",
+    )
+    tuning_sub.add_argument(
+        "--trials-per-iteration",
+        type=int,
+        default=2,
+        dest="trials_per_iteration",
+        help="optimize-numeric: batch size per iteration (capped by remaining max-benchmarks budget)",
+    )
+    tuning_sub.add_argument(
+        "--target-numeric-hits",
+        type=float,
+        default=0.0,
+        dest="target_numeric_hits",
+        help="optimize-numeric: stop when best numeric objective is at or below this",
+    )
+    tuning_sub.add_argument(
+        "--target-trust-rejects",
+        type=float,
+        default=None,
+        dest="target_trust_rejects",
+        help="optimize-numeric: optional second stop condition on trust_region_reject_cells",
+    )
+    tuning_sub.add_argument(
+        "--max-wall-seconds",
+        type=float,
+        default=None,
+        dest="max_wall_seconds",
+        help="optimize-numeric: optional wall-time limit (monotonic clock)",
+    )
+    tuning_sub.add_argument(
+        "--max-consecutive-benchmark-failures",
+        type=int,
+        default=None,
+        dest="max_consecutive_benchmark_failures",
+        help="optimize-numeric: stop if this many iterations in a row have only failed benchmarks",
+    )
     tuning_sub.add_argument(
         "--dry-run",
         action="store_true",
