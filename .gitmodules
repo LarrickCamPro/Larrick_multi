@@ -7,3 +7,9 @@
 [submodule "larrak-simulation"]
 	path = larrak-simulation
 	url = /Users/maxholden/GitHub/larrak-simulation
+[submodule "larrak-core"]
+	path = larrak-core
+	url = /Users/maxholden/GitHub/larrak-core
+[submodule "larrak-optimization"]
+	path = larrak-optimization
+	url = /Users/maxholden/GitHub/larrak-optimization

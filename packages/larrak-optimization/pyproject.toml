@@ -22,8 +22,8 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.package-dir]
-"" = "../../src"
+"" = "../../larrak-optimization/src"
 
 [tool.setuptools.packages.find]
-where = ["../../src"]
+where = ["../../larrak-optimization/src"]
 include = ["larrak_optimization*"]
