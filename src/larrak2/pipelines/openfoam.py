@@ -337,7 +337,7 @@ def _engine_seed_bundle(
         )
     species_mass_fractions = _to_mass_fractions(species_mole_fractions)
     pressure = float(incoming.get("pressure_Pa", params.get("p_manifold_Pa", 101325.0)))
-    temperature = float(incoming.get("temperature_K", params.get("T_intake_K", 300.0)))
+    temperature = float(incoming.get("temperature_K", params.get("T_intake_K", 375.0)))
     cycle_coordinate = float(
         incoming.get("cycle_coordinate_deg", params.get("engine_start_angle_deg", -180.0))
     )
@@ -388,15 +388,17 @@ def _engine_case_placeholders(
     mass_fractions = dict(handoff_bundle.get("species_mass_fractions", {}) or {})
     cycle_coordinate = float(handoff_bundle.get("cycle_coordinate_deg", -180.0))
     pressure = float(handoff_bundle.get("pressure_Pa", params.get("p_manifold_Pa", 101325.0)))
-    temperature = float(handoff_bundle.get("temperature_K", params.get("T_intake_K", 300.0)))
-    # Engine-case templates assume a minimum stable initialization temperature.
-    temperature = max(450.0, temperature)
+    temperature = float(handoff_bundle.get("temperature_K", params.get("T_intake_K", 375.0)))
+    # The combustion/chemistry-enabled templates assume a minimum stable initialization temperature.
+    # For "breathing proof" modes (chemistry+combustion disabled), keep the incoming temperature.
+    if bool(params.get("chemistry_enabled", True)) or bool(params.get("combustion_enabled", True)):
+        temperature = max(450.0, temperature)
     residual_fraction = float(
         handoff_bundle.get("residual_fraction", params.get("residual_fraction_seed", 0.08))
     )
     residual_temperature = float(
         params.get(
-            "T_residual_K", max(float(params.get("T_intake_K", 300.0)) * 2.5, temperature * 1.3)
+            "T_residual_K", max(float(params.get("T_intake_K", 375.0)) * 2.5, temperature * 1.3)
         )
     )
     wall_temperature = float(

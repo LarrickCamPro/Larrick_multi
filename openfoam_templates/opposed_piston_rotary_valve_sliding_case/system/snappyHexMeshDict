@@ -34,13 +34,13 @@ castellatedMeshControls
     features ();
     refinementSurfaces
     {
-        cylinder { level (1 1); }
-        intakeValve { level (1 1); }
-        exhaustValveLeft { level (1 1); }
-        exhaustValveRight { level (1 1); }
+        cylinder { level ({{surface_level}} {{surface_level}}); }
+        intakeValve { level ({{surface_level}} {{surface_level}}); }
+        exhaustValveLeft { level ({{surface_level}} {{surface_level}}); }
+        exhaustValveRight { level ({{surface_level}} {{surface_level}}); }
         intakeValveInterface
         {
-            level           (1 1);
+            level           ({{interface_level}} {{interface_level}});
             faceZone        intakeValveZone;
             cellZone        intakeValveZone;
             cellZoneInside  insidePoint;
@@ -48,7 +48,7 @@ castellatedMeshControls
         }
         exhaustValveLeftInterface
         {
-            level           (1 1);
+            level           ({{interface_level}} {{interface_level}});
             faceZone        exhaustValveLeftZone;
             cellZone        exhaustValveLeftZone;
             cellZoneInside  insidePoint;
@@ -56,7 +56,7 @@ castellatedMeshControls
         }
         exhaustValveRightInterface
         {
-            level           (1 1);
+            level           ({{interface_level}} {{interface_level}});
             faceZone        exhaustValveRightZone;
             cellZone        exhaustValveRightZone;
             cellZoneInside  insidePoint;

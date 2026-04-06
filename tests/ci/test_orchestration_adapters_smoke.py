@@ -92,7 +92,7 @@ def test_casadi_solver_adapter_passes_stack_path_and_ipopt(monkeypatch) -> None:
         )
 
     monkeypatch.setattr(
-        "larrak2.orchestration.adapters.solver_adapter.refine_candidate", _mock_refine_candidate
+        "larrak_optimization.integrations.orchestration.refine_candidate", _mock_refine_candidate
     )
 
     solver = CasadiSolverAdapter(

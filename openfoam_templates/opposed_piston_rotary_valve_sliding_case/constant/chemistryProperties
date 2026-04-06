@@ -12,7 +12,7 @@ chemistryType
     method          TDAC;
 }
 
-chemistry       on;
+chemistry       {{chemistry_switch}};
 
 importantSpecies
 {

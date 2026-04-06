@@ -7,7 +7,7 @@ FoamFile
 }
 
 combustionModel      PaSR;
-active               yes;
+active               {{combustion_switch}};
 
 PaSRCoeffs
 {
