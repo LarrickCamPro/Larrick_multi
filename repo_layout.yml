@@ -1,14 +1,19 @@
 allowed_top_level_dirs:
   - .github
+  - .task-runtime
   - Docs
   - LEAP71_ShapeKernel
   - Legacy_Monolithic
   - PicoGK
   - data
+  - larrak-core
+  - larrak-optimization
+  - larrak-simulation
   - mechanisms
   - openfoam_custom_solvers
   - openfoam_templates
   - outputs
+  - packages
   - scripts
   - src
   - tests
@@ -20,6 +25,7 @@ required_top_level_dirs:
   - src
   - tests
 allowed_top_level_files:
+  - .gitmodules
   - .gitignore
   - AGENTS.md
   - CLAUDE.md
