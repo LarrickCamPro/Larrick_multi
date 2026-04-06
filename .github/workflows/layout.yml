@@ -11,6 +11,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
@@ -21,7 +23,7 @@ jobs:
       - name: Compute changed files
         if: github.event_name == 'pull_request'
         run: |
-          git fetch origin ${{ github.base_ref }} --depth=1
+          git fetch origin ${{ github.base_ref }} --depth=1000
           git diff --name-only origin/${{ github.base_ref }}...HEAD > /tmp/changed.txt
 
       - name: Run layout check on PR diff
