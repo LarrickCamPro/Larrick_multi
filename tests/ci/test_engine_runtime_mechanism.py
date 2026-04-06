@@ -14,7 +14,9 @@ def _write_package(package_dir: Path) -> None:
     )
 
 
-def test_resolve_engine_runtime_package_prefers_repo_relative_paths(tmp_path: Path, monkeypatch) -> None:
+def test_resolve_engine_runtime_package_prefers_repo_relative_paths(
+    tmp_path: Path, monkeypatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     package_dir = tmp_path / "mechanisms" / "openfoam" / "v2512" / "chem323_reduced"
     _write_package(package_dir)

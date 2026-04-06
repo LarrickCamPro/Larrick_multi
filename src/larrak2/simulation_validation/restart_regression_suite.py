@@ -145,10 +145,17 @@ def _same_area_classification(
         and float(item["first_divergence_fraction"]) <= 0.25
         for item in runtime_summary_rows
     )
-    if point_score >= 0.65 and not early_collapse and (dense_distance is None or dense_distance <= 4.0):
+    if (
+        point_score >= 0.65
+        and not early_collapse
+        and (dense_distance is None or dense_distance <= 4.0)
+    ):
         classification = "same_area"
-    elif point_score <= 0.35 or early_collapse or first_divergence_early or (
-        dense_distance is not None and dense_distance >= 5.0
+    elif (
+        point_score <= 0.35
+        or early_collapse
+        or first_divergence_early
+        or (dense_distance is not None and dense_distance >= 5.0)
     ):
         classification = "shifted_area"
     else:
@@ -235,7 +242,11 @@ def _primary_regression_drivers(
             }
         )
 
-    latest_signature = (_first_miss_stage(latest_run), _top_variable(latest_run), _failure_class(latest_run))
+    latest_signature = (
+        _first_miss_stage(latest_run),
+        _top_variable(latest_run),
+        _failure_class(latest_run),
+    )
     previous_signature = (
         _first_miss_stage(previous_run),
         _top_variable(previous_run),
@@ -339,11 +350,7 @@ def _overall_verdict(
                 direction = "regressed"
                 regression += weight
 
-        if (
-            direction == "improved"
-            and primary_regressions
-            and metric_name == "total_numeric_hits"
-        ):
+        if direction == "improved" and primary_regressions and metric_name == "total_numeric_hits":
             direction = "suppressed_improvement"
             suppressed_secondary_improvements.append(
                 {
@@ -403,11 +410,11 @@ def _cluster_id(*, stage_name: str, top_variable: str, failure_class: str, famil
 
 def _recommended_next_analysis_target(*, stage_name: str, top_variable: str) -> str:
     if stage_name and top_variable:
-        return (
-            f"Inspect the {stage_name} neighborhood around {top_variable} and the earliest runtime-summary collapse window."
-        )
+        return f"Inspect the {stage_name} neighborhood around {top_variable} and the earliest runtime-summary collapse window."
     if top_variable:
-        return f"Inspect the authority envelope and local dense-window behavior around {top_variable}."
+        return (
+            f"Inspect the authority envelope and local dense-window behavior around {top_variable}."
+        )
     return "Inspect the earliest dense divergence window and the dominant failure-family scalars together."
 
 
@@ -460,9 +467,7 @@ def _focus_clusters(
             + [float(item.get("priority_score") or 0.0) for item in related_dense[:2]]
         )
     )
-    cluster_label = (
-        f"failure cluster: {stage_name or 'unknown_stage'} / {top_variable or 'unknown_variable'} authority break"
-    )
+    cluster_label = f"failure cluster: {stage_name or 'unknown_stage'} / {top_variable or 'unknown_variable'} authority break"
     primary_cluster = {
         "cluster_id": primary_cluster_id,
         "kind": "failure_cluster",
@@ -567,8 +572,12 @@ def _prioritized_focus(
                     "stage_name": cluster.get("stage_name"),
                     "top_variable": cluster.get("top_variable"),
                     "failure_class": cluster.get("failure_class"),
-                    "dominant_operational_consequence": cluster.get("dominant_operational_consequence"),
-                    "recommended_next_analysis_target": cluster.get("recommended_next_analysis_target"),
+                    "dominant_operational_consequence": cluster.get(
+                        "dominant_operational_consequence"
+                    ),
+                    "recommended_next_analysis_target": cluster.get(
+                        "recommended_next_analysis_target"
+                    ),
                 },
             }
         )

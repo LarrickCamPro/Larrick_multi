@@ -72,7 +72,9 @@ class DockerOpenFoam:
         path.parent.mkdir(parents=True, exist_ok=True)
         meta_text = ""
         if metadata:
-            meta_text = "=== Metadata ===\n" + json.dumps(metadata, indent=2, sort_keys=True) + "\n\n"
+            meta_text = (
+                "=== Metadata ===\n" + json.dumps(metadata, indent=2, sort_keys=True) + "\n\n"
+            )
         path.write_text(
             meta_text
             + "=== Command ===\n"
@@ -174,7 +176,9 @@ class DockerOpenFoam:
         return code, stdout, stderr
 
     def _open_docker_desktop(self, *, timeout_s: int) -> tuple[int, str, str]:
-        return self._run_process(["open", "-a", "Docker"], timeout_s=min(max(int(timeout_s), 1), 15))
+        return self._run_process(
+            ["open", "-a", "Docker"], timeout_s=min(max(int(timeout_s), 1), 15)
+        )
 
     def _autostart_docker_desktop(
         self,
@@ -412,7 +416,11 @@ class DockerOpenFoam:
             timeout_s=timeout_s,
         )
         autostart_meta: dict[str, Any] = {}
-        if code != 0 and self._docker_daemon_unavailable(stdout, stderr) and self._can_autostart_docker_desktop():
+        if (
+            code != 0
+            and self._docker_daemon_unavailable(stdout, stderr)
+            and self._can_autostart_docker_desktop()
+        ):
             autostart = self._autostart_docker_desktop(docker_bin=docker_bin, timeout_s=timeout_s)
             autostart_attempted = bool(autostart.get("attempted", False))
             autostart_succeeded = bool(autostart.get("succeeded", False))

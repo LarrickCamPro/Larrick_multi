@@ -314,10 +314,7 @@ def _scalar_priority(
     disappearance_component = float(disappearance_score) * 1.25
     family_weight = float(_FAMILY_PRIORITY_WEIGHTS.get(slot_family, 1.0))
     priority_score = family_weight * (
-        compressed_delta
-        + 0.75 * compressed_shift
-        + appearance_component
-        + disappearance_component
+        compressed_delta + 0.75 * compressed_shift + appearance_component + disappearance_component
     )
     components = {
         "compressed_delta": compressed_delta,
@@ -500,7 +497,13 @@ def _dense_collapse_priority(
 ) -> tuple[float, dict[str, float | bool], float, bool, str]:
     scale_floor = _scale_floor(
         slot_family=slot_family,
-        values=[latest_final, previous_final, area_between, float(latest_length), float(previous_length)],
+        values=[
+            latest_final,
+            previous_final,
+            area_between,
+            float(latest_length),
+            float(previous_length),
+        ],
     )
     scale_used = max(raw_scale, scale_floor)
     scale_floor_applied = scale_used > raw_scale
@@ -515,7 +518,8 @@ def _dense_collapse_priority(
         first_divergence_fraction is not None and float(first_divergence_fraction) <= 0.25
     )
     early_collapse_detected = bool(
-        latest_shorter and (early_divergence or first_divergence_fraction is None or truncation_fraction >= 0.25)
+        latest_shorter
+        and (early_divergence or first_divergence_fraction is None or truncation_fraction >= 0.25)
     )
     table_hit_collapse_detected = bool(
         semantic_label == "tableHitCells"
@@ -574,7 +578,13 @@ def _dense_collapse_priority(
         "family_weight": float(_FAMILY_PRIORITY_WEIGHTS[slot_family]),
         "truncation_depth_delta": float(truncation_depth_delta),
     }
-    return priority_score, components, float(scale_used), bool(scale_floor_applied), collapse_classification
+    return (
+        priority_score,
+        components,
+        float(scale_used),
+        bool(scale_floor_applied),
+        collapse_classification,
+    )
 
 
 def analyze_dense_series(
@@ -615,8 +625,12 @@ def analyze_dense_series(
                     "regression_signal": 0.0,
                     "improvement_signal": 0.0,
                     "confidence": 0.0,
-                    "series_length_latest": None if latest_entry is None else len(latest_entry["y_values"]),
-                    "series_length_baseline": None if previous_entry is None else len(previous_entry["y_values"]),
+                    "series_length_latest": None
+                    if latest_entry is None
+                    else len(latest_entry["y_values"]),
+                    "series_length_baseline": None
+                    if previous_entry is None
+                    else len(previous_entry["y_values"]),
                     "truncation_depth_delta": None,
                     "latest_series_shorter_than_baseline": None,
                     "first_divergence_index": None,
@@ -697,18 +711,22 @@ def analyze_dense_series(
             else float(latest_final - previous_final)
         )
         confidence = min(len(prior_resampled) / max(history_window, 1), 1.0)
-        priority_score, priority_components, scale_used, scale_floor_applied, collapse_classification = (
-            _dense_collapse_priority(
-                semantic_label=str(entry["latest_semantic_label"]),
-                latest_final=latest_final,
-                previous_final=previous_final,
-                latest_length=len(latest_y),
-                previous_length=len(previous_y),
-                first_divergence_fraction=first_divergence_fraction,
-                area_between=area_between,
-                raw_scale=raw_scale,
-                slot_family=str(entry["slot_family"]),
-            )
+        (
+            priority_score,
+            priority_components,
+            scale_used,
+            scale_floor_applied,
+            collapse_classification,
+        ) = _dense_collapse_priority(
+            semantic_label=str(entry["latest_semantic_label"]),
+            latest_final=latest_final,
+            previous_final=previous_final,
+            latest_length=len(latest_y),
+            previous_length=len(previous_y),
+            first_divergence_fraction=first_divergence_fraction,
+            area_between=area_between,
+            raw_scale=raw_scale,
+            slot_family=str(entry["slot_family"]),
         )
         focus_eligible = collapse_classification != "missing_dense_series"
         focus_reason = "eligible" if focus_eligible else "missing_comparable_dense_series"
@@ -733,7 +751,9 @@ def analyze_dense_series(
                 "latest_series_shorter_than_baseline": len(latest_y) < len(previous_y),
                 "first_divergence_index": first_divergence_index,
                 "first_divergence_fraction": first_divergence_fraction,
-                "early_collapse_detected": bool(priority_components.get("early_collapse_detected", False)),
+                "early_collapse_detected": bool(
+                    priority_components.get("early_collapse_detected", False)
+                ),
                 "table_hit_collapse_detected": bool(
                     priority_components.get("table_hit_collapse_detected", False)
                     or priority_components.get("query_collapse_detected", False)

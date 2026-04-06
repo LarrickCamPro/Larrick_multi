@@ -90,10 +90,13 @@ def _infer_failure_family(
     ):
         return MISS_FAMILY_SPECIES_DIAG
     max_out_of_bound = dict(authority_miss_payload.get("max_out_of_bound_by_variable", {}) or {})
-    if any(str(name).endswith("_diag") or str(name) in tracked_species for name in max_out_of_bound):
+    if any(
+        str(name).endswith("_diag") or str(name) in tracked_species for name in max_out_of_bound
+    ):
         return MISS_FAMILY_SPECIES_DIAG
     first_variables = [
-        str(value) for value in list(authority_miss_payload.get("first_offending_variables", []) or [])
+        str(value)
+        for value in list(authority_miss_payload.get("first_offending_variables", []) or [])
     ]
     if any(value.endswith("_diag") or value in tracked_species for value in first_variables):
         return MISS_FAMILY_SPECIES_DIAG
@@ -173,7 +176,9 @@ def _candidate_run_authority_miss_paths(
     paths: list[Path] = []
     for run_dir in run_dirs:
         artifacts = extract_restart_run_artifacts(run_dir=run_dir, profile_name=profile_name)
-        authority_miss_path = str(artifacts.get("artifact_paths", {}).get("authority_miss_path", "")).strip()
+        authority_miss_path = str(
+            artifacts.get("artifact_paths", {}).get("authority_miss_path", "")
+        ).strip()
         if authority_miss_path:
             paths.append(Path(authority_miss_path).resolve())
     return paths
@@ -201,7 +206,11 @@ def _load_stage_runtime_context(
         for item in list(stage_runtime_cfg.get("state_species", []) or [])
         if str(item).strip()
     }
-    axis_order = ["Temperature", "Pressure", *list(stage_runtime_cfg.get("state_species", []) or [])]
+    axis_order = [
+        "Temperature",
+        "Pressure",
+        *list(stage_runtime_cfg.get("state_species", []) or []),
+    ]
     transformed_state_variables = _resolve_transformed_state_variables(
         stage_runtime_cfg,
         axis_order=axis_order,
@@ -346,7 +355,9 @@ def _select_species_frontier(
     active_paths = {str(item["path"]) for item in active}
     for candidate in deduped.values():
         if str(candidate["path"]) not in active_paths:
-            pruned.append({"path": candidate["path"], "reason": "older_than_active_species_frontier"})
+            pruned.append(
+                {"path": candidate["path"], "reason": "older_than_active_species_frontier"}
+            )
     return active, pruned
 
 
@@ -361,7 +372,9 @@ def _select_qdot_frontier(
         if candidate["miss_family"] != MISS_FAMILY_QDOT:
             continue
         if not candidate["seedable"]:
-            pruned.append({"path": candidate["path"], "reason": str(candidate["seedability_reason"])})
+            pruned.append(
+                {"path": candidate["path"], "reason": str(candidate["seedability_reason"])}
+            )
             continue
         signature = candidate["transformed_signature"]
         if signature is None:
@@ -385,9 +398,12 @@ def _select_qdot_frontier(
             if candidate_state is None:
                 continue
             min_distance = min(
-                float((candidate_state - selected_state).dot(candidate_state - selected_state)) ** 0.5
+                float((candidate_state - selected_state).dot(candidate_state - selected_state))
+                ** 0.5
                 for selected_state in [
-                    item.get("transformed_state") for item in active if item.get("transformed_state") is not None
+                    item.get("transformed_state")
+                    for item in active
+                    if item.get("transformed_state") is not None
                 ]
             )
             candidate_key = (float(min_distance), int(candidate["recency_rank"]))
@@ -401,7 +417,9 @@ def _select_qdot_frontier(
     active_paths = {str(item["path"]) for item in active}
     for candidate in seedable:
         if str(candidate["path"]) not in active_paths:
-            pruned.append({"path": candidate["path"], "reason": "not_selected_for_active_qdot_frontier"})
+            pruned.append(
+                {"path": candidate["path"], "reason": "not_selected_for_active_qdot_frontier"}
+            )
     return active, pruned
 
 
@@ -429,7 +447,9 @@ def plan_stage_local_runtime_table_refresh(
     failure_cluster = _first_cluster(general, kind="failure_cluster")
     operational_cluster = _first_cluster(general, kind="operational_cluster")
     latest_run_dir = Path(run_dirs[-1]).resolve()
-    latest_artifacts = extract_restart_run_artifacts(run_dir=latest_run_dir, profile_name=profile_name)
+    latest_artifacts = extract_restart_run_artifacts(
+        run_dir=latest_run_dir, profile_name=profile_name
+    )
     authority_miss_path = latest_artifacts["artifact_paths"].get("authority_miss_path")
     if not authority_miss_path:
         raise FileNotFoundError(
@@ -437,9 +457,7 @@ def plan_stage_local_runtime_table_refresh(
         )
     authority_miss_payload = dict(latest_artifacts.get("authority_miss_payload", {}) or {})
     stage_name = str(
-        failure_cluster.get("stage_name")
-        or authority_miss_payload.get("stage_name")
-        or ""
+        failure_cluster.get("stage_name") or authority_miss_payload.get("stage_name") or ""
     ).strip()
     if not stage_name:
         raise ValueError("Unable to infer target stage from latest analyzer output")
@@ -568,7 +586,9 @@ def apply_stage_local_runtime_table_refresh(
     payload = _load_json(config_path)
     runtime_cfg = dict(payload.get("runtime_chemistry_table", {}) or {})
     target_list_name = str(refresh_plan["target_list_name"])
-    miss_storage_path = _storage_path(Path(str(refresh_plan["authority_miss_path"])), repo_root=repo_root_path)
+    miss_storage_path = _storage_path(
+        Path(str(refresh_plan["authority_miss_path"])), repo_root=repo_root_path
+    )
     miss_items = [str(item) for item in list(runtime_cfg.get(target_list_name, []) or [])]
     if miss_storage_path not in miss_items:
         miss_items.append(miss_storage_path)
@@ -577,7 +597,9 @@ def apply_stage_local_runtime_table_refresh(
     appended_coverage = None
     coverage_path_raw = refresh_plan.get("coverage_corpus_path")
     if coverage_path_raw:
-        coverage_storage_path = _storage_path(Path(str(coverage_path_raw)), repo_root=repo_root_path)
+        coverage_storage_path = _storage_path(
+            Path(str(coverage_path_raw)), repo_root=repo_root_path
+        )
         coverage_items = [str(item) for item in list(runtime_cfg.get("coverage_corpora", []) or [])]
         if coverage_storage_path not in coverage_items:
             coverage_items.append(coverage_storage_path)
@@ -622,7 +644,9 @@ def apply_stage_local_runtime_table_frontier_rebalance(
     return {
         "stage_name": str(rebalance_plan["stage_name"]),
         "stage_config_path": str(config_path),
-        "selection_reason": str(rebalance_plan.get("selection_reason", "bounded_frontier_rebalance")),
+        "selection_reason": str(
+            rebalance_plan.get("selection_reason", "bounded_frontier_rebalance")
+        ),
         "active_species_frontier": active_species,
         "active_qdot_frontier": active_qdot,
         "pruned_species_artifacts": list(rebalance_plan.get("pruned_species_artifacts", []) or []),

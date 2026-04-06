@@ -40,7 +40,9 @@ def resolve_engine_runtime_package(
     del refresh_packages
     strategy = _load_json(config_path)
     runtime_entry = dict(strategy.get("runtime_package", {}) or {})
-    checkpoint_entries = [dict(item) for item in list(strategy.get("checkpoint_packages", []) or [])]
+    checkpoint_entries = [
+        dict(item) for item in list(strategy.get("checkpoint_packages", []) or [])
+    ]
 
     selected_entry: dict[str, Any] | None = None
     normalized_label = str(package_label).strip()

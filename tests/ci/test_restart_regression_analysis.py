@@ -523,7 +523,9 @@ def test_analyze_restart_regression_runs_detects_shifted_regression_and_clusters
 
 def test_scalar_priority_downweights_context_outliers(tmp_path: Path) -> None:
     earlier, latest = _make_same_area_runs(tmp_path)
-    payload = json.loads((latest / "engine_restart_benchmark_summary.json").read_text(encoding="utf-8"))
+    payload = json.loads(
+        (latest / "engine_restart_benchmark_summary.json").read_text(encoding="utf-8")
+    )
     payload["profiles"][0]["baseline_start"]["mean_pressure_Pa"] = 9.42194e5
     _write_json(latest / "engine_restart_benchmark_summary.json", payload)
 
@@ -569,7 +571,9 @@ def test_same_area_regression_classification(tmp_path: Path) -> None:
 
 def test_schema_drift_slots_preserve_presence_masks(tmp_path: Path) -> None:
     v63, v64, _ = _make_recent_runs(tmp_path)
-    payload = json.loads((v64 / "engine_restart_benchmark_summary.json").read_text(encoding="utf-8"))
+    payload = json.loads(
+        (v64 / "engine_restart_benchmark_summary.json").read_text(encoding="utf-8")
+    )
     payload["profiles"][0]["experimental_probe_value"] = 42.0
     _write_json(v64 / "engine_restart_benchmark_summary.json", payload)
 

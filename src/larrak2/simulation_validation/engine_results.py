@@ -204,17 +204,13 @@ def _load_runtime_chemistry_summary(engine_case_dir: str | Path) -> dict[str, An
     latest_row: list[float] | None = None
     for path in summary_files:
         rows = [
-            line.strip()
-            for line in path.read_text(encoding="utf-8").splitlines()
-            if line.strip()
+            line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
         ]
         header_line = next((line for line in rows if line.startswith("#")), "")
         if header_line:
             header = header_line.lstrip("#").split()
         numeric_rows = [
-            [float(token) for token in line.split()]
-            for line in rows
-            if not line.startswith("#")
+            [float(token) for token in line.split()] for line in rows if not line.startswith("#")
         ]
         if numeric_rows:
             latest_row = numeric_rows[-1]
@@ -399,7 +395,9 @@ def emit_engine_progress_artifacts(
     progress_path = Path(engine_case_dir) / "engine_progress_summary.json"
     progress_path.write_text(json.dumps(progress, indent=2, sort_keys=True), encoding="utf-8")
     return {
-        "engine_results_partial_path": str((Path(engine_case_dir) / "engine_results_partial.json").resolve()),
+        "engine_results_partial_path": str(
+            (Path(engine_case_dir) / "engine_results_partial.json").resolve()
+        ),
         "engine_progress_summary_path": str(progress_path.resolve()),
         "partial_results": partial_results,
         "progress_summary": progress,

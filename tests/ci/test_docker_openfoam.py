@@ -181,7 +181,11 @@ def test_docker_preflight_autostarts_docker_desktop_when_daemon_is_down(
 
     info_calls = iter(
         [
-            (1, "", "Cannot connect to the Docker daemon at unix:///tmp/docker.sock. Is the docker daemon running?"),
+            (
+                1,
+                "",
+                "Cannot connect to the Docker daemon at unix:///tmp/docker.sock. Is the docker daemon running?",
+            ),
             (0, "Server Version: 29.2.1", ""),
         ]
     )

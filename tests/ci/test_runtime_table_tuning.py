@@ -225,7 +225,9 @@ def test_plan_and_apply_routes_qdot_family_and_appends_existing_corpus(tmp_path:
     )
 
 
-def test_plan_prefers_json_coverage_corpus_path_when_json_and_npz_both_exist(tmp_path: Path) -> None:
+def test_plan_prefers_json_coverage_corpus_path_when_json_and_npz_both_exist(
+    tmp_path: Path,
+) -> None:
     entry_config = tmp_path / "entry.json"
     ramp_config = tmp_path / "ramp.json"
     _write_stage_config(entry_config)
@@ -244,11 +246,7 @@ def test_plan_prefers_json_coverage_corpus_path_when_json_and_npz_both_exist(tmp
         },
         coverage_exists=True,
     )
-    npz_path = (
-        latest_run
-        / "chem323_lookup_strict"
-        / "runtimeChemistryCoverageCorpus.npz"
-    )
+    npz_path = latest_run / "chem323_lookup_strict" / "runtimeChemistryCoverageCorpus.npz"
     npz_path.write_bytes(b"fake")
 
     refresh_plan = plan_stage_local_runtime_table_refresh(
@@ -269,9 +267,7 @@ def test_plan_prefers_json_coverage_corpus_path_when_json_and_npz_both_exist(tmp
     )
 
     assert refresh_plan["coverage_corpus_exists"] is True
-    assert str(refresh_plan["coverage_corpus_path"]).endswith(
-        "runtimeChemistryCoverageCorpus.json"
-    )
+    assert str(refresh_plan["coverage_corpus_path"]).endswith("runtimeChemistryCoverageCorpus.json")
 
 
 def test_plan_marks_tracked_species_same_sign_overshoot_as_seedable_species_family(
@@ -622,12 +618,28 @@ def test_frontier_rebalance_selects_exact_species_and_qdot_frontiers(
         str((tmp_path / qdot_v66c).resolve()),
         str((tmp_path / qdot_v66j).resolve()),
         str((tmp_path / qdot_v66l).resolve()),
-        str((tmp_path / "latest_run/chem323_lookup_strict/runtimeChemistryAuthorityMiss.json").resolve()),
+        str(
+            (
+                tmp_path / "latest_run/chem323_lookup_strict/runtimeChemistryAuthorityMiss.json"
+            ).resolve()
+        ),
     ]
-    assert {"path": str((tmp_path / species_v62).resolve()), "reason": "older_than_active_species_frontier"} in rebalance_plan["pruned_species_artifacts"]
-    assert {"path": str((tmp_path / qdot_v66a).resolve()), "reason": "missing_reject_state"} in rebalance_plan["pruned_qdot_artifacts"]
-    assert {"path": str((tmp_path / qdot_v63).resolve()), "reason": "superseded_duplicate_signature"} in rebalance_plan["pruned_qdot_artifacts"]
-    assert {"path": str((tmp_path / qdot_v64).resolve()), "reason": "not_selected_for_active_qdot_frontier"} in rebalance_plan["pruned_qdot_artifacts"]
+    assert {
+        "path": str((tmp_path / species_v62).resolve()),
+        "reason": "older_than_active_species_frontier",
+    } in rebalance_plan["pruned_species_artifacts"]
+    assert {
+        "path": str((tmp_path / qdot_v66a).resolve()),
+        "reason": "missing_reject_state",
+    } in rebalance_plan["pruned_qdot_artifacts"]
+    assert {
+        "path": str((tmp_path / qdot_v63).resolve()),
+        "reason": "superseded_duplicate_signature",
+    } in rebalance_plan["pruned_qdot_artifacts"]
+    assert {
+        "path": str((tmp_path / qdot_v64).resolve()),
+        "reason": "not_selected_for_active_qdot_frontier",
+    } in rebalance_plan["pruned_qdot_artifacts"]
 
     result = apply_stage_local_runtime_table_frontier_rebalance(
         rebalance_plan=rebalance_plan,
@@ -635,14 +647,24 @@ def test_frontier_rebalance_selects_exact_species_and_qdot_frontiers(
     )
 
     updated = json.loads(entry_config.read_text(encoding="utf-8"))["runtime_chemistry_table"]
-    assert result["active_species_frontier"] == [species_v66d, species_v66g, species_v66h, species_v66i]
+    assert result["active_species_frontier"] == [
+        species_v66d,
+        species_v66g,
+        species_v66h,
+        species_v66i,
+    ]
     assert result["active_qdot_frontier"] == [
         qdot_v66c,
         qdot_v66j,
         qdot_v66l,
         "latest_run/chem323_lookup_strict/runtimeChemistryAuthorityMiss.json",
     ]
-    assert updated["seed_species_miss_artifacts"] == [species_v66d, species_v66g, species_v66h, species_v66i]
+    assert updated["seed_species_miss_artifacts"] == [
+        species_v66d,
+        species_v66g,
+        species_v66h,
+        species_v66i,
+    ]
     assert updated["seed_qdot_miss_artifacts"] == [
         qdot_v66c,
         qdot_v66j,

@@ -589,9 +589,7 @@ class OpenFoamPipeline:
             docker_bin=docker_bin,
         )
         self.docker = (
-            DockerOpenFoam(docker_cfg)
-            if docker_image is not None
-            else DockerOpenFoam(docker_cfg)
+            DockerOpenFoam(docker_cfg) if docker_image is not None else DockerOpenFoam(docker_cfg)
         )
         self.runner = OpenFoamRunner(
             template_dir=template_dir,
