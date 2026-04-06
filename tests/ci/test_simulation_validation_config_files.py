@@ -184,7 +184,10 @@ class TestSimulationValidationConfigFiles:
             "outputs/diagnostics/engine_restart_benchmark_live_parallel_v66l_chem323_ignition_entry_seeded_ch2oh_sanity/chem323_lookup_strict/runtimeChemistryAuthorityMiss.json",
         ]
         corpora = list(table_cfg["coverage_corpora"])
-        assert corpora[0] == "data/simulation_validation/chem323_ignition_entry_cold_lowp_corpus_stub.json"
+        assert (
+            corpora[0]
+            == "data/simulation_validation/chem323_ignition_entry_cold_lowp_corpus_stub.json"
+        )
         for required in (
             "outputs/diagnostics/engine_restart_benchmark_live_parallel_v62_chem323_multitable_handoff_gate/chem323_lookup_strict/runtimeChemistryCoverageCorpus.json",
             "outputs/diagnostics/engine_restart_benchmark_live_parallel_v63_chem323_multitable_entry_refreshed/chem323_lookup_strict/runtimeChemistryCoverageCorpus.json",

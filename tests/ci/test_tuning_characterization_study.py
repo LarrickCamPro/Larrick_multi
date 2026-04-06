@@ -197,7 +197,9 @@ def test_gp_ei_proposes_after_two_trusted_points(tmp_path: Path) -> None:
 
 
 def test_nsga2_surrogate_proposes_with_three_trusted_points() -> None:
-    schema_path = Path("data/simulation_validation/tuning_knob_schema_chem323_ignition_entry_v1.json")
+    schema_path = Path(
+        "data/simulation_validation/tuning_knob_schema_chem323_ignition_entry_v1.json"
+    )
     schema = load_knob_schema(schema_path)
 
     def k(rbf_env: float, n: int) -> dict[str, float | int]:
