@@ -17,6 +17,9 @@ from typing import Any
 
 import numpy as np
 from larrak_optimization.cli.run_pareto import main as run_pareto_main
+from larrak_optimization.promote.control_plane import (
+    select_promotion_indices as _select_promotion_indices_impl,
+)
 
 from larrak2.adapters.calculix import CalculiXRunner
 from larrak2.adapters.openfoam import OpenFoamRunner
@@ -339,49 +342,6 @@ def run_active_learning_workflow(args: argparse.Namespace) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _dominates(f_a: np.ndarray, f_b: np.ndarray) -> bool:
-    """Return True when f_a Pareto-dominates f_b for minimization objectives."""
-    return bool(np.all(f_a <= f_b) and np.any(f_a < f_b))
-
-
-def _non_dominated_ranks(F: np.ndarray) -> np.ndarray:
-    """Compute non-dominated rank (0 = best front)."""
-    n = int(F.shape[0])
-    if n == 0:
-        return np.zeros(0, dtype=int)
-
-    dominates_list: list[list[int]] = [[] for _ in range(n)]
-    dominated_count = np.zeros(n, dtype=int)
-    rank = np.full(n, fill_value=n + 1, dtype=int)
-
-    first_front: list[int] = []
-    for i in range(n):
-        for j in range(n):
-            if i == j:
-                continue
-            if _dominates(F[i], F[j]):
-                dominates_list[i].append(j)
-            elif _dominates(F[j], F[i]):
-                dominated_count[i] += 1
-        if dominated_count[i] == 0:
-            first_front.append(i)
-
-    front = first_front
-    front_rank = 0
-    while front:
-        next_front: list[int] = []
-        for i in front:
-            rank[i] = front_rank
-            for j in dominates_list[i]:
-                dominated_count[j] -= 1
-                if dominated_count[j] == 0:
-                    next_front.append(j)
-        front = next_front
-        front_rank += 1
-
-    return rank
-
-
 def _sweep_values(min_v: float, max_v: float, step_v: float) -> list[float]:
     """Create an inclusive coarse sweep list."""
     if step_v <= 0:
@@ -540,98 +500,24 @@ def _select_promotion_indices(
             "applied_margin_filter": 0,
         }
 
-    ranks = _non_dominated_ranks(F)
     margins = _compute_margin_profiles(X, ctx=ctx, contexts=contexts)
 
     margin_arr = np.array([m["margin_min"] for m in margins], dtype=float)
     hard_margin_arr = np.array([m["hard_margin_min"] for m in margins], dtype=float)
     soft_arr = np.array([m["soft_violation_sum"] for m in margins], dtype=float)
-    composite_margin = hard_margin_arr - 0.1 * soft_arr
-    objective_sum = np.sum(F, axis=1)
-
-    # Eligibility is based on hard-margin floor so soft violations guide but do
-    # not completely erase the promotion set.
-    eligible = np.where(hard_margin_arr >= float(margin_min))[0]
-    applied_margin_filter = True
-    if eligible.size == 0:
-        eligible = np.arange(n, dtype=int)
-        applied_margin_filter = False
-
-    ordered = sorted(
-        eligible.tolist(),
-        key=lambda i: (
-            int(ranks[i]),
-            -float(composite_margin[i]),
-            float(soft_arr[i]),
-            float(objective_sum[i]),
-        ),
-    )
-
-    # Shortlist keeps quality pressure before diversity expansion.
-    shortlist_n = min(len(ordered), max(k * max(pool_mult, 1), k))
-    shortlist = ordered[:shortlist_n]
-    if not shortlist:
-        shortlist = ordered
-
-    # Geometry diversity selection in gear subspace.
     Xg = np.asarray(X[:, N_THERMO : N_THERMO + N_GEAR], dtype=float)
-    g_min = np.min(Xg, axis=0)
-    g_span = np.maximum(np.max(Xg, axis=0) - g_min, 1e-9)
-    Xg_norm = (Xg - g_min) / g_span
-
-    selected: list[int] = []
-    if shortlist:
-        selected.append(shortlist[0])
-
-    while len(selected) < min(k, len(ordered)):
-        pool = [i for i in shortlist if i not in selected]
-        if not pool:
-            pool = [i for i in ordered if i not in selected]
-        if not pool:
-            break
-
-        def min_geom_dist(i: int) -> float:
-            if not selected:
-                return 0.0
-            return float(min(np.linalg.norm(Xg_norm[i] - Xg_norm[j], ord=2) for j in selected))
-
-        # Maximize geometry distance first; preserve quality with tie-breakers.
-        best = max(
-            pool,
-            key=lambda i: (
-                min_geom_dist(i),
-                -int(ranks[i]),
-                float(margin_arr[i]),
-                -float(soft_arr[i]),
-            ),
-        )
-        selected.append(best)
-
-    selected_arr = np.array(selected, dtype=int)
-    selection_rows = []
-    for i in selected_arr:
-        selection_rows.append(
-            {
-                "index": int(i),
-                "rank": int(ranks[i]),
-                "hard_margin_min": float(hard_margin_arr[i]),
-                "margin_min": float(margin_arr[i]),
-                "composite_margin": float(composite_margin[i]),
-                "soft_violation_sum": float(soft_arr[i]),
-                "objective_sum": float(objective_sum[i]),
-            }
-        )
-
-    meta: dict[str, object] = {
-        "n_candidates": n,
-        "n_selected": int(selected_arr.size),
-        "margin_min_required": float(margin_min),
-        "margin_metric": "hard_margin_min",
-        "applied_margin_filter": bool(applied_margin_filter),
-        "n_margin_eligible": int(len(eligible)),
-        "pool_multiplier": int(max(pool_mult, 1)),
-        "selection": selection_rows,
-    }
+    selected_arr, meta = _select_promotion_indices_impl(
+        F=F,
+        hard_margin_min=hard_margin_arr,
+        soft_violation_sum=soft_arr,
+        diversity_vectors=Xg,
+        k=int(k),
+        margin_min_required=float(margin_min),
+        pool_mult=int(pool_mult),
+    )
+    # Preserve legacy metadata fields for dashboards/debugging.
+    meta.setdefault("margin_min", float(margin_min))
+    meta.setdefault("margin_arr_preview", [float(x) for x in margin_arr[: min(8, n)]])
     return selected_arr, meta
 
 

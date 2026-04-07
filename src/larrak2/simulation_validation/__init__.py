@@ -1,29 +1,6 @@
-"""Canonical-regime simulation validation suite.
-
-Replaces the monolithic thermo-anchor gate with a five-regime validation
-ladder: chemistry → spray → reacting_flow → closed_cylinder → full_handoff.
-"""
+"""Compatibility shim to `larrak_simulation.simulation_validation`."""
 
 from __future__ import annotations
 
-from .models import (
-    ValidationCaseSpec,
-    ValidationDatasetManifest,
-    ValidationMetricResult,
-    ValidationMetricSpec,
-    ValidationRunManifest,
-    ValidationSuiteManifest,
-    ValidationSuiteProfile,
-)
-from .regimes import CanonicalRegime
+from larrak_simulation.simulation_validation import *  # noqa: F403
 
-__all__ = [
-    "CanonicalRegime",
-    "ValidationCaseSpec",
-    "ValidationDatasetManifest",
-    "ValidationMetricResult",
-    "ValidationMetricSpec",
-    "ValidationRunManifest",
-    "ValidationSuiteProfile",
-    "ValidationSuiteManifest",
-]
