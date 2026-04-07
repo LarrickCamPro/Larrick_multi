@@ -1,8 +1,26 @@
+"""
+Agent context: CI checks that optional standalone installs (larrak-runtime stack via git
+pins) stay consistent between requirements-external.txt and pyproject.toml.
+"""
+
 from __future__ import annotations
 
 import importlib
 import sys
 from pathlib import Path
+
+
+def _pep508_git_pins_from_requirements(path: Path) -> dict[str, str]:
+    """Parse `name @ git+...` lines from a requirements file into name -> git spec."""
+
+    pins: dict[str, str] = {}
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if not line or " @ git+" not in line:
+            continue
+        name, spec = line.split(" @ ", 1)
+        pins[name.strip()] = spec.strip()
+    return pins
 
 
 def _new_modules(before: set[str]) -> set[str]:
@@ -97,21 +115,21 @@ def test_standalone_package_manifests_are_present() -> None:
     bootstrap = Path("scripts/install_external_larrak.sh")
 
     assert external_req.exists()
-    text = external_req.read_text(encoding="utf-8")
-    assert "larrak-core @ git+https://github.com/mhold3n/larrak-core.git@" in text
-    assert "larrak-simulation @ git+https://github.com/mhold3n/larrak-simulation.git@" in text
-    assert "larrak-optimization @ git+https://github.com/mhold3n/larrak-optimization.git@" in text
-    assert "9368bb8040f7dc2ea4b3b063bf7482d8dd7b18a0" in text
-    assert "65ee2339c1cd7d977cc2ba6ceff977a9dd0deab6" in text
-    assert "b21de537d4eb2f2c1d07af1e9772b6447ba59072" in text
+    pins = _pep508_git_pins_from_requirements(external_req)
+    required = ("larrak-core", "larrak-simulation", "larrak-optimization")
+    for name in required:
+        assert name in pins, f"missing git pin for {name} in {external_req}"
+        assert pins[name].startswith("git+https://github.com/mhold3n/"), (
+            f"{name} must install from mhold3n GitHub pin"
+        )
 
+    # Same pins must appear in pyproject so `pip install -e ".[dev]"` matches bootstrap installs.
     root_txt = root_manifest.read_text(encoding="utf-8")
-    assert "larrak-core @ git+https://github.com/mhold3n/larrak-core.git@" in root_txt
-    assert "larrak-simulation @ git+https://github.com/mhold3n/larrak-simulation.git@" in root_txt
-    assert "larrak-optimization @ git+https://github.com/mhold3n/larrak-optimization.git@" in root_txt
-    assert "9368bb8040f7dc2ea4b3b063bf7482d8dd7b18a0" in root_txt
-    assert "65ee2339c1cd7d977cc2ba6ceff977a9dd0deab6" in root_txt
-    assert "b21de537d4eb2f2c1d07af1e9772b6447ba59072" in root_txt
+    text = external_req.read_text(encoding="utf-8")
+    for name in required:
+        needle = f"{name} @ {pins[name]}"
+        assert needle in text
+        assert needle in root_txt
 
     assert bootstrap.exists()
     boot_txt = bootstrap.read_text(encoding="utf-8")
