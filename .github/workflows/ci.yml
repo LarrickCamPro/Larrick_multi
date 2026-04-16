@@ -42,6 +42,7 @@ jobs:
           python -m pip install --upgrade pip
           bash scripts/install_external_larrak.sh
           pip install -e ".[dev]" --no-deps
+          pip install "ruff>=0.1" "mypy>=1.0" "pytest>=7.0"
       - name: Ruff format check
         run: ruff format --check src tests scripts
       - name: Ruff lint
