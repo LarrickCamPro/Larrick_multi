@@ -53,7 +53,7 @@ jobs:
           LARRICK_MULTI_ROOT: ${{ github.workspace }}
         run: >
           mypy
-          src/larrak2/architecture/workflow_contracts.py
+          src/larrak2/architecture/__init__.py
           src/larrak2/cli/run.py
           src/larrak2/cli/train.py
       - name: Pytest
