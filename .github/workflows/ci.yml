@@ -51,7 +51,10 @@ jobs:
         env:
           PYTHONPATH: src
           LARRICK_MULTI_ROOT: ${{ github.workspace }}
-        run: mypy src/larrak2/core/constants.py
+        run: >
+          mypy --follow-imports=silent
+          src/larrak2/cli/run.py
+          src/larrak2/cli/train.py
       - name: Pytest
         env:
           PYTHONPATH: src

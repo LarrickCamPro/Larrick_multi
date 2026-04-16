@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Callable
 
 from larrak_analysis.workflows import diagnostic_workflow, sensitivity_workflow
 from larrak_runtime.core.artifact_paths import (
@@ -35,6 +36,8 @@ from larrak2.cli.run_workflows import (
     run_train_surrogates_workflow,
     run_train_thermo_symbolic_workflow,
 )
+
+_RunHandler = Callable[[argparse.Namespace], int]
 
 
 def main() -> int:
@@ -1050,7 +1053,7 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    dispatch = {
+    dispatch: dict[str, _RunHandler] = {
         "pareto-grid": run_pareto_grid_workflow,
         "pareto-staged": run_pareto_staged_workflow,
         "active-learning": run_active_learning_workflow,
