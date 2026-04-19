@@ -250,7 +250,7 @@ def cmd_rewrite_imports(args: argparse.Namespace) -> int:
     mapping = {
         "larrak2.core": "larrak_runtime.core",
         "larrak2.architecture": "larrak_runtime.architecture",
-        "larrak2.surrogate.quality_contract": "larrak_runtime.surrogate.quality_contract",
+        "larrak2.surrogate.quality_contract": "larrak_simulation.surrogate.quality_contract",
         "larrak2.training": "larrak_simulation.training",
         "larrak2.simulation_validation": "larrak_simulation.simulation_validation",
         "larrak2.pipelines.openfoam": "larrak_simulation.pipelines.openfoam",

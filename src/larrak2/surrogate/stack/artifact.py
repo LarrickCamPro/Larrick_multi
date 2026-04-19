@@ -10,7 +10,7 @@ from typing import Any
 
 import numpy as np
 from larrak_runtime.core.encoding import ENCODING_VERSION, LEGACY_ENCODING_VERSION
-from larrak_runtime.surrogate.quality_contract import (
+from larrak_simulation.surrogate.quality_contract import (
     sha256_file,
     validate_artifact_quality,
     write_quality_report,

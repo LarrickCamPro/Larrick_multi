@@ -29,7 +29,7 @@ from larrak_runtime.core.artifact_paths import (  # noqa: E402
     DEFAULT_STACK_SURROGATE_ARTIFACT,
     DEFAULT_THERMO_SYMBOLIC_ARTIFACT,
 )
-from larrak_runtime.surrogate.quality_contract import validate_artifact_quality  # noqa: E402
+from larrak_simulation.surrogate.quality_contract import validate_artifact_quality  # noqa: E402
 
 
 @dataclass

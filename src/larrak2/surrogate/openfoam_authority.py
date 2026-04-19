@@ -13,7 +13,7 @@ from larrak_runtime.core.artifact_paths import (
     DEFAULT_OPENFOAM_NN_DIR,
     OUTPUTS_ROOT,
 )
-from larrak_runtime.surrogate.quality_contract import (
+from larrak_simulation.surrogate.quality_contract import (
     load_quality_report,
     openfoam_quality_fail_reasons,
     openfoam_strict_f2_provenance_status,

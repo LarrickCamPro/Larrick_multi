@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 import numpy as np
-from larrak_runtime.surrogate.quality_contract import (
+from larrak_simulation.surrogate.quality_contract import (
     openfoam_default_data_provenance,
     openfoam_quality_profile,
     sha256_file,

@@ -12,7 +12,7 @@ from larrak_runtime.core.artifact_paths import (
     assert_not_legacy_models_path,
 )
 from larrak_runtime.core.encoding import N_TOTAL, decode_candidate
-from larrak_runtime.surrogate.quality_contract import validate_artifact_quality
+from larrak_simulation.surrogate.quality_contract import validate_artifact_quality
 from larrak_simulation.training.hifi_schema import NormalizationParams
 
 from larrak2.surrogate.hifi.models import (
