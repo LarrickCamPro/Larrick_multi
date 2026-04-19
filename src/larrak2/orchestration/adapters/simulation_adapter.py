@@ -9,11 +9,10 @@ from typing import Any
 
 import numpy as np
 from larrak_runtime.core.encoding import N_TOTAL, decode_candidate
-from larrak_runtime.core.evaluator import evaluate_candidate
 from larrak_runtime.core.types import EvalContext
-
-from larrak2.adapters.calculix import CalculiXRunner
-from larrak2.adapters.openfoam import OpenFoamRunner
+from larrak_simulation.adapters.calculix import CalculiXRunner
+from larrak_simulation.adapters.openfoam import OpenFoamRunner
+from larrak_simulation.evaluation import evaluate_candidate
 
 LOGGER = logging.getLogger(__name__)
 
