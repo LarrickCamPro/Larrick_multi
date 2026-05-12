@@ -12,13 +12,22 @@ dependencies = [
     "numpy-stl>=3.0",
     "torch>=2.0",
     "scikit-learn>=1.0",
-    "larrak-core @ git+https://github.com/LarrickCamPro/larrak-core.git@bb1e9c798e7fdbc20c12bbeabf71b00880e7377f",
-    "larrak-engines @ git+https://github.com/LarrickCamPro/larrak-engines.git@840590963db6d8d825bd8446443747bdde0452ae",
-    "larrak-simulation @ git+https://github.com/LarrickCamPro/larrak-simulation.git@94bc592ebae402f9545c03895e96c6c7565dbe0c",
-    "larrak-optimization @ git+https://github.com/LarrickCamPro/larrak-optimization.git@e898acb29bb6226113bcdb2ec1d090d5b5c25ebc",
-    "larrak-analysis @ git+https://github.com/LarrickCamPro/larrak-analysis.git@2c9252996b1604e11e163d72b34e42301c295f3a",
-    "larrak-orchestration @ git+https://github.com/LarrickCamPro/larrak-orchestration.git@b94e702b7d5953550004979233072c6f14fa61a0",
+    "larrak-core",
+    "larrak-engines",
+    "larrak-simulation",
+    "larrak-optimization",
+    "larrak-analysis",
+    "larrak-orchestration",
 ]
+
+[tool.uv.sources]
+# Local suite checkouts — single resolution path per package (no conflicting git pins).
+larrak-core = { path = "../larrak-core", editable = true }
+larrak-engines = { path = "../larrak-engines", editable = true }
+larrak-simulation = { path = "../larrak-simulation", editable = true }
+larrak-optimization = { path = "../larrak-optimization", editable = true }
+larrak-analysis = { path = "../larrak-analysis", editable = true }
+larrak-orchestration = { path = "../larrak-orchestration", editable = true }
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0", "ruff>=0.1", "mypy>=1.0"]
