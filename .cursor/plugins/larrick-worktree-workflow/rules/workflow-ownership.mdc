@@ -3,6 +3,8 @@ description: Enforce Larrick branch-domain ownership and branch naming.
 alwaysApply: true
 ---
 
+These rules **add stricter git conventions** when the in-repo Cursor plugin ([`larrick-worktree-workflow`](../)) is **enabled**. They do **not** replace the baseline workflow in [`Larrick_multi/AGENTS.md`](../../../AGENTS.md): outside this plugin, `main` remains the documented branch and there is no required branch naming scheme unless your team adopts this plugin.
+
 - Use `codex/<workflow>/<short-topic>` branch naming for task branches.
 - Land changes on owning `dev/<workflow>` first, then promote to `main`.
 - Do not propose edits outside the owning domain paths unless explicitly requested.

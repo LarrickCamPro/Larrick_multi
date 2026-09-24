@@ -1,80 +1,13 @@
 # Agent Context — Larrick Multi Repository
 
 This file is read by Claude Code and other AI coding agents.
-Before making changes, read this file in full.
 
-## Repository Purpose
+## Canonical context
 
-Larrick Multi is an engine simulation and surrogate-model optimization platform.
-The codebase still groups work by engineering domain, but branch governance is
-no longer part of the repo workflow. The domain map below is kept as
-documentation only and is intended to help a future split into separate
-projects.
+Read **[AGENTS.md](AGENTS.md)** in full first. It is the single source of truth for workflow, external `larrak-*` packages (`pyproject.toml` / `uv` vs `requirements-external.txt`), CI, domain map, umbrella documentation links, and Cursor worktree notes.
 
-## Workflow Model
+If anything in this file ever disagrees with `AGENTS.md`, **`AGENTS.md` wins.**
 
-- `main` is the only documented repo workflow branch.
-- Direct commits to `main` are the default working model for this repository.
-- Temporary Git branches may still exist, but the repo does not define,
-  validate, or automate any branch naming convention.
-- Do not assume any workflow-routing, promotion, or branch-ownership automation
-  exists.
+## Optional Cursor worktree plugin
 
-## External modules
-
-`larrak-core` (Python import **`larrak_runtime`**), `larrak-simulation`, and `larrak-optimization` install from **pinned git URLs** in [`requirements-external.txt`](requirements-external.txt), normally via [`scripts/install_external_larrak.sh`](scripts/install_external_larrak.sh) (pip install + monorepo `data/` symlink for wheel-installed `larrak_runtime`). None are checked in as submodules. LEAP71 PicoGK/ShapeKernel vendor trees are likewise external. Set **`LARRICK_MULTI_ROOT`** to the repo root when packaged code must resolve `data/` paths.
-
-## Domain Ownership (Documentation Only)
-
-| Domain | Primary Paths |
-|---|---|
-| Simulation pipeline | `src/larrak2/simulation_validation/`, `src/larrak2/pipelines/openfoam.py`, `src/larrak2/adapters/openfoam.py`, `src/larrak2/adapters/docker_openfoam.py`, `openfoam_custom_solvers/`, `openfoam_templates/`, `mechanisms/openfoam/` |
-| Surrogate training | `src/larrak2/training/`, `src/larrak2/surrogate/`, `src/larrak2/cli/train.py` |
-| Optimization and orchestration | `src/larrak2/optimization/`, `src/larrak2/promote/`, `src/larrak2/cli/run.py`, `src/larrak2/cli/run_workflows.py`, `src/larrak2/orchestration/simulation_inputs.py` |
-| Analysis and telemetry | `src/larrak2/analysis/` |
-| CEM and real-world backends | `src/larrak2/cem/`, `src/larrak2/realworld/`, `src/larrak2/orchestration/` except `src/larrak2/orchestration/simulation_inputs.py` |
-| Shared architecture contracts | `src/larrak2/architecture/` |
-
-Treat this mapping as guidance for review and future extraction work, not as an
-enforced branch or PR policy.
-
-## Working Expectations
-
-- Prefer small, reviewable changes even when working directly on `main`.
-- If a change spans multiple domains, call that out clearly in the summary and
-  keep interfaces stable where possible.
-- Do not force-push protected branches.
-- Do not add `contents: write` permission to CI workflows.
-
-## CI Contract
-
-The repository uses a single `CI` workflow for pushes to `main` and pull
-requests targeting `main`. The fast lane runs:
-
-- `ruff format --check` and `ruff check`
-- `mypy` on the maintained typed entrypoints
-- `pytest -q` (default `testpaths`: `tests/ci_contract` only)
-
-Self-hosted heavy lanes may still exist in the future, but they are not tied to
-branch-specific workflow wrappers anymore.
-
-## Cursor Worktree Workflow
-
-- Manual domain separation: open one Cursor window per `git worktree` directory.
-- Cursor Parallel Agents create Cursor-managed worktrees and apply edits back via
-  the Cursor "Apply" action.
-- Keep branch naming short, descriptive, and consistent within your team.
-- In Cursor-created worktrees, rely on CLI checks (`ruff`, `mypy`, `pytest`) for
-  validation because LSP diagnostics are not available in that environment.
-- Cursor-specific hooks/setup should delegate to portable stubs in
-  `scripts/worktree_agent/` so open-source editor/agent replacements can reuse
-  the same workflow contract across all five development branches.
-
-## Simulation Dataset Contract
-
-Simulation outputs are shared through versioned manifest bundles
-(`simulation_dataset_bundle.json`). Training and replay consumers must support
-the current simulation API version and the immediately previous version.
-Use `load_simulation_dataset_bundle()` from
-`src/larrak2/architecture/workflow_contracts.py` to read these bundles rather
-than parsing the JSON directly.
+When the in-repo [larrick-worktree-workflow](.cursor/plugins/larrick-worktree-workflow/) plugin is active, [workflow-ownership.mdc](.cursor/plugins/larrick-worktree-workflow/rules/workflow-ownership.mdc) and [hooks/hooks.json](.cursor/plugins/larrick-worktree-workflow/hooks/hooks.json) add branch and shell guardrails **on top of** the baseline in `AGENTS.md`. See the plugin [README.md](.cursor/plugins/larrick-worktree-workflow/README.md) for installation and validation gates.

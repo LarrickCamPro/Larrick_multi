@@ -6,11 +6,11 @@ import logging
 from typing import Any
 
 import numpy as np
-from larrak_engines.realworld.surrogates import (
+from larrak_runtime.core.encoding import N_GEAR, N_THERMO, N_TOTAL, bounds, decode_candidate
+from larrak_simulation.engine_physics.realworld import (
     RealWorldSurrogateParams,
     evaluate_realworld_surrogates,
 )
-from larrak_runtime.core.encoding import N_GEAR, N_THERMO, N_TOTAL, bounds, decode_candidate
 
 LOGGER = logging.getLogger(__name__)
 

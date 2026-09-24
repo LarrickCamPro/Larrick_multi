@@ -35,3 +35,7 @@ jobs:
         if: github.event_name != 'pull_request'
         run: |
           python scripts/check_repo_layout.py
+
+      - name: Tracked JSON must avoid machine-local absolute paths
+        run: |
+          python scripts/check_json_no_absolute_paths.py

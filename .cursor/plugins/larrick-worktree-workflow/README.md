@@ -4,6 +4,8 @@ This plugin standardizes the Larrick domain-separated worktree workflow in Curso
 
 ## Scope
 
+**Baseline git workflow** for this repository is documented in the repo root [`AGENTS.md`](../../AGENTS.md) (direct commits to `main`, no mandatory branch naming for plain-git use). This plugin **supplements** that baseline when installed: stricter branch rules, hooks, and session hints for Cursor-managed worktrees—not a replacement for `AGENTS.md`.
+
 - Provides workflow policy as Cursor `rules`.
 - Provides reusable runbook guidance as a Cursor `skill`.
 - Provides optional shell guardrails via Cursor `hooks`.
@@ -18,11 +20,12 @@ To keep this workflow portable, Cursor-specific elements call shared scripts in
 
 ## Local prototype usage
 
-1. Symlink plugin into local plugin directory:
+1. Symlink plugin into local plugin directory (run from your **Larrick Multi git root**—the folder that contains `.cursor/plugins/larrick-worktree-workflow/`; in the CamPro umbrella that is `…/Larrick-CamPro/Larrick_multi`):
 
 ```bash
 mkdir -p ~/.cursor/plugins/local
-ln -s /Users/maxholden/GitHub/Larrick_multi/.cursor/plugins/larrick-worktree-workflow ~/.cursor/plugins/local/larrick-worktree-workflow
+PLUGIN_SRC="$(pwd)/.cursor/plugins/larrick-worktree-workflow"
+ln -sfn "$PLUGIN_SRC" ~/.cursor/plugins/local/larrick-worktree-workflow
 ```
 
 2. Reload Cursor window.

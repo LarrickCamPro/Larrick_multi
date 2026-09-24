@@ -14,33 +14,34 @@
 /src/larrak2/architecture/ @maxholden
 /tests/ci_contract/ @maxholden
 
-# Simulation domain
-/src/larrak2/simulation_validation/ @maxholden
-/src/larrak2/pipelines/openfoam.py @maxholden
-/src/larrak2/adapters/openfoam.py @maxholden
-/src/larrak2/adapters/docker_openfoam.py @maxholden
+# Simulation validation CLI (delegates to larrak_simulation)
+/src/larrak2/cli/validate_simulation.py @maxholden
+
+# OpenFOAM-related adapters and repo-local CFD assets
+/src/larrak2/adapters/ @maxholden
 /openfoam_custom_solvers/ @maxholden
 /openfoam_templates/ @maxholden
 /mechanisms/openfoam/ @maxholden
 
-# Training domain
-/src/larrak2/training/ @maxholden
+# Pipelines, surrogate stack, training CLI
+/src/larrak2/pipelines/ @maxholden
 /src/larrak2/surrogate/ @maxholden
 /src/larrak2/cli/train.py @maxholden
 
-# Optimization and orchestration domain
+# Optimization, promotion, workflow CLIs, orchestration
 /src/larrak2/optimization/ @maxholden
 /src/larrak2/promote/ @maxholden
 /src/larrak2/cli/run.py @maxholden
 /src/larrak2/cli/run_workflows.py @maxholden
-/src/larrak2/orchestration/simulation_inputs.py @maxholden
-
-# Analysis domain
-/src/larrak2/analysis/ @maxholden
-
-# CEM and real-world domain
-/src/larrak2/cem/ @maxholden
-/src/larrak2/realworld/ @maxholden
+/src/larrak2/cli/run_pareto.py @maxholden
+/src/larrak2/cli/refine_pareto.py @maxholden
 /src/larrak2/orchestration/ @maxholden
 /src/larrak2/optimization/production_gate.py @maxholden
-/src/larrak2/optimization/workflow_report.py @maxholden
+
+# Gear / geometry / machining / core / artifacts / ports
+/src/larrak2/gear/ @maxholden
+/src/larrak2/geometry/ @maxholden
+/src/larrak2/machining/ @maxholden
+/src/larrak2/core/ @maxholden
+/src/larrak2/artifacts/ @maxholden
+/src/larrak2/ports/ @maxholden

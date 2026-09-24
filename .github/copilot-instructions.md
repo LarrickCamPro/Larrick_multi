@@ -20,15 +20,28 @@ projects.
 - Do not assume any workflow-routing, promotion, or branch-ownership automation
   exists.
 
+### Optional: Cursor worktree plugin
+
+This repo may ship the in-tree plugin at [`.cursor/plugins/larrick-worktree-workflow/`](.cursor/plugins/larrick-worktree-workflow/). When that plugin is **enabled** in Cursor, it adds stricter conventions on top of the baseline above: see [`rules/workflow-ownership.mdc`](.cursor/plugins/larrick-worktree-workflow/rules/workflow-ownership.mdc) and [`hooks/hooks.json`](.cursor/plugins/larrick-worktree-workflow/hooks/hooks.json). Plain terminal git users are not required to follow plugin rules unless the team adopts them.
+
+### Umbrella documentation (CamPro parent checkout)
+
+When this repository lives inside the Larrick-CamPro umbrella (sibling `docs/`, `larrak-*` trees), also see [`../docs/developer-experience/agent-workflow-playbook.md`](../docs/developer-experience/agent-workflow-playbook.md), [`../docs/solutions/`](../docs/solutions/), and [`../docs/project_status/agent_native_architecture_audit.md`](../docs/project_status/agent_native_architecture_audit.md).
+
 ## Domain Ownership (Documentation Only)
 
 | Domain | Primary Paths |
 |---|---|
-| Simulation pipeline | `src/larrak2/simulation_validation/`, `src/larrak2/pipelines/openfoam.py`, `src/larrak2/adapters/openfoam.py`, `src/larrak2/adapters/docker_openfoam.py`, `openfoam_custom_solvers/`, `openfoam_templates/`, `mechanisms/openfoam/` |
-| Surrogate training | `src/larrak2/training/`, `src/larrak2/surrogate/`, `src/larrak2/cli/train.py` |
-| Optimization and orchestration | `src/larrak2/optimization/`, `src/larrak2/promote/`, `src/larrak2/cli/run.py`, `src/larrak2/cli/run_workflows.py`, `src/larrak2/orchestration/simulation_inputs.py` |
-| Analysis and telemetry | `src/larrak2/analysis/` |
-| CEM and real-world backends | `src/larrak2/cem/`, `src/larrak2/realworld/`, `src/larrak2/orchestration/` except `src/larrak2/orchestration/simulation_inputs.py` |
+| Simulation validation (CLI glue) | `src/larrak2/cli/validate_simulation.py` (imports `larrak_simulation.simulation_validation.*`); repo data under `data/simulation_validation/` |
+| OpenFOAM and CFD adapters | `src/larrak2/adapters/openfoam.py`, `src/larrak2/adapters/docker_openfoam.py`, `openfoam_custom_solvers/`, `openfoam_templates/`, `mechanisms/openfoam/` |
+| Pipelines (principles, explore–exploit) | `src/larrak2/pipelines/` |
+| Surrogate stack and training entrypoints | `src/larrak2/surrogate/`, `src/larrak2/cli/train.py` |
+| Optimization | `src/larrak2/optimization/` (solvers, scaling, slicing, IPOPT glue) |
+| Promotion and workflow CLI | `src/larrak2/promote/`, `src/larrak2/cli/run.py`, `src/larrak2/cli/run_workflows.py`, `src/larrak2/cli/run_pareto.py`, `src/larrak2/cli/refine_pareto.py` |
+| Orchestration and adapters | `src/larrak2/orchestration/` (`orchestrator.py`, `multi_start.py`, `parameters.py`, `adapters/{cem,simulation,surrogate}_adapter.py`) |
+| Gear, geometry, machining | `src/larrak2/gear/`, `src/larrak2/geometry/`, `src/larrak2/machining/` |
+| Core, artifacts, ports | `src/larrak2/core/`, `src/larrak2/artifacts/`, `src/larrak2/ports/` |
+| External algorithm adapters | `src/larrak2/adapters/pymoo_problem.py`, `casadi_refine.py`, `calculix.py` |
 | Shared architecture contracts | `src/larrak2/architecture/` |
 
 Treat this mapping as guidance for review and future extraction work, not as an
@@ -49,7 +62,7 @@ requests targeting `main`. The fast lane runs:
 
 - `ruff format --check` and `ruff check`
 - `mypy` on the maintained typed entrypoints
-- `pytest -q`
+- `pytest -q` (default `testpaths`: `tests/ci_contract` only per `[tool.pytest.ini_options]` in `pyproject.toml`)
 
 Self-hosted heavy lanes may still exist in the future, but they are not tied to
 branch-specific workflow wrappers anymore.
